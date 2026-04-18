@@ -15,17 +15,23 @@ export interface ScoringInput {
 
 /**
  * Urgência baseada em data_vencimento / prazo_conclusao.
+ * Usa data LOCAL (dia civil) pra evitar ambiguidade de timezone.
  */
 export function calcularUrgencia(
   dataVencimento?: string | null,
   prazoConclusao?: string | null,
 ): number {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
+  const agora = new Date();
+  const hojeLocal = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+
   const base = (data: string): number => {
-    const d = new Date(data);
-    d.setHours(0, 0, 0, 0);
-    const dias = Math.floor((d.getTime() - hoje.getTime()) / 86_400_000);
+    // Aceita "YYYY-MM-DD" e "YYYY-MM-DDTHH:mm:ss..."
+    const [ymd] = data.split('T');
+    const parts = (ymd ?? '').split('-').map(Number);
+    const [ano, mes, dia] = parts;
+    if (!ano || !mes || !dia) return 10;
+    const dLocal = new Date(ano, mes - 1, dia);
+    const dias = Math.round((dLocal.getTime() - hojeLocal.getTime()) / 86_400_000);
     if (dias < 0) return 100;
     if (dias === 0) return 95;
     if (dias === 1) return 85;
