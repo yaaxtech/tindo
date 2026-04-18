@@ -7,6 +7,7 @@ import { TaskCard } from '@/components/card/TaskCard';
 import { SwipeHandler, type SwipeDir } from '@/components/card/SwipeHandler';
 import { AdiamentoNivel2 } from '@/components/card/AdiamentoNivel2';
 import { CompletionCelebration } from '@/components/celebration/CompletionCelebration';
+import { TarefaModal, type SalvarPayload } from '@/components/card/TarefaModal';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { useCardStackStore } from '@/stores/cardStack';
 import { useGamificacaoStore } from '@/stores/gamificacao';
@@ -40,10 +41,41 @@ export default function CardsPage() {
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [ultimoXp, setUltimoXp] = useState(10);
+  const [modalAberto, setModalAberto] = useState<'editar' | 'criar' | null>(null);
+  const [projetosLite, setProjetosLite] = useState<{ id: string; nome: string; cor: string }[]>(
+    [],
+  );
+  const [tagsLite, setTagsLite] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const tarefaAtual = atual();
 
   useEffect(() => {
     void hidratarGami();
+    void (async () => {
+      try {
+        const [resP, resT] = await Promise.all([
+          fetch('/api/projetos'),
+          fetch('/api/tags'),
+        ]);
+        const bodyP = await resP.json();
+        const bodyT = await resT.json();
+        setProjetosLite(
+          (bodyP.projetos ?? []).map((p: { id: string; nome: string; cor: string }) => ({
+            id: p.id,
+            nome: p.nome,
+            cor: p.cor,
+          })),
+        );
+        setTagsLite(
+          (bodyT.tags ?? []).map((t: { id: string; nome: string; cor: string }) => ({
+            id: t.id,
+            nome: t.nome,
+            cor: t.cor,
+          })),
+        );
+      } catch {
+        /* ignore */
+      }
+    })();
   }, [hidratarGami]);
 
   useEffect(() => {
@@ -213,9 +245,9 @@ export default function CardsPage() {
                     tarefa={tarefaAtual}
                     onConcluir={handleConcluir}
                     onExcluir={handleExcluir}
-                    onEditar={() => {}}
+                    onEditar={() => setModalAberto('editar')}
                     onDependencia={() => {}}
-                    onAdicionar={() => {}}
+                    onAdicionar={() => setModalAberto('criar')}
                     onListar={() => router.push('/tarefas')}
                   />
                 </SwipeHandler>
@@ -245,6 +277,38 @@ export default function CardsPage() {
           />
         </div>
       </section>
+
+      <TarefaModal
+        aberto={modalAberto !== null}
+        modo={modalAberto ?? 'criar'}
+        onFechar={() => setModalAberto(null)}
+        tarefa={modalAberto === 'editar' && tarefaAtual ? tarefaAtual : undefined}
+        projetos={projetosLite}
+        tags={tagsLite}
+        onSalvar={async (payload: SalvarPayload) => {
+          if (modalAberto === 'editar' && tarefaAtual) {
+            await fetch(`/api/tarefas/${tarefaAtual.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+          } else {
+            await fetch('/api/tarefas', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+          }
+          // Recarrega fila
+          try {
+            const res = await fetch('/api/fila', { cache: 'no-store' });
+            const body = await res.json();
+            setFila(body.fila);
+          } catch {
+            /* ignore */
+          }
+        }}
+      />
     </main>
   );
 }

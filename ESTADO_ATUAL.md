@@ -42,8 +42,9 @@
 ## 🟡 O que falta
 
 ### Alto valor (próxima sessão)
-- Modal de editar tarefa (ajustar importância/urgência/facilidade/tags/dependência) — botão "Editar" e "Dependência" no card ainda são no-op.
-- Modal de adicionar tarefa — botão "+" no card no-op.
+- ✅ Modal editar tarefa (feito) — botão "Editar" abre sheet com todos os campos, recalcula nota ao salvar.
+- ✅ Modal adicionar tarefa (feito) — botão "+" abre o mesmo modal em modo criar.
+- Modal de dependência (seleciona qual tarefa bloqueia) — botão ainda no-op.
 - Wizard de calibração inicial (`/calibracao`) — perguntas de critério de sucesso pra alimentar IA.
 - Auth real com Magic Link (atualmente `/login` só finge que envia).
 - Deploy Cloudflare Pages.
