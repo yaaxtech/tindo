@@ -119,18 +119,20 @@ Easings:
 └─────────────────────────────────────┘
 ```
 
-### Swipe — convenção (proposta)
+### Swipe — convenção (decidida 2026-04-17)
 
 | Direção | Ação | Undo? |
 |---|---|---|
-| → DIREITA | **Pular** (próxima tarefa da fila) | Sim, swipe ← reverte |
-| ← ESQUERDA | **Voltar** (tarefa anterior mostrada) | Sim, swipe → reverte |
+| ← ESQUERDA | **Pular** (próxima tarefa da fila) | Sim, swipe → reverte |
+| → DIREITA | **Voltar** (tarefa anterior mostrada) | Sim, swipe ← reverte |
 | ↑ CIMA | **Adiar manual** (abre 2º nível de swipe) | Esc |
 | ↓ BAIXO | **Adiar automático** (heurística decide) | Undo na toast por 5s |
 
-**Convenção temporal explicada**: "pra frente na fila" = direita. "Pra trás na fila" = esquerda. Isso é consistente com leitura esquerda→direita e navegação "próximo/anterior".
+**Modelo mental**: a tarefa atual é uma carta no topo da pilha.
+- Empurrar a carta **para a esquerda** = "joga a carta pra trás da pilha" = pula pra próxima.
+- Empurrar a carta **para a direita** = "puxa a carta anterior pra frente" = volta.
 
-> PS: o usuário mencionou uma convenção invertida (pra trás = pular). Vou seguir essa proposta aqui e **pedir confirmação** em `PERGUNTAS_ABERTAS.md`. Se ele preferir o inverso, é trocar um sinal.
+Keyboard segue a mesma convenção: **← pular**, **→ voltar**.
 
 ### Adiamento manual (nível 2)
 
@@ -161,8 +163,8 @@ Ao fazer ↑, o card se contrai e aparece novo set de opções no centro:
 
 | Tecla | Ação |
 |---|---|
-| `→` | Pular |
-| `←` | Voltar |
+| `←` | Pular (próxima) |
+| `→` | Voltar (anterior) |
 | `↑` | Adiar manual (abre nível 2) |
 | `↓` | Adiar automático |
 | `Space` ou `Enter` | Concluir |

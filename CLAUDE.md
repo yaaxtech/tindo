@@ -126,9 +126,9 @@ Login → Fila priorizada (cards) → Ação (concluir/pular/voltar/adiar) → P
                          Recalibração periódica quando KPIs disparam
 ```
 
-### Swipe (proposta — confirmar com usuário)
-- **→ DIREITA**: próxima tarefa (pular)
-- **← ESQUERDA**: tarefa anterior (voltar)
+### Swipe (convenção confirmada 2026-04-17)
+- **← ESQUERDA**: próxima tarefa (pular)
+- **→ DIREITA**: tarefa anterior (voltar)
 - **↑ CIMA**: adiar manual (abre 2º nível de swipe)
 - **↓ BAIXO**: adiar automático (heurística)
 

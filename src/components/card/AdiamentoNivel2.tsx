@@ -32,8 +32,9 @@ export function AdiamentoNivel2({ onEscolher, onCancelar }: AdiamentoNivel2Props
   const [datetime, setDatetime] = useState<string>('');
 
   const handleSwipe = (dir: SwipeDir): void => {
-    if (dir === 'right') onEscolher(proximoTurno());
-    else if (dir === 'left') onEscolher(amanhaMesmoHorario());
+    // Convenção: esquerda = "próximo turno" (avança), direita = "amanhã mesmo horário" (volta ao mesmo).
+    if (dir === 'left') onEscolher(proximoTurno());
+    else if (dir === 'right') onEscolher(amanhaMesmoHorario());
     else if (dir === 'down') onCancelar();
     // up: não confirma — usuário usa o date-picker abaixo
   };
@@ -58,8 +59,8 @@ export function AdiamentoNivel2({ onEscolher, onCancelar }: AdiamentoNivel2Props
           </header>
 
           <div className="grid w-full grid-cols-2 gap-3 text-sm">
-            <Opcao titulo="← Amanhã mesmo horário" />
-            <Opcao titulo="Próximo turno →" />
+            <Opcao titulo="← Próximo turno" />
+            <Opcao titulo="Amanhã mesmo horário →" />
           </div>
 
           <div className="w-full space-y-2">

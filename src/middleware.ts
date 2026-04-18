@@ -10,38 +10,31 @@ interface CookieToSet {
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: CookieToSet[]) {
-          for (const { name, value } of cookiesToSet) {
-            request.cookies.set(name, value);
-          }
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
-          }
-        },
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Sem credenciais: modo mock, pula o middleware.
+  if (!url || !key) return response;
+
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet: CookieToSet[]) {
+        for (const { name, value } of cookiesToSet) {
+          request.cookies.set(name, value);
+        }
+        response = NextResponse.next({ request });
+        for (const { name, value, options } of cookiesToSet) {
+          response.cookies.set(name, value, options);
+        }
       },
     },
-  );
+  });
 
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const rotasProtegidas = ['/cards', '/tarefas', '/projetos', '/tags', '/gamificacao', '/conquistas', '/calibracao', '/configuracoes'];
-  const rotaAtual = request.nextUrl.pathname;
-  const precisaAuth = rotasProtegidas.some((r) => rotaAtual.startsWith(r));
-
-  if (precisaAuth && !user) {
-    // MVP: deixa passar sem auth (mock); trocar pra redirect quando auth real estiver pronto.
-    // const loginUrl = new URL('/login', request.url);
-    // return NextResponse.redirect(loginUrl);
-  }
+  // Por enquanto, só rehidrata a sessão (não bloqueia rotas).
+  await supabase.auth.getUser();
 
   return response;
 }

@@ -42,6 +42,7 @@ supabase/.env
 
 # claude
 .claude/settings.local.json
+.claude/worktrees/
 
 # pwa
 public/sw.js
