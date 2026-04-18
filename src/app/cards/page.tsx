@@ -9,8 +9,9 @@ import { AdiamentoNivel2 } from '@/components/card/AdiamentoNivel2';
 import { CompletionCelebration } from '@/components/celebration/CompletionCelebration';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { useCardStackStore } from '@/stores/cardStack';
+import { useGamificacaoStore } from '@/stores/gamificacao';
 import { mockTarefas } from '@/lib/mock/tarefas';
-import { playCompletion, playSwipe } from '@/lib/audio/tones';
+import { playCompletion, playLevelUp, playSwipe } from '@/lib/audio/tones';
 import type { Tarefa } from '@/types/domain';
 
 export default function CardsPage() {
@@ -28,10 +29,22 @@ export default function CardsPage() {
     nivel2Adiar,
     removerAtual,
   } = useCardStackStore();
+  const {
+    streakAtual,
+    nivel,
+    progressoPercentual,
+    hidratar: hidratarGami,
+    registrarConclusao,
+  } = useGamificacaoStore();
   const [celebrando, setCelebrando] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [ultimoXp, setUltimoXp] = useState(10);
   const tarefaAtual = atual();
+
+  useEffect(() => {
+    void hidratarGami();
+  }, [hidratarGami]);
 
   useEffect(() => {
     let cancelado = false;
@@ -100,12 +113,18 @@ export default function CardsPage() {
 
   const handleConcluir = (): void => {
     if (!tarefaAtual) return;
-    const id = tarefaAtual.id;
+    const { id, nota, tipo } = tarefaAtual;
+    const xpEstimado = tipo === 'lembrete' ? 5 : 10 + Math.round(nota / 10);
+    setUltimoXp(xpEstimado);
     setCelebrando(true);
-    void playCompletion();
+    void playCompletion(streakAtual > 0);
     window.setTimeout(() => {
       concluir();
       void sincronizarAcao(id, { tipo: 'concluir' });
+      void (async () => {
+        const r = await registrarConclusao(id, tipo, nota);
+        if (r?.subiuNivel) void playLevelUp();
+      })();
     }, 600);
   };
 
@@ -145,8 +164,19 @@ export default function CardsPage() {
           {pendentes.length} pendentes · {lembretesPendentes} lembretes
           {erroCarga && <span className="ml-2 text-warning">· {erroCarga}</span>}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-bg-elevated px-3 py-1 font-medium text-jade-accent">
-          🔥 0 dias
+        <span className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-jade-accent/40 bg-jade-dim/30 px-2.5 py-1 font-medium text-jade-accent"
+            title={`Nível ${nivel} · ${progressoPercentual}% do próximo`}
+          >
+            ⚡ N{nivel}
+          </span>
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-border-strong bg-bg-elevated px-3 py-1 font-medium text-jade-accent"
+            title="Streak (dias consecutivos com ao menos 1 conclusão)"
+          >
+            🔥 {streakAtual}
+          </span>
         </span>
       </header>
 
@@ -210,7 +240,7 @@ export default function CardsPage() {
 
           <CompletionCelebration
             visivel={celebrando}
-            xpGanho={tarefaAtual ? Math.max(10, Math.round(tarefaAtual.nota / 5)) : 10}
+            xpGanho={ultimoXp}
             onFim={() => setCelebrando(false)}
           />
         </div>

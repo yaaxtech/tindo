@@ -118,6 +118,12 @@ export default function TarefasPage() {
             >
               Config
             </Link>
+            <Link
+              href="/gamificacao"
+              className="rounded-full border border-border-strong bg-bg-elevated px-3 py-1.5 font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+            >
+              Stats
+            </Link>
             <BotaoSync />
           </nav>
         </div>
