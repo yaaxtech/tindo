@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCardStackStore } from '@/stores/cardStack';
+import { BotaoSync } from '@/components/BotaoSync';
 import { mockTarefas } from '@/lib/mock/tarefas';
 import type { Tarefa } from '@/types/domain';
 import { corUrgencia } from '@/lib/urgency-color';
@@ -32,7 +33,28 @@ export default function TarefasPage() {
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'tarefa' | 'lembrete'>('todos');
   const [busca, setBusca] = useState('');
 
-  const fonte: Tarefa[] = fila.length > 0 ? fila : mockTarefas;
+  const [filaReal, setFilaReal] = useState<Tarefa[]>([]);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/fila', { cache: 'no-store' });
+        const body = (await res.json()) as { fila: Tarefa[] };
+        if (!cancelado) setFilaReal(body.fila);
+      } catch {
+        /* usa fallback */
+      } finally {
+        if (!cancelado) setCarregando(false);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  const fonte: Tarefa[] = filaReal.length > 0 ? filaReal : fila.length > 0 ? fila : mockTarefas;
 
   const tarefas = useMemo(() => {
     let filtradas = fonte.filter((t) => t.status === 'pendente');
@@ -77,6 +99,27 @@ export default function TarefasPage() {
               {totais.total} pendentes · {totais.tarefas} tarefas · {totais.lembretes} lembretes · média nota {totais.mediaNota}
             </p>
           </div>
+          <nav className="flex items-center gap-2 text-xs">
+            <Link
+              href="/projetos"
+              className="rounded-full border border-border-strong bg-bg-elevated px-3 py-1.5 font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+            >
+              Projetos
+            </Link>
+            <Link
+              href="/tags"
+              className="rounded-full border border-border-strong bg-bg-elevated px-3 py-1.5 font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+            >
+              Tags
+            </Link>
+            <Link
+              href="/configuracoes"
+              className="rounded-full border border-border-strong bg-bg-elevated px-3 py-1.5 font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+            >
+              Config
+            </Link>
+            <BotaoSync />
+          </nav>
         </div>
       </header>
 

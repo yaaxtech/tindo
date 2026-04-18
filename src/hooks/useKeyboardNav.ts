@@ -21,7 +21,12 @@ export function useKeyboardNav(handlers: KeyboardHandlers, enabled = true): void
   useEffect(() => {
     if (!enabled) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
       switch (e.key) {
         case 'ArrowLeft': e.preventDefault(); handlers.onLeft?.(); break;
         case 'ArrowRight': e.preventDefault(); handlers.onRight?.(); break;

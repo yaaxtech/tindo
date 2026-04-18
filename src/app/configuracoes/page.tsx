@@ -1,0 +1,358 @@
+'use client';
+
+import Link from 'next/link';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
+
+interface ConfigRow {
+  peso_urgencia: number;
+  peso_importancia: number;
+  peso_facilidade: number;
+  audio_habilitado: boolean;
+  animacoes_habilitadas: boolean;
+  todoist_sync_habilitado: boolean;
+  ai_habilitado: boolean;
+  limiar_recalibracao_reavaliacao: number;
+  limiar_recalibracao_descarte: number;
+  limiar_recalibracao_adiamento: number;
+}
+
+export default function ConfiguracoesPage() {
+  const [cfg, setCfg] = useState<ConfigRow | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [recalculando, setRecalculando] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/configuracoes');
+        const body = (await res.json()) as { configuracoes: Record<string, unknown> };
+        const c = body.configuracoes;
+        if (!c) throw new Error('Sem config');
+        setCfg({
+          peso_urgencia: Number(c.peso_urgencia),
+          peso_importancia: Number(c.peso_importancia),
+          peso_facilidade: Number(c.peso_facilidade),
+          audio_habilitado: Boolean(c.audio_habilitado),
+          animacoes_habilitadas: Boolean(c.animacoes_habilitadas),
+          todoist_sync_habilitado: Boolean(c.todoist_sync_habilitado),
+          ai_habilitado: Boolean(c.ai_habilitado),
+          limiar_recalibracao_reavaliacao: Number(c.limiar_recalibracao_reavaliacao),
+          limiar_recalibracao_descarte: Number(c.limiar_recalibracao_descarte),
+          limiar_recalibracao_adiamento: Number(c.limiar_recalibracao_adiamento),
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const somaPesos = useMemo(() => {
+    if (!cfg) return 0;
+    return cfg.peso_urgencia + cfg.peso_importancia + cfg.peso_facilidade;
+  }, [cfg]);
+
+  const salvar = async () => {
+    if (!cfg) return;
+    setSalvando(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/configuracoes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Erro');
+      setMsg('Configurações salvas.');
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Erro');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const recalcular = async () => {
+    setRecalculando(true);
+    try {
+      const res = await fetch('/api/recalcular-notas', { method: 'POST' });
+      const { atualizadas } = (await res.json()) as { atualizadas: number };
+      setMsg(`${atualizadas} tarefas recalculadas.`);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Erro');
+    } finally {
+      setRecalculando(false);
+    }
+  };
+
+  const ajustarPeso = (campo: 'peso_urgencia' | 'peso_importancia' | 'peso_facilidade', v: number) => {
+    if (!cfg) return;
+    // Normaliza pra somar 1: ajusta proporcionalmente os outros dois.
+    const outros = (['peso_urgencia', 'peso_importancia', 'peso_facilidade'] as const).filter(
+      (c) => c !== campo,
+    );
+    const restante = 1 - v;
+    const soma_outros = cfg[outros[0]!] + cfg[outros[1]!];
+    const proporcao = soma_outros === 0 ? 0.5 : cfg[outros[0]!] / soma_outros;
+    const novo: ConfigRow = {
+      ...cfg,
+      [campo]: v,
+      [outros[0]!]: Number((restante * proporcao).toFixed(2)),
+      [outros[1]!]: Number((restante * (1 - proporcao)).toFixed(2)),
+    };
+    setCfg(novo);
+  };
+
+  if (loading || !cfg) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center">
+        <div className="h-10 w-10 animate-pulse-jade rounded-full bg-jade" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-dvh pb-24 safe-top safe-bottom">
+      <header className="sticky top-0 z-10 border-b border-border bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-4">
+          <Link
+            href="/cards"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold">Configurações</h1>
+            <p className="text-xs text-text-muted">Ajuste o peso dos fatores na nota 0-100.</p>
+          </div>
+        </div>
+      </header>
+
+      <section className="mx-auto mt-6 w-full max-w-3xl space-y-8 px-6">
+        {/* Pesos do scoring */}
+        <Card titulo="Pesos do Scoring" subtitulo="Como os três fatores contribuem pra nota. Devem somar 1.00.">
+          <div className="space-y-4">
+            <Slider
+              label="Urgência"
+              ajuda="Quanto mais próximo o prazo, maior a nota."
+              valor={cfg.peso_urgencia}
+              onChange={(v) => ajustarPeso('peso_urgencia', v)}
+            />
+            <Slider
+              label="Importância"
+              ajuda="Vem da prioridade (P1-P4) e projeto."
+              valor={cfg.peso_importancia}
+              onChange={(v) => ajustarPeso('peso_importancia', v)}
+            />
+            <Slider
+              label="Facilidade"
+              ajuda="Tarefas rápidas ganham boost (quick wins)."
+              valor={cfg.peso_facilidade}
+              onChange={(v) => ajustarPeso('peso_facilidade', v)}
+            />
+            <p
+              className={cn(
+                'rounded-md px-3 py-2 text-xs font-mono',
+                Math.abs(somaPesos - 1) < 0.01
+                  ? 'bg-jade-dim/30 text-jade-accent'
+                  : 'bg-danger/20 text-danger',
+              )}
+            >
+              Soma: {somaPesos.toFixed(2)} {Math.abs(somaPesos - 1) < 0.01 ? '✓' : '✗ deve ser 1.00'}
+            </p>
+          </div>
+        </Card>
+
+        {/* Limiares de recalibração */}
+        <Card
+          titulo="Limiares de Recalibração"
+          subtitulo="Quando o app sugere recalibrar (percentuais)."
+        >
+          <div className="space-y-3">
+            <NumField
+              label="% de reavaliação humana → sugere recalibrar pesos"
+              valor={cfg.limiar_recalibracao_reavaliacao}
+              onChange={(v) => setCfg({ ...cfg, limiar_recalibracao_reavaliacao: v })}
+            />
+            <NumField
+              label="% de descarte de sugestões IA → sugere recalibrar caminho"
+              valor={cfg.limiar_recalibracao_descarte}
+              onChange={(v) => setCfg({ ...cfg, limiar_recalibracao_descarte: v })}
+            />
+            <NumField
+              label="% de adiamento → sugere slide das 5"
+              valor={cfg.limiar_recalibracao_adiamento}
+              onChange={(v) => setCfg({ ...cfg, limiar_recalibracao_adiamento: v })}
+            />
+          </div>
+        </Card>
+
+        {/* Bem-estar */}
+        <Card titulo="Bem-estar" subtitulo="Pode desligar sons e animações sem perder funcionalidade.">
+          <Toggle
+            label="Som na conclusão"
+            valor={cfg.audio_habilitado}
+            onChange={(v) => setCfg({ ...cfg, audio_habilitado: v })}
+          />
+          <Toggle
+            label="Animações"
+            valor={cfg.animacoes_habilitadas}
+            onChange={(v) => setCfg({ ...cfg, animacoes_habilitadas: v })}
+          />
+        </Card>
+
+        <Card titulo="Integrações" subtitulo="">
+          <Toggle
+            label="Sync Todoist (leitura apenas por enquanto)"
+            valor={cfg.todoist_sync_habilitado}
+            onChange={(v) => setCfg({ ...cfg, todoist_sync_habilitado: v })}
+          />
+          <Toggle
+            label="IA Claude (classificação/sugestões)"
+            valor={cfg.ai_habilitado}
+            onChange={(v) => setCfg({ ...cfg, ai_habilitado: v })}
+          />
+        </Card>
+      </section>
+
+      <footer className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg-deep/95 px-6 py-3 backdrop-blur-xl safe-bottom">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-xs text-text-secondary">
+            {msg ?? 'Salve e recalcule para refletir nas notas.'}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={salvar}
+              disabled={salvando || Math.abs(somaPesos - 1) > 0.01}
+              className="inline-flex h-10 items-center rounded-md border border-border-strong bg-bg-elevated px-4 text-sm font-medium text-text-primary hover:bg-bg-hover disabled:opacity-40"
+            >
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
+            <button
+              type="button"
+              onClick={recalcular}
+              disabled={recalculando}
+              className="inline-flex h-10 items-center gap-2 rounded-md grad-jade px-4 text-sm font-medium text-text-inverse disabled:opacity-40"
+            >
+              <RefreshCw className={cn('h-4 w-4', recalculando && 'animate-spin')} />
+              {recalculando ? 'Recalculando...' : 'Recalcular notas'}
+            </button>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+function Card({
+  titulo,
+  subtitulo,
+  children,
+}: {
+  titulo: string;
+  subtitulo: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border-strong bg-bg-elevated p-5">
+      <header className="mb-4">
+        <h2 className="text-sm font-semibold text-text-primary">{titulo}</h2>
+        {subtitulo && <p className="text-xs text-text-muted">{subtitulo}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function Slider({
+  label,
+  ajuda,
+  valor,
+  onChange,
+}: {
+  label: string;
+  ajuda: string;
+  valor: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between">
+        <div>
+          <span className="text-sm font-medium">{label}</span>
+          <span className="ml-2 font-mono text-xs text-text-muted">{(valor * 100).toFixed(0)}%</span>
+        </div>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.05}
+        value={valor}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-jade-accent"
+      />
+      <p className="mt-1 text-[11px] text-text-muted">{ajuda}</p>
+    </div>
+  );
+}
+
+function NumField({
+  label,
+  valor,
+  onChange,
+}: {
+  label: string;
+  valor: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 text-sm">
+      <span className="flex-1 text-text-secondary">{label}</span>
+      <input
+        type="number"
+        min={0}
+        max={100}
+        step={5}
+        value={valor}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-9 w-20 rounded-md border border-border-strong bg-bg-surface px-2 text-right font-semibold outline-none focus:border-jade-accent"
+      />
+      <span className="text-xs text-text-muted">%</span>
+    </label>
+  );
+}
+
+function Toggle({
+  label,
+  valor,
+  onChange,
+}: {
+  label: string;
+  valor: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between py-2 text-sm">
+      <span>{label}</span>
+      <span
+        onClick={() => onChange(!valor)}
+        className={cn(
+          'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+          valor ? 'bg-jade' : 'bg-bg-surface',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute left-0.5 h-4 w-4 rounded-full bg-white transition-transform',
+            valor && 'translate-x-4',
+          )}
+        />
+      </span>
+    </label>
+  );
+}
