@@ -1,10 +1,11 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { useToasts } from '@/stores/toasts';
 import type { Tarefa } from '@/types/domain';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Sparkles, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ProjetoLite {
   id: string;
@@ -52,9 +53,16 @@ export function TarefaModal({
 }: TarefaModalProps) {
   const [form, setForm] = useState<SalvarPayload>(() => mkInicial(tarefa));
   const [salvando, setSalvando] = useState(false);
+  const [classificando, setClassificando] = useState(false);
+  const [explicacaoIA, setExplicacaoIA] = useState<string | null>(null);
+  const pushToast = useToasts((s) => s.push);
+  const classificarInicioRef = useRef<number>(0);
 
   useEffect(() => {
-    if (aberto) setForm(mkInicial(tarefa));
+    if (aberto) {
+      setForm(mkInicial(tarefa));
+      setExplicacaoIA(null);
+    }
   }, [aberto, tarefa]);
 
   useEffect(() => {
@@ -74,6 +82,82 @@ export function TarefaModal({
       ...f,
       tag_ids: f.tag_ids.includes(id) ? f.tag_ids.filter((t) => t !== id) : [...f.tag_ids, id],
     }));
+  };
+
+  const classificarComIA = async () => {
+    setClassificando(true);
+    setExplicacaoIA(null);
+    classificarInicioRef.current = Date.now();
+
+    try {
+      const body =
+        modo === 'editar' && tarefa?.id
+          ? { tarefaId: tarefa.id }
+          : { titulo: form.titulo, descricao: form.descricao ?? undefined, projetoId: form.projeto_id ?? undefined };
+
+      const res = await fetch('/api/ai/classificar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data: unknown = await res.json();
+
+      if (!res.ok) {
+        // Narrow to error shape
+        const err = data as { error?: string };
+        const msg = err?.error ?? 'Erro ao classificar';
+        if (msg.toLowerCase().includes('configure') || msg.toLowerCase().includes('chave')) {
+          pushToast({
+            titulo: 'Chave de IA não configurada',
+            descricao: msg,
+            icone: 'alerta',
+            acao: {
+              label: 'Configurar',
+              onClick: () => { window.open('/configuracoes', '_blank'); },
+            },
+          });
+        } else {
+          pushToast({ titulo: 'Erro ao classificar', descricao: msg, icone: 'alerta' });
+        }
+        return;
+      }
+
+      const { classificacao } = data as {
+        classificacao: {
+          importancia: number;
+          urgencia: number;
+          facilidade: number;
+          tags_sugeridas: string[];
+          explicacao: string;
+        };
+        usage: unknown;
+      };
+
+      // Apply suggestions to form
+      setForm((f) => {
+        const tagsDeduped = Array.from(new Set([...f.tag_ids, ...classificacao.tags_sugeridas]));
+        return {
+          ...f,
+          importancia: classificacao.importancia,
+          urgencia: classificacao.urgencia,
+          facilidade: classificacao.facilidade,
+          tag_ids: tagsDeduped,
+        };
+      });
+      setExplicacaoIA(classificacao.explicacao);
+
+      const elapsed = ((Date.now() - classificarInicioRef.current) / 1000).toFixed(1);
+      pushToast({
+        titulo: `IA classificou em ${elapsed}s`,
+        descricao: classificacao.explicacao,
+        icone: 'ok',
+      });
+    } catch {
+      pushToast({ titulo: 'Erro inesperado ao classificar', icone: 'alerta' });
+    } finally {
+      setClassificando(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -201,6 +285,40 @@ export function TarefaModal({
                       className="h-10 w-full rounded-md border border-border-strong bg-bg-surface px-3 outline-none focus:border-jade-accent"
                     />
                   </Campo>
+                </div>
+
+                {/* Seção IA */}
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    disabled={classificando || form.titulo.trim().length < 3}
+                    aria-busy={classificando}
+                    aria-label="Classificar importância, urgência e facilidade com IA"
+                    onClick={classificarComIA}
+                    className={cn(
+                      'inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors',
+                      'border-jade-accent/50 bg-jade-dim/20 text-jade-accent hover:bg-jade-dim/40',
+                      'disabled:cursor-not-allowed disabled:opacity-40',
+                    )}
+                  >
+                    <Sparkles className={cn('h-3.5 w-3.5', classificando && 'animate-pulse')} />
+                    {classificando ? 'Classificando…' : 'Classificar com IA'}
+                  </button>
+
+                  <AnimatePresence>
+                    {explicacaoIA && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-start gap-2 rounded-md border border-jade-accent/30 bg-jade-dim/15 px-3 py-2"
+                      >
+                        <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-jade-accent" />
+                        <p className="text-[11px] leading-snug text-text-secondary">{explicacaoIA}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <Campo label="Overrides manuais (opcional — deixe em branco pro automático)">

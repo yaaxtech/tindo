@@ -21,31 +21,31 @@
 
 **Critério de done**: `bun run dev` abre uma tela de login funcional (mock ou Magic Link), e `bun run typecheck` passa.
 
-## Fase 1 — Card Swipeable com Mock (meta: 2-3 dias)
+## Fase 1 — Card Swipeable com Mock (meta: 2-3 dias) — ✅ DONE
 
-- [ ] Componente `TaskCard` com layout completo (obsidian/jade)
-- [ ] `SwipeHandler` usando Framer Motion (4 direções)
-- [ ] Threshold visual: feedback de cor durante o drag
-- [ ] `KeyboardNav` (setas, Space/Enter, E, D, L, N, Esc, Cmd+Z)
-- [ ] Store Zustand `useCardStackStore` com fila + histórico
-- [ ] Mock data (20 tarefas fake)
-- [ ] `CompletionCelebration` — som + confetti + check + +XP ticker
-- [ ] `AdiamentoNivel2` — 2º nível de swipe funcional
-- [ ] Shell de navegação (mobile bottom nav, desktop sidebar)
-- [ ] PWA funcional (instalável)
+- [x] Componente `TaskCard` com layout completo (obsidian/jade)
+- [x] `SwipeHandler` usando Framer Motion (4 direções)
+- [x] Threshold visual: feedback de cor durante o drag
+- [x] `KeyboardNav` (setas, Space/Enter, E, D, L, N, Esc, Cmd+Z)
+- [x] Store Zustand `useCardStackStore` com fila + histórico
+- [x] Mock data (20 tarefas fake)
+- [x] `CompletionCelebration` — som + confetti + check + +XP ticker
+- [x] `AdiamentoNivel2` — 2º nível de swipe funcional
+- [x] Shell de navegação (mobile bottom nav, desktop sidebar)
+- [x] PWA funcional (instalável)
 
 **Critério de done**: consigo abrir em mobile e desktop, passar por 10 cards usando apenas swipe/teclado, concluir com efeito viciante, e voltar/avançar.
 
-## Fase 2 — Persistência e Scoring (meta: 2 dias)
+## Fase 2 — Persistência e Scoring (meta: 2 dias) — ✅ DONE
 
-- [ ] Serviços `tarefas`, `projetos`, `tags`, `configuracoes` com Supabase real
-- [ ] `src/lib/scoring/engine.ts` com a fórmula completa + testes
-- [ ] Triggers PG que recalculam `nota` em update (ou service cuida)
-- [ ] Tela `/tarefas` (lista + filtros + busca)
-- [ ] Tela `/projetos` (drag-and-drop ordenação)
-- [ ] Tela `/tags` (criar com tipo de peso)
-- [ ] Tela `/configuracoes/scoring` (sliders de w_urg/imp/fac)
-- [ ] CRUD completo (criar, editar, excluir — soft delete)
+- [x] Serviços `tarefas`, `projetos`, `tags`, `configuracoes` com Supabase real
+- [x] `src/lib/scoring/engine.ts` com a fórmula completa + testes
+- [x] Triggers PG que recalculam `nota` em update (ou service cuida)
+- [x] Tela `/tarefas` (lista + filtros + busca)
+- [x] Tela `/projetos` (drag-and-drop ordenação)
+- [x] Tela `/tags` (criar com tipo de peso)
+- [x] Tela `/configuracoes/scoring` (sliders de w_urg/imp/fac)
+- [x] CRUD completo (criar, editar, excluir — soft delete)
 
 **Critério de done**: crio tarefas reais, vejo na fila ordenada pela nota, altero pesos e a fila re-ordena.
 
@@ -62,48 +62,52 @@
 
 **Critério de done**: crio tarefa no Todoist mobile, aparece no TinDo em ≤2min. Concluo no TinDo, marca como concluída no Todoist.
 
-## Fase 4 — Gamificação v1 (meta: 2 dias)
+## Fase 4 — Gamificação v1 (meta: 2 dias) — ✅ DONE (parcial)
 
-- [ ] Tabela `gamificacao` + `conquistas` + triggers
-- [ ] Service `gamificacao.ts` (XP, streak, conquistas)
-- [ ] Store Zustand + UI reativa
-- [ ] Tela `/gamificacao` (streak, XP, nível, heatmap, conquistas)
-- [ ] StreakBadge no header
-- [ ] Sons variados + level up fanfare
+- [x] Tabela `gamificacao` + `conquistas` + triggers
+- [x] Service `gamificacao.ts` (XP, streak, conquistas)
+- [x] Store Zustand + UI reativa
+- [x] Tela `/gamificacao` (streak, XP, nível, heatmap, conquistas)
+- [x] StreakBadge no header
+- [x] Sons variados + level up fanfare
 - [ ] Congelador de streak
 - [ ] Anéis semanais
 
 **Critério de done**: ganho XP ao concluir, subo de nível, streak incrementa, conquistas desbloqueiam com celebração.
 
-## Fase 5 — Adiamento Inteligente (meta: 2 dias)
+## Fase 5 — Adiamento Inteligente (meta: 2 dias) — ✅ DONE
 
-- [ ] Adiamento manual (nível 2 já existe em Fase 1; agora persiste de verdade)
-- [ ] Adiamento automático com heurística:
-  - Se usuário costuma adiar tarefas com tag X → adia pra horário Y
-  - Dia da semana + hora do dia → sugere
-- [ ] Motivo do adiamento em `adiamento_motivo_auto`
-- [ ] Undo em toast 5s
+- [x] Adiamento manual persistido via `/api/tarefas/[id]/acao` + `adiamentoCount++`
+- [x] Adiamento automático com heurística em `src/lib/adiamento/heuristica.ts`:
+  - Buckets: tag+dia, projeto+dia, tag, projeto, dia (≥3 amostras)
+  - Fallback inteligente por hora do dia
+- [x] Motivo gravado em `adiamento_motivo_auto` + `historico_acoes.dados`
+- [x] Toast global com Undo 5s (`Toaster` + `useToasts`) + ação `desfazer_adiamento`
+- [x] `AdiamentoNivel2` redesenhado: sugestão destacada + grid 2x3 de presets + accordion custom
 
 **Critério de done**: adio via ↑ e ↓, sistema aprende padrões básicos e sugere horários relevantes.
 
-## Fase 6 — Calibração Inicial de IA (meta: 2 dias)
+## Fase 6 — Calibração Inicial de IA (meta: 2 dias) — ✅ DONE
 
-- [ ] Wizard `/calibracao` (4 perguntas) — sem LLM ainda, só captura
-- [ ] Persiste em `configuracoes.criterios_sucesso`
-- [ ] Ordenação de projetos (drag-and-drop)
-- [ ] Input de Claude API key
+- [x] Wizard `/calibracao` (4 perguntas) — sem LLM ainda, só captura
+- [x] Persiste em `configuracoes.criterios_sucesso` via `/api/calibracao`
+- [x] Ordenação de projetos (drag-and-drop com @dnd-kit + auto-save)
+- [x] Input de Claude API key (aba IA em `/configuracoes`)
+- [x] Migration `20260419000001_calibracao_ai.sql` aplicada
 
 **Critério de done**: completo wizard uma vez, respostas salvam, é possível editar.
 
-## Fase 7 — IA Classificação de Tarefas (meta: 3 dias)
+## Fase 7 — IA Classificação de Tarefas (meta: 3 dias) — ✅ DONE
 
-- [ ] SDK Anthropic integrado
-- [ ] System prompts em `prompts.ts` com caching
-- [ ] `POST /api/ai/classificar` — 1 tarefa
-- [ ] Auto-classificação ao criar tarefa (se feature flag ativa)
-- [ ] Modal "Sugerido pela IA: ..." em tarefas não-classificadas
-- [ ] Aceitar / editar / rejeitar
-- [ ] Registro em `sugestoes_ai`
+- [x] SDK Anthropic integrado (`@anthropic-ai/sdk`)
+- [x] System prompts em `src/lib/ai/prompts.ts` com caching ephemeral (projetos+tags+critérios)
+- [x] `POST /api/ai/classificar` — aceita `tarefaId` OU `{ titulo, descricao, projetoId }`
+- [x] `POST /api/ai/testar` — valida chave real via `messages.create` com max_tokens 1
+- [x] Service `src/services/ai.ts` usando tool_use `classificar_tarefa`
+- [x] Modal `TarefaModal` com botão "Classificar com IA" + explicação exibida
+- [x] Aceitar/editar preenchendo sliders + tag_ids automaticamente
+- [x] Registro em `sugestoes_ai` quando há `tarefaId`
+- [ ] Auto-classificação ao criar tarefa (feature flag `ai_auto_aceita_classificacao` já existe; hook ainda pendente)
 
 **Critério de done**: nova tarefa é classificada automaticamente em ≤3s, posso aceitar/editar.
 

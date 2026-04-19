@@ -1,11 +1,13 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { useToasts } from '@/stores/toasts';
 import {
   DndContext,
   type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -40,6 +42,7 @@ export default function ProjetosPage() {
   const [salvando, setSalvando] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
+  const toast = useToasts((s) => s.push);
 
   useEffect(() => {
     void (async () => {
@@ -54,38 +57,38 @@ export default function ProjetosPage() {
   }, []);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+    let reordered: ProjetoRow[] = [];
     setProjetos((current) => {
       const oldIdx = current.findIndex((p) => p.id === active.id);
       const newIdx = current.findIndex((p) => p.id === over.id);
-      const reordered = arrayMove(current, oldIdx, newIdx).map((p, i) => ({
+      reordered = arrayMove(current, oldIdx, newIdx).map((p, i) => ({
         ...p,
         ordem_prioridade: i,
         multiplicador: MULT_POR_POSICAO[i] ?? 0.8,
       }));
       return reordered;
     });
+    // Auto-save order after drag
+    void salvarOrdem(reordered);
   };
 
-  const handleEditarMultiplicador = (id: string, valor: number) => {
-    setProjetos((cur) => cur.map((p) => (p.id === id ? { ...p, multiplicador: valor } : p)));
-  };
-
-  const salvar = async () => {
+  const salvarOrdem = async (lista: ProjetoRow[]) => {
+    if (lista.length === 0) return;
     setSalvando(true);
-    setMensagem(null);
     try {
       const res = await fetch('/api/projetos', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projetos: projetos.map((p) => ({
+          projetos: lista.map((p) => ({
             id: p.id,
             ordem_prioridade: p.ordem_prioridade,
             multiplicador: p.multiplicador,
@@ -93,16 +96,29 @@ export default function ProjetosPage() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setMensagem('Projetos salvos. Rode "Recalcular notas" pra aplicar.');
+      toast({ titulo: 'Ordem atualizada', icone: 'ok', duracaoMs: 3000 });
     } catch (err) {
-      setMensagem(err instanceof Error ? err.message : 'Erro');
+      toast({
+        titulo: 'Erro ao salvar ordem',
+        descricao: err instanceof Error ? err.message : 'Tente novamente',
+        icone: 'alerta',
+      });
     } finally {
       setSalvando(false);
     }
   };
 
+  const handleEditarMultiplicador = (id: string, valor: number) => {
+    setProjetos((cur) => cur.map((p) => (p.id === id ? { ...p, multiplicador: valor } : p)));
+  };
+
+  const salvar = async () => {
+    await salvarOrdem(projetos);
+  };
+
   const recalcular = async () => {
     setRecalculando(true);
+    setMensagem(null);
     try {
       const res = await fetch('/api/recalcular-notas', { method: 'POST' });
       const { atualizadas } = (await res.json()) as { atualizadas: number };

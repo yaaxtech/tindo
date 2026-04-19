@@ -34,6 +34,10 @@ interface PatchPayload {
   limiar_recalibracao_reavaliacao?: number;
   limiar_recalibracao_descarte?: number;
   limiar_recalibracao_adiamento?: number;
+  // Campos IA — opcionais (migração pode estar pendente; erro é logado mas não quebra)
+  ai_api_key_criptografada?: string;
+  ai_modelo?: string;
+  ai_auto_aceita_classificacao?: boolean;
 }
 
 export async function PATCH(request: NextRequest) {

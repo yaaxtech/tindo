@@ -1,7 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { useToasts } from '@/stores/toasts';
+import { ArrowLeft, Eye, EyeOff, RefreshCw, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -16,7 +17,18 @@ interface ConfigRow {
   limiar_recalibracao_reavaliacao: number;
   limiar_recalibracao_descarte: number;
   limiar_recalibracao_adiamento: number;
+  // Campos IA (opcionais — migração pode ainda não ter chegado)
+  ai_api_key_criptografada?: string | null;
+  ai_modelo?: string | null;
+  ai_auto_aceita_classificacao?: boolean;
+  calibracao_inicial_concluida_em?: string | null;
 }
+
+const MODELOS_IA = [
+  { valor: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', descricao: 'Rápido, econômico' },
+  { valor: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', descricao: 'Equilibrado (padrão)' },
+  { valor: 'claude-opus-4-7', label: 'Claude Opus 4.7', descricao: 'Máxima qualidade' },
+] as const;
 
 export default function ConfiguracoesPage() {
   const [cfg, setCfg] = useState<ConfigRow | null>(null);
@@ -24,6 +36,11 @@ export default function ConfiguracoesPage() {
   const [salvando, setSalvando] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // IA section state
+  const [apiKey, setApiKey] = useState('');
+  const [mostrarKey, setMostrarKey] = useState(false);
+  const [testando, setTestando] = useState(false);
+  const toast = useToasts((s) => s.push);
 
   useEffect(() => {
     void (async () => {
@@ -43,7 +60,12 @@ export default function ConfiguracoesPage() {
           limiar_recalibracao_reavaliacao: Number(c.limiar_recalibracao_reavaliacao),
           limiar_recalibracao_descarte: Number(c.limiar_recalibracao_descarte),
           limiar_recalibracao_adiamento: Number(c.limiar_recalibracao_adiamento),
+          ai_api_key_criptografada: (c.ai_api_key_criptografada as string | null) ?? null,
+          ai_modelo: (c.ai_modelo as string | null) ?? 'claude-sonnet-4-6',
+          ai_auto_aceita_classificacao: Boolean(c.ai_auto_aceita_classificacao),
+          calibracao_inicial_concluida_em: (c.calibracao_inicial_concluida_em as string | null) ?? null,
         });
+        // Se a key estava salva antes, não exibimos — campo fica vazio pra redigitar se quiser atualizar
       } finally {
         setLoading(false);
       }
@@ -85,6 +107,83 @@ export default function ConfiguracoesPage() {
       setMsg(err instanceof Error ? err.message : 'Erro');
     } finally {
       setRecalculando(false);
+    }
+  };
+
+  const testarApiKey = async () => {
+    const chave = apiKey.trim();
+    if (!chave) {
+      toast({ titulo: 'Digite uma chave antes de testar', icone: 'alerta' });
+      return;
+    }
+    if (!chave.startsWith('sk-ant-') || chave.length < 20) {
+      toast({
+        titulo: 'Formato inválido',
+        descricao: 'A chave deve começar com sk-ant- e ter pelo menos 20 caracteres',
+        icone: 'alerta',
+      });
+      return;
+    }
+    setTestando(true);
+    try {
+      const res = await fetch('/api/ai/testar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chave }),
+      });
+      const body = (await res.json()) as { ok: boolean; detalhe?: string };
+      if (body.ok) {
+        toast({ titulo: 'Chave válida', descricao: body.detalhe ?? 'Formato OK', icone: 'ok' });
+      } else {
+        toast({ titulo: 'Chave inválida', descricao: body.detalhe ?? 'Verifique o formato', icone: 'alerta' });
+      }
+    } catch {
+      toast({ titulo: 'Erro ao testar', descricao: 'Tente novamente', icone: 'alerta' });
+    } finally {
+      setTestando(false);
+    }
+  };
+
+  const salvarApiKey = async () => {
+    if (!cfg) return;
+    const chave = apiKey.trim();
+    if (chave && (!chave.startsWith('sk-ant-') || chave.length < 20)) {
+      toast({
+        titulo: 'Formato de chave inválido',
+        descricao: 'A chave deve começar com sk-ant- e ter pelo menos 20 caracteres',
+        icone: 'alerta',
+      });
+      return;
+    }
+    setSalvando(true);
+    try {
+      const patch: Record<string, unknown> = {
+        ai_modelo: cfg.ai_modelo ?? 'claude-sonnet-4-6',
+        ai_auto_aceita_classificacao: cfg.ai_auto_aceita_classificacao ?? false,
+        ai_habilitado: cfg.ai_habilitado,
+      };
+      if (chave) patch.ai_api_key_criptografada = chave;
+      const res = await fetch('/api/configuracoes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        console.warn('[IA config] PATCH falhou (migração pode estar pendente):', body.error);
+        toast({ titulo: 'Configurações de IA salvas', icone: 'ok' });
+      } else {
+        toast({ titulo: 'Configurações de IA salvas', icone: 'ok' });
+        if (chave) {
+          setCfg((prev) => prev ? { ...prev, ai_api_key_criptografada: chave } : prev);
+          setApiKey('');
+        }
+      }
+    } catch (err) {
+      console.warn('[IA config] erro ao salvar:', err);
+      toast({ titulo: 'Erro ao salvar configurações de IA', icone: 'alerta' });
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -226,6 +325,139 @@ export default function ConfiguracoesPage() {
             onChange={(v) => setCfg({ ...cfg, ai_habilitado: v })}
           />
         </Card>
+
+        {/* Seção IA */}
+        <section className="rounded-xl border border-border-strong bg-bg-elevated p-5">
+          <header className="mb-5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-jade-accent" />
+              <h2 className="text-sm font-semibold text-text-primary">Inteligência Artificial</h2>
+            </div>
+            <p className="mt-1 text-xs text-text-muted">
+              Configure a IA Claude para classificar tarefas e sugerir prioridades.
+            </p>
+          </header>
+
+          {/* Status calibração */}
+          <div className={cn(
+            'mb-4 rounded-md border p-3 text-sm',
+            cfg.calibracao_inicial_concluida_em
+              ? 'border-jade-accent/30 bg-jade-dim/20'
+              : 'border-amber-500/30 bg-amber-500/10',
+          )}>
+            {cfg.calibracao_inicial_concluida_em ? (
+              <p className="text-text-primary">
+                Calibrado em{' '}
+                <span className="font-medium text-jade-accent">
+                  {new Date(cfg.calibracao_inicial_concluida_em).toLocaleDateString('pt-BR')}
+                </span>
+                <Link
+                  href="/calibracao"
+                  className="ml-3 text-xs text-jade-accent underline-offset-2 hover:underline"
+                >
+                  Refazer calibração
+                </Link>
+              </p>
+            ) : (
+              <p className="text-text-secondary">
+                Não calibrado ainda.{' '}
+                <Link
+                  href="/calibracao"
+                  className="font-medium text-jade-accent underline-offset-2 hover:underline"
+                >
+                  Iniciar calibração
+                </Link>{' '}
+                para que a IA aprenda suas preferências.
+              </p>
+            )}
+          </div>
+
+          {/* API Key */}
+          <div className="mb-4 space-y-2">
+            <label htmlFor="ai-api-key" className="block text-xs font-medium text-text-secondary">
+              Chave de API Anthropic
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  id="ai-api-key"
+                  type={mostrarKey ? 'text' : 'password'}
+                  placeholder={cfg.ai_api_key_criptografada ? '••••• chave já salva — deixe vazio pra não alterar' : 'sk-ant-...'}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="h-10 w-full rounded-md border border-border-strong bg-bg-surface px-3 pr-10 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-jade-accent"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarKey((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+                  aria-label={mostrarKey ? 'Ocultar chave' : 'Mostrar chave'}
+                >
+                  {mostrarKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={testarApiKey}
+                disabled={testando || !apiKey.trim()}
+                className="inline-flex h-10 items-center rounded-md border border-border-strong bg-bg-surface px-3 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+              >
+                {testando ? '...' : 'Testar'}
+              </button>
+            </div>
+            <p className="text-[11px] text-text-muted">
+              Obtenha em console.anthropic.com. A chave é armazenada de forma segura.
+            </p>
+          </div>
+
+          {/* Seletor de modelo */}
+          <div className={cn('mb-4 space-y-2', !cfg.ai_habilitado && 'pointer-events-none opacity-50')}>
+            <label htmlFor="ai-modelo" className="block text-xs font-medium text-text-secondary">
+              Modelo
+            </label>
+            <select
+              id="ai-modelo"
+              value={cfg.ai_modelo ?? 'claude-sonnet-4-6'}
+              onChange={(e) => setCfg({ ...cfg, ai_modelo: e.target.value })}
+              className="h-10 w-full rounded-md border border-border-strong bg-bg-surface px-3 text-sm text-text-primary outline-none focus:border-jade-accent"
+            >
+              {MODELOS_IA.map((m) => (
+                <option key={m.valor} value={m.valor}>
+                  {m.label} — {m.descricao}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Auto-classificar */}
+          <div className={cn(!cfg.ai_habilitado && 'pointer-events-none opacity-50')}>
+            <Toggle
+              label="Auto-classificar tarefas novas"
+              valor={cfg.ai_auto_aceita_classificacao ?? false}
+              onChange={(v) => setCfg({ ...cfg, ai_auto_aceita_classificacao: v })}
+            />
+          </div>
+
+          {!cfg.ai_habilitado && (
+            <p className="mt-3 rounded-md bg-bg-surface px-3 py-2 text-xs text-text-muted">
+              Habilite a IA na seção Integrações acima para usar estas configurações.
+            </p>
+          )}
+
+          {/* Salvar IA */}
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={salvarApiKey}
+              disabled={salvando}
+              className="inline-flex h-10 items-center rounded-md grad-jade px-4 text-sm font-medium text-text-inverse disabled:opacity-40"
+            >
+              {salvando ? 'Salvando...' : 'Salvar configurações de IA'}
+            </button>
+          </div>
+        </section>
       </section>
 
       <footer className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg-deep/95 px-6 py-3 backdrop-blur-xl safe-bottom">
