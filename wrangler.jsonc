@@ -1,0 +1,33 @@
+{
+  // Cloudflare Worker config para TinDo
+  "name": "tindo-api",
+  "main": ".open-next/worker.js",
+  "site": {
+    "bucket": ".open-next/static"
+  },
+  "compatibility_date": "2024-12-18",
+  "compatibility_flags": [
+    "nodejs_compat_v2"
+  ],
+  "env": {
+    "production": {
+      "routes": [
+        {
+          "pattern": "tindo.dev/*",
+          "zone_name": "tindo.dev"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "production"
+      }
+    },
+    "staging": {
+      "vars": {
+        "ENVIRONMENT": "staging"
+      }
+    }
+  },
+  "build": {
+    "command": "bun run build && bunx opennextjs-cloudflare build"
+  }
+}
