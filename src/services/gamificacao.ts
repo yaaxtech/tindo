@@ -27,10 +27,7 @@ export async function registrarConclusao(tarefa: Tarefa): Promise<Gamificacao | 
   const ganho = xpDeConclusao(tarefa);
   const hoje = new Date().toISOString().slice(0, 10);
 
-  const { data: atual, error: errSel } = await supabase
-    .from('gamificacao')
-    .select('*')
-    .single();
+  const { data: atual, error: errSel } = await supabase.from('gamificacao').select('*').single();
   if (errSel) return null;
   const tudo = atual as unknown as Gamificacao | null;
   if (!tudo) return null;
@@ -61,7 +58,9 @@ export async function registrarConclusao(tarefa: Tarefa): Promise<Gamificacao | 
       tarefas_concluidas_total:
         tarefa.tipo === 'tarefa' ? tudo.tarefasConcluidasTotal + 1 : tudo.tarefasConcluidasTotal,
       lembretes_concluidos_total:
-        tarefa.tipo === 'lembrete' ? tudo.lembretesConcluidosTotal + 1 : tudo.lembretesConcluidosTotal,
+        tarefa.tipo === 'lembrete'
+          ? tudo.lembretesConcluidosTotal + 1
+          : tudo.lembretesConcluidosTotal,
     })
     .eq('usuario_id', tudo.usuarioId)
     .select()

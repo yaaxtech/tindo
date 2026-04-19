@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
+import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import type { Configuracoes, Projeto, Tag, Tarefa } from '@/types/domain';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +20,7 @@ interface PatchPayload {
   tag_ids?: string[];
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const admin = getAdminClient();
@@ -76,7 +73,9 @@ async function recalcularNotaUnica(
       .maybeSingle(),
     admin
       .from('tarefas')
-      .select('id, tipo, prioridade, data_vencimento, prazo_conclusao, importancia, urgencia, facilidade, projeto_id')
+      .select(
+        'id, tipo, prioridade, data_vencimento, prazo_conclusao, importancia, urgencia, facilidade, projeto_id',
+      )
       .eq('id', tarefaId)
       .maybeSingle(),
   ]);
@@ -126,7 +125,10 @@ async function recalcularNotaUnica(
     const { data: tagRows } = await admin
       .from('tags')
       .select('id, nome, cor, tipo_peso, valor_peso, ativo')
-      .in('id', tagLinks.map((t: { tag_id: string }) => t.tag_id));
+      .in(
+        'id',
+        tagLinks.map((t: { tag_id: string }) => t.tag_id),
+      );
     tags = (tagRows ?? []).map((r: Record<string, unknown>) => ({
       id: r.id as string,
       nome: r.nome as string,

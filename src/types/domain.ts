@@ -1,11 +1,6 @@
 export type TipoTarefa = 'tarefa' | 'lembrete';
 export type StatusTarefa = 'pendente' | 'concluida' | 'adiada' | 'excluida';
-export type TipoPesoTag =
-  | 'multiplicador'
-  | 'soma'
-  | 'subtracao'
-  | 'percentual'
-  | 'peso_custom';
+export type TipoPesoTag = 'multiplicador' | 'soma' | 'subtracao' | 'percentual' | 'peso_custom';
 
 export interface Projeto {
   id: string;

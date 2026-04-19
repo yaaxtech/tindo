@@ -11,8 +11,8 @@ export default function HomePage() {
           Tin<span className="text-jade-accent">Do</span>
         </h1>
         <p className="mb-10 text-balance text-text-secondary">
-          Produtividade uma tarefa por vez. Priorização por IA, recompensa neural
-          na conclusão, gamificação que sustenta.
+          Produtividade uma tarefa por vez. Priorização por IA, recompensa neural na conclusão,
+          gamificação que sustenta.
         </p>
 
         <div className="flex flex-col gap-3">
@@ -30,9 +30,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <p className="mt-10 text-xs text-text-muted">
-          v0.0.1 · Fase 0 · Foco, prazer, calibração.
-        </p>
+        <p className="mt-10 text-xs text-text-muted">v0.0.1 · Fase 0 · Foco, prazer, calibração.</p>
       </div>
     </main>
   );

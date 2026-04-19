@@ -1,9 +1,9 @@
 'use client';
 
+import confetti from 'canvas-confetti';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import confetti from 'canvas-confetti';
 
 interface CompletionCelebrationProps {
   visivel: boolean;

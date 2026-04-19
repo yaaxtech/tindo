@@ -1,17 +1,15 @@
-import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 type Acao =
   | { tipo: 'concluir' }
-  | { tipo: 'adiar'; ate: string; motivoAuto?: string }
+  | { tipo: 'adiar'; ate: string; motivoAuto?: string; automatico?: boolean }
+  | { tipo: 'desfazer_adiamento' }
   | { tipo: 'excluir' };
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = (await request.json()) as Acao;
@@ -37,11 +35,19 @@ export async function POST(
         return NextResponse.json({ ok: true });
       }
       case 'adiar': {
+        const { data: prev } = await admin
+          .from('tarefas')
+          .select('adiamento_count')
+          .eq('id', id)
+          .eq('usuario_id', usuarioId)
+          .maybeSingle();
+        const novoCount = (prev?.adiamento_count ?? 0) + 1;
         const { error } = await admin
           .from('tarefas')
           .update({
             adiada_ate: body.ate,
             adiamento_motivo_auto: body.motivoAuto ?? null,
+            adiamento_count: novoCount,
           })
           .eq('id', id)
           .eq('usuario_id', usuarioId);
@@ -49,8 +55,34 @@ export async function POST(
         await admin.from('historico_acoes').insert({
           usuario_id: usuarioId,
           tarefa_id: id,
-          acao: body.motivoAuto ? 'adiada_auto' : 'adiada_manual',
-          dados: { ate: body.ate },
+          acao: body.automatico ? 'adiada_auto' : 'adiada_manual',
+          dados: { ateISO: body.ate, motivo: body.motivoAuto ?? null },
+        });
+        return NextResponse.json({ ok: true });
+      }
+      case 'desfazer_adiamento': {
+        const { data: prev } = await admin
+          .from('tarefas')
+          .select('adiamento_count')
+          .eq('id', id)
+          .eq('usuario_id', usuarioId)
+          .maybeSingle();
+        const novoCount = Math.max(0, (prev?.adiamento_count ?? 1) - 1);
+        const { error } = await admin
+          .from('tarefas')
+          .update({
+            adiada_ate: null,
+            adiamento_motivo_auto: null,
+            adiamento_count: novoCount,
+          })
+          .eq('id', id)
+          .eq('usuario_id', usuarioId);
+        if (error) throw error;
+        await admin.from('historico_acoes').insert({
+          usuario_id: usuarioId,
+          tarefa_id: id,
+          acao: 'voltada',
+          dados: { origem: 'desfazer_adiamento' },
         });
         return NextResponse.json({ ok: true });
       }

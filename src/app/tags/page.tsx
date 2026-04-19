@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 type TipoPeso = 'multiplicador' | 'soma' | 'subtracao' | 'percentual' | 'peso_custom';
 
@@ -131,7 +131,8 @@ export default function TagsPage() {
       <section className="mx-auto mt-6 w-full max-w-3xl px-6">
         <div className="mb-4 rounded-md border border-jade-accent/40 bg-jade-dim/20 p-4 text-sm text-text-primary">
           <p>
-            Multiplicadores empilham (×). Somas e subtrações somam. Percentuais somam entre si (ex: +15% e +10% = +25%).
+            Multiplicadores empilham (×). Somas e subtrações somam. Percentuais somam entre si (ex:
+            +15% e +10% = +25%).
           </p>
         </div>
 
@@ -151,9 +152,7 @@ export default function TagsPage() {
               />
               <div className="min-w-[160px] flex-1">
                 <p className="text-sm font-medium">{t.nome}</p>
-                {t.todoist_id && (
-                  <p className="text-[10px] text-text-muted">Sync Todoist</p>
-                )}
+                {t.todoist_id && <p className="text-[10px] text-text-muted">Sync Todoist</p>}
               </div>
               <select
                 value={t.tipo_peso}

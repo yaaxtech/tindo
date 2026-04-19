@@ -1,5 +1,5 @@
-import type { Configuracoes, PesosScoring, Projeto, Tag, Tarefa } from '@/types/domain';
 import { clamp } from '@/lib/utils';
+import type { Configuracoes, PesosScoring, Projeto, Tag, Tarefa } from '@/types/domain';
 
 export interface ScoringInput {
   importancia?: number | null;
@@ -53,10 +53,14 @@ export function calcularUrgencia(
 
 export function prioridadeParaImportancia(p: Tarefa['prioridade']): number {
   switch (p) {
-    case 1: return 90;
-    case 2: return 65;
-    case 3: return 40;
-    case 4: return 20;
+    case 1:
+      return 90;
+    case 2:
+      return 65;
+    case 3:
+      return 40;
+    case 4:
+      return 20;
   }
 }
 

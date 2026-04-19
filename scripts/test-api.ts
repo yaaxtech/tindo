@@ -3,13 +3,7 @@
  * Testa os endpoints da API local.
  */
 export {};
-const paths = [
-  '/api/fila',
-  '/api/projetos',
-  '/api/tags',
-  '/api/configuracoes',
-  '/api/gamificacao',
-];
+const paths = ['/api/fila', '/api/projetos', '/api/tags', '/api/configuracoes', '/api/gamificacao'];
 
 for (const p of paths) {
   try {

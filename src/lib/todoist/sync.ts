@@ -11,11 +11,11 @@
  *   mas preserva adiada_ate e status das existentes.
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { TodoistClient, todoistColorHex, type TodoistTask } from './client';
-import { deriveTipo, prioridadeTodoistParaTinDo } from './mapper';
-import { calcularNota, CONFIG_PADRAO_PESOS } from '@/lib/scoring/engine';
+import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
 import type { Configuracoes, Projeto, Tag } from '@/types/domain';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { TodoistClient, todoistColorHex } from './client';
+import { deriveTipo, prioridadeTodoistParaTinDo } from './mapper';
 
 export interface SyncResultado {
   projetos: number;

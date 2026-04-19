@@ -1,10 +1,10 @@
 'use client';
 
+import { corUrgencia } from '@/lib/urgency-color';
+import { cn, formatRelativeDate } from '@/lib/utils';
+import type { Tarefa } from '@/types/domain';
 import { motion } from 'framer-motion';
 import { Check, Link2, List, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { Tarefa } from '@/types/domain';
-import { cn, formatRelativeDate } from '@/lib/utils';
-import { corUrgencia } from '@/lib/urgency-color';
 
 interface TaskCardProps {
   tarefa: Tarefa;
@@ -48,9 +48,10 @@ export function TaskCard({
         className="pointer-events-none absolute inset-0 rounded-xl"
         aria-hidden
         style={{
-          background: urg.intensity > 0
-            ? `radial-gradient(ellipse at top, hsla(${urg.hue}, 80%, 50%, ${urg.intensity * 0.12}) 0%, transparent 60%)`
-            : 'transparent',
+          background:
+            urg.intensity > 0
+              ? `radial-gradient(ellipse at top, hsla(${urg.hue}, 80%, 50%, ${urg.intensity * 0.12}) 0%, transparent 60%)`
+              : 'transparent',
         }}
       />
 
@@ -177,11 +178,10 @@ function Chip({ label, valor, corValor, corFundo, corBorda }: ChipProps) {
         background: corFundo ?? 'var(--bg-surface)',
       }}
     >
-      <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">{label}</span>
-      <span
-        className="mt-1 text-lg font-bold"
-        style={{ color: corValor ?? 'var(--text-primary)' }}
-      >
+      <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+        {label}
+      </span>
+      <span className="mt-1 text-lg font-bold" style={{ color: corValor ?? 'var(--text-primary)' }}>
         {valor}
       </span>
     </div>

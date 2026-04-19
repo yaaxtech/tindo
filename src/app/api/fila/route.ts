@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import type { Tarefa } from '@/types/domain';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -35,7 +35,7 @@ export async function GET() {
       .eq('usuario_id', usuarioId);
     if (errProj) throw errProj;
 
-    const projetosMap = new Map<string, typeof projetosRows[number]>();
+    const projetosMap = new Map<string, (typeof projetosRows)[number]>();
     for (const p of projetosRows ?? []) projetosMap.set(p.id, p);
 
     // Tags do usuário
@@ -44,7 +44,7 @@ export async function GET() {
       .select('id, todoist_id, nome, cor, tipo_peso, valor_peso, ativo')
       .eq('usuario_id', usuarioId);
     if (errTags) throw errTags;
-    const tagsMap = new Map<string, typeof tagsRows[number]>();
+    const tagsMap = new Map<string, (typeof tagsRows)[number]>();
     for (const t of tagsRows ?? []) tagsMap.set(t.id, t);
 
     // tarefa_tags

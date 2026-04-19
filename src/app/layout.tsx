@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { Toaster } from '@/components/Toaster';
 
 export const metadata: Metadata = {
   title: 'TinDo — foco por swipe',
@@ -31,7 +32,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className="min-h-dvh bg-bg-deep text-text-primary no-tap">{children}</body>
+      <body className="min-h-dvh bg-bg-deep text-text-primary no-tap">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

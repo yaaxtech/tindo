@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,10 +57,7 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const { error } = await admin
-      .from('configuracoes')
-      .update(body)
-      .eq('usuario_id', usuarioId);
+    const { error } = await admin.from('configuracoes').update(body).eq('usuario_id', usuarioId);
     if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (err) {

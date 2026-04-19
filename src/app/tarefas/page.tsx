@@ -1,14 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useCardStackStore } from '@/stores/cardStack';
 import { BotaoSync } from '@/components/BotaoSync';
 import { mockTarefas } from '@/lib/mock/tarefas';
-import type { Tarefa } from '@/types/domain';
 import { corUrgencia } from '@/lib/urgency-color';
 import { cn, formatRelativeDate } from '@/lib/utils';
+import { useCardStackStore } from '@/stores/cardStack';
+import type { Tarefa } from '@/types/domain';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 
 type OrdemLista =
   | 'nota_desc'
@@ -96,7 +96,8 @@ export default function TarefasPage() {
           <div className="flex-1">
             <h1 className="text-lg font-semibold">Todas as tarefas</h1>
             <p className="text-xs text-text-muted">
-              {totais.total} pendentes · {totais.tarefas} tarefas · {totais.lembretes} lembretes · média nota {totais.mediaNota}
+              {totais.total} pendentes · {totais.tarefas} tarefas · {totais.lembretes} lembretes ·
+              média nota {totais.mediaNota}
             </p>
           </div>
           <nav className="flex items-center gap-2 text-xs">
@@ -211,7 +212,9 @@ function TarefaRow({ tarefa }: { tarefa: Tarefa }) {
               </span>
             )}
             {tarefa.tipo === 'lembrete' && (
-              <span className="rounded bg-jade-dim/40 px-1.5 py-0.5 text-jade-accent">lembrete</span>
+              <span className="rounded bg-jade-dim/40 px-1.5 py-0.5 text-jade-accent">
+                lembrete
+              </span>
             )}
             {tarefa.tags.slice(0, 4).map((tag) => (
               <span

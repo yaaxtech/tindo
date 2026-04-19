@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
+import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import type { Configuracoes, Projeto, Tag, Tarefa } from '@/types/domain';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,29 +14,32 @@ export async function POST() {
     const admin = getAdminClient();
     const usuarioId = await getUsuarioIdMVP();
 
-    const [{ data: configRow }, { data: projRows }, { data: tagRows }, { data: tarRows }] = await Promise.all([
-      admin
-        .from('configuracoes')
-        .select('peso_urgencia, peso_importancia, peso_facilidade')
-        .eq('usuario_id', usuarioId)
-        .maybeSingle(),
-      admin
-        .from('projetos')
-        .select('id, nome, cor, ordem_prioridade, multiplicador, ativo')
-        .eq('usuario_id', usuarioId)
-        .is('deleted_at', null),
-      admin
-        .from('tags')
-        .select('id, nome, cor, tipo_peso, valor_peso, ativo')
-        .eq('usuario_id', usuarioId)
-        .is('deleted_at', null),
-      admin
-        .from('tarefas')
-        .select('id, tipo, prioridade, data_vencimento, prazo_conclusao, importancia, urgencia, facilidade, projeto_id')
-        .eq('usuario_id', usuarioId)
-        .eq('status', 'pendente')
-        .is('deleted_at', null),
-    ]);
+    const [{ data: configRow }, { data: projRows }, { data: tagRows }, { data: tarRows }] =
+      await Promise.all([
+        admin
+          .from('configuracoes')
+          .select('peso_urgencia, peso_importancia, peso_facilidade')
+          .eq('usuario_id', usuarioId)
+          .maybeSingle(),
+        admin
+          .from('projetos')
+          .select('id, nome, cor, ordem_prioridade, multiplicador, ativo')
+          .eq('usuario_id', usuarioId)
+          .is('deleted_at', null),
+        admin
+          .from('tags')
+          .select('id, nome, cor, tipo_peso, valor_peso, ativo')
+          .eq('usuario_id', usuarioId)
+          .is('deleted_at', null),
+        admin
+          .from('tarefas')
+          .select(
+            'id, tipo, prioridade, data_vencimento, prazo_conclusao, importancia, urgencia, facilidade, projeto_id',
+          )
+          .eq('usuario_id', usuarioId)
+          .eq('status', 'pendente')
+          .is('deleted_at', null),
+      ]);
 
     const config: Configuracoes = {
       usuarioId,

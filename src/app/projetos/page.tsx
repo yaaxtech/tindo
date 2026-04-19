@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '@/lib/utils';
 import {
   DndContext,
   type DragEndEvent,
@@ -17,10 +18,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import Link from 'next/link';
 import { ArrowLeft, GripVertical, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { cn } from '@/lib/utils';
 
 interface ProjetoRow {
   id: string;
@@ -46,9 +46,7 @@ export default function ProjetosPage() {
       try {
         const res = await fetch('/api/projetos');
         const body = (await res.json()) as { projetos: ProjetoRow[] };
-        setProjetos(
-          body.projetos.map((p) => ({ ...p, multiplicador: Number(p.multiplicador) })),
-        );
+        setProjetos(body.projetos.map((p) => ({ ...p, multiplicador: Number(p.multiplicador) })));
       } finally {
         setLoading(false);
       }
@@ -147,8 +145,9 @@ export default function ProjetosPage() {
       <section className="mx-auto mt-6 w-full max-w-3xl px-6">
         <div className="mb-4 rounded-md border border-jade-accent/40 bg-jade-dim/20 p-4 text-sm">
           <p className="text-text-primary">
-            <strong className="text-jade-accent">Lembre-se</strong>: a prioridade aqui é pra projetos que MAIS
-            te despreocupariam. O multiplicador escala a nota de todas as tarefas desse projeto.
+            <strong className="text-jade-accent">Lembre-se</strong>: a prioridade aqui é pra
+            projetos que MAIS te despreocupariam. O multiplicador escala a nota de todas as tarefas
+            desse projeto.
           </p>
         </div>
 
@@ -246,7 +245,10 @@ function ProjetoItem({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-[11px] uppercase tracking-wider text-text-muted" htmlFor={`mult-${projeto.id}`}>
+        <label
+          className="text-[11px] uppercase tracking-wider text-text-muted"
+          htmlFor={`mult-${projeto.id}`}
+        >
           ×
         </label>
         <input

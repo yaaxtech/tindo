@@ -19,10 +19,10 @@
  */
 
 import postgres from 'postgres';
-import { TodoistClient, todoistColorHex, type TodoistTask } from '../src/lib/todoist/client';
+import { CONFIG_PADRAO_PESOS, calcularNota } from '../src/lib/scoring/engine';
+import { TodoistClient, type TodoistTask, todoistColorHex } from '../src/lib/todoist/client';
 import { deriveTipo, prioridadeTodoistParaTinDo } from '../src/lib/todoist/mapper';
-import { calcularNota, CONFIG_PADRAO_PESOS } from '../src/lib/scoring/engine';
-import type { Configuracoes, Projeto, Tag, Tarefa } from '../src/types/domain';
+import type { Configuracoes, Projeto, Tag } from '../src/types/domain';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD;
@@ -160,7 +160,16 @@ async function importarTarefas(
   console.log(`\n📥 ${tasks.length} tarefas trazidas do Todoist`);
 
   // Preload projetos/tags como objetos em memória (pra scoring)
-  const projetosRows = await sql<{ id: string; todoist_id: string; nome: string; cor: string; ordem_prioridade: number; multiplicador: string }[]>`
+  const projetosRows = await sql<
+    {
+      id: string;
+      todoist_id: string;
+      nome: string;
+      cor: string;
+      ordem_prioridade: number;
+      multiplicador: string;
+    }[]
+  >`
     SELECT id::text, todoist_id, nome, cor, ordem_prioridade, multiplicador::text FROM public.projetos WHERE usuario_id = ${usuarioId}::uuid
   `;
   const projetos = new Map<string, Projeto>();
@@ -176,7 +185,9 @@ async function importarTarefas(
       todoistId: r.todoist_id,
     });
   }
-  const tagsRows = await sql<{ id: string; nome: string; cor: string; tipo_peso: string; valor_peso: string }[]>`
+  const tagsRows = await sql<
+    { id: string; nome: string; cor: string; tipo_peso: string; valor_peso: string }[]
+  >`
     SELECT id::text, nome, cor, tipo_peso, valor_peso::text FROM public.tags WHERE usuario_id = ${usuarioId}::uuid
   `;
   const tagsObj = new Map<string, Tag>();
@@ -204,10 +215,17 @@ async function importarTarefas(
   }
 
   for (const t of tasks) {
-    if (t.checked || t.is_deleted) { concluidasSkip++; continue; }
+    if (t.checked || t.is_deleted) {
+      concluidasSkip++;
+      continue;
+    }
     const projetoNome = nomePorProjTodoistId.get(t.project_id) ?? null;
     const tipo = deriveTipo({ labels: t.labels, projetoNome });
-    if (!tipo) { semLabelFiltro++; ignoradas++; continue; }
+    if (!tipo) {
+      semLabelFiltro++;
+      ignoradas++;
+      continue;
+    }
 
     const projetoId = mapaProj.get(t.project_id) ?? null;
     const nota = notaDe(t, projetos, tagsObj, tipo);

@@ -1,19 +1,44 @@
 'use client';
 
+import { AdiamentoNivel2 } from '@/components/card/AdiamentoNivel2';
+import { type SwipeDir, SwipeHandler } from '@/components/card/SwipeHandler';
+import { type SalvarPayload, TarefaModal } from '@/components/card/TarefaModal';
+import { TaskCard } from '@/components/card/TaskCard';
+import { CompletionCelebration } from '@/components/celebration/CompletionCelebration';
+import { useKeyboardNav } from '@/hooks/useKeyboardNav';
+import { type SugestaoAdiamento, rotuloMotivoManual } from '@/lib/adiamento/heuristica';
+import { playCompletion, playLevelUp, playSwipe } from '@/lib/audio/tones';
+import { mockTarefas } from '@/lib/mock/tarefas';
+import { useCardStackStore } from '@/stores/cardStack';
+import { useGamificacaoStore } from '@/stores/gamificacao';
+import { useToasts } from '@/stores/toasts';
+import type { Tarefa } from '@/types/domain';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { TaskCard } from '@/components/card/TaskCard';
-import { SwipeHandler, type SwipeDir } from '@/components/card/SwipeHandler';
-import { AdiamentoNivel2 } from '@/components/card/AdiamentoNivel2';
-import { CompletionCelebration } from '@/components/celebration/CompletionCelebration';
-import { TarefaModal, type SalvarPayload } from '@/components/card/TarefaModal';
-import { useKeyboardNav } from '@/hooks/useKeyboardNav';
-import { useCardStackStore } from '@/stores/cardStack';
-import { useGamificacaoStore } from '@/stores/gamificacao';
-import { mockTarefas } from '@/lib/mock/tarefas';
-import { playCompletion, playLevelUp, playSwipe } from '@/lib/audio/tones';
-import type { Tarefa } from '@/types/domain';
+
+function formatarQuando(ate: Date): string {
+  const agora = new Date();
+  const sameDay =
+    ate.getFullYear() === agora.getFullYear() &&
+    ate.getMonth() === agora.getMonth() &&
+    ate.getDate() === agora.getDate();
+  const amanha = new Date(agora);
+  amanha.setDate(amanha.getDate() + 1);
+  const isAmanha =
+    ate.getFullYear() === amanha.getFullYear() &&
+    ate.getMonth() === amanha.getMonth() &&
+    ate.getDate() === amanha.getDate();
+  const hora = ate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (sameDay) return `hoje às ${hora}`;
+  if (isAmanha) return `amanhã às ${hora}`;
+  return ate.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function CardsPage() {
   const router = useRouter();
@@ -27,9 +52,11 @@ export default function CardsPage() {
     abrirNivel2Adiar,
     fecharNivel2Adiar,
     adiarAte,
+    desfazerUltimoAdiamento,
     nivel2Adiar,
     removerAtual,
   } = useCardStackStore();
+  const pushToast = useToasts((s) => s.push);
   const {
     streakAtual,
     nivel,
@@ -42,9 +69,8 @@ export default function CardsPage() {
   const [erroCarga, setErroCarga] = useState<string | null>(null);
   const [ultimoXp, setUltimoXp] = useState(10);
   const [modalAberto, setModalAberto] = useState<'editar' | 'criar' | null>(null);
-  const [projetosLite, setProjetosLite] = useState<{ id: string; nome: string; cor: string }[]>(
-    [],
-  );
+  const [sugestaoNivel2, setSugestaoNivel2] = useState<SugestaoAdiamento | null>(null);
+  const [projetosLite, setProjetosLite] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const [tagsLite, setTagsLite] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const tarefaAtual = atual();
 
@@ -52,10 +78,7 @@ export default function CardsPage() {
     void hidratarGami();
     void (async () => {
       try {
-        const [resP, resT] = await Promise.all([
-          fetch('/api/projetos'),
-          fetch('/api/tags'),
-        ]);
+        const [resP, resT] = await Promise.all([fetch('/api/projetos'), fetch('/api/tags')]);
         const bodyP = await resP.json();
         const bodyT = await resT.json();
         setProjetosLite(
@@ -109,7 +132,11 @@ export default function CardsPage() {
 
   async function sincronizarAcao(
     tarefaId: string,
-    payload: { tipo: 'concluir' } | { tipo: 'adiar'; ate: string; motivoAuto?: string } | { tipo: 'excluir' },
+    payload:
+      | { tipo: 'concluir' }
+      | { tipo: 'adiar'; ate: string; motivoAuto?: string; automatico?: boolean }
+      | { tipo: 'desfazer_adiamento' }
+      | { tipo: 'excluir' },
   ): Promise<void> {
     try {
       await fetch(`/api/tarefas/${tarefaId}/acao`, {
@@ -122,24 +149,74 @@ export default function CardsPage() {
     }
   }
 
+  async function buscarSugestao(tarefaId: string): Promise<SugestaoAdiamento | null> {
+    try {
+      const res = await fetch(`/api/adiamento/sugerir?tarefaId=${encodeURIComponent(tarefaId)}`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as { sugestao: SugestaoAdiamento };
+      return body.sugestao ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  function dispararToastAdiamento(tarefa: Tarefa, ate: Date, motivo: string): void {
+    const labelQuando = formatarQuando(ate);
+    pushToast({
+      titulo: `Adiada para ${labelQuando}`,
+      descricao: motivo,
+      icone: 'adiar',
+      duracaoMs: 5000,
+      acao: {
+        label: 'Desfazer',
+        onClick: async () => {
+          desfazerUltimoAdiamento();
+          await sincronizarAcao(tarefa.id, { tipo: 'desfazer_adiamento' });
+        },
+      },
+    });
+  }
+
+  const abrirNivel2ComSugestao = (): void => {
+    const alvo = tarefaAtual;
+    setSugestaoNivel2(null);
+    abrirNivel2Adiar();
+    if (!alvo) return;
+    void (async () => {
+      const s = await buscarSugestao(alvo.id);
+      setSugestaoNivel2(s);
+    })();
+  };
+
   const handleSwipe = (dir: SwipeDir): void => {
     void playSwipe(dir);
-    // Convenção: esquerda = próxima, direita = anterior.
     if (dir === 'left') proxima();
     else if (dir === 'right') anterior();
-    else if (dir === 'up') abrirNivel2Adiar();
+    else if (dir === 'up') abrirNivel2ComSugestao();
     else if (dir === 'down') {
-      const adiarAutoAte = new Date();
-      adiarAutoAte.setHours(adiarAutoAte.getHours() + 3);
-      const atualTarefa = tarefaAtual;
-      adiarAte(adiarAutoAte);
-      if (atualTarefa) {
-        void sincronizarAcao(atualTarefa.id, {
+      const alvo = tarefaAtual;
+      if (!alvo) return;
+      void (async () => {
+        const sugestao = await buscarSugestao(alvo.id);
+        const ate = sugestao
+          ? new Date(sugestao.ateISO)
+          : (() => {
+              const d = new Date();
+              d.setHours(d.getHours() + 3);
+              return d;
+            })();
+        const motivo = sugestao?.motivo ?? '+3h (fallback)';
+        adiarAte(ate);
+        void sincronizarAcao(alvo.id, {
           tipo: 'adiar',
-          ate: adiarAutoAte.toISOString(),
-          motivoAuto: '+3h',
+          ate: ate.toISOString(),
+          motivoAuto: motivo,
+          automatico: true,
         });
-      }
+        dispararToastAdiamento(alvo, ate, motivo);
+      })();
     }
   };
 
@@ -160,11 +237,20 @@ export default function CardsPage() {
     }, 600);
   };
 
-  const handleAdiarManual = (ate: Date): void => {
+  const handleAdiarManual = (ate: Date, motivoCustom?: string): void => {
     const atualTarefa = tarefaAtual;
+    const motivo = motivoCustom ?? rotuloMotivoManual(ate);
+    const automatico = motivo.startsWith('sugestão IA');
     adiarAte(ate);
+    setSugestaoNivel2(null);
     if (atualTarefa) {
-      void sincronizarAcao(atualTarefa.id, { tipo: 'adiar', ate: ate.toISOString() });
+      void sincronizarAcao(atualTarefa.id, {
+        tipo: 'adiar',
+        ate: ate.toISOString(),
+        motivoAuto: motivo,
+        automatico,
+      });
+      dispararToastAdiamento(atualTarefa, ate, motivo);
     }
   };
 
@@ -178,7 +264,7 @@ export default function CardsPage() {
   useKeyboardNav({
     onLeft: () => !nivel2Adiar && handleSwipe('left'),
     onRight: () => !nivel2Adiar && handleSwipe('right'),
-    onUp: () => !nivel2Adiar && handleSwipe('up'),
+    onUp: () => !nivel2Adiar && abrirNivel2ComSugestao(),
     onDown: () => !nivel2Adiar && handleSwipe('down'),
     onSpace: () => !nivel2Adiar && handleConcluir(),
     onEnter: () => !nivel2Adiar && handleConcluir(),
@@ -228,8 +314,12 @@ export default function CardsPage() {
             ) : nivel2Adiar ? (
               <AdiamentoNivel2
                 key="nivel2"
+                sugestao={sugestaoNivel2}
                 onEscolher={handleAdiarManual}
-                onCancelar={() => fecharNivel2Adiar()}
+                onCancelar={() => {
+                  setSugestaoNivel2(null);
+                  fecharNivel2Adiar();
+                }}
               />
             ) : tarefaAtual ? (
               <motion.div

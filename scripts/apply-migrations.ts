@@ -10,9 +10,9 @@
  *   bun scripts/apply-migrations.ts
  */
 
-import postgres from 'postgres';
-import { readdir, readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import postgres from 'postgres';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD;

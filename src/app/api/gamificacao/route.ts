@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { calcularNivelAtual, xpParaNivel } from '@/services/gamificacao';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 

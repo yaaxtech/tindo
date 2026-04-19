@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { Configuracoes, Projeto, Tag } from '@/types/domain';
+import { describe, expect, it } from 'vitest';
 import { CONFIG_PADRAO_PESOS, calcularNota, calcularUrgencia } from './engine';
 
 const mkConfig = (): Configuracoes => ({
@@ -93,10 +93,7 @@ describe('calcularNota', () => {
   });
 
   it('tags multiplicadoras empilham', () => {
-    const sem = calcularNota(
-      { tipo: 'tarefa', prioridade: 3, tags: [] },
-      mkConfig(),
-    );
+    const sem = calcularNota({ tipo: 'tarefa', prioridade: 3, tags: [] }, mkConfig());
     const com = calcularNota(
       {
         tipo: 'tarefa',

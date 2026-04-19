@@ -1,6 +1,6 @@
-import { type NextRequest, NextResponse } from 'next/server';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { calcularNivelAtual } from '@/services/gamificacao';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
     const usuarioId = await getUsuarioIdMVP();
     const body = (await request.json()) as Payload;
 
-    const xpGanho =
-      body.tipo === 'lembrete' ? 5 : 10 + Math.round(body.nota / 10);
+    const xpGanho = body.tipo === 'lembrete' ? 5 : 10 + Math.round(body.nota / 10);
 
     const hojeStr = new Date().toISOString().slice(0, 10);
 

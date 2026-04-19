@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowLeft, Flame, Trophy, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useGamificacaoStore } from '@/stores/gamificacao';
 import { cn } from '@/lib/utils';
+import { useGamificacaoStore } from '@/stores/gamificacao';
+import { ArrowLeft, Flame, Trophy, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 interface HistoricoDia {
   dia: string;

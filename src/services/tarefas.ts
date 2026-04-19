@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/client';
 import { calcularNota } from '@/lib/scoring/engine';
+import { createClient } from '@/lib/supabase/client';
 import type { Configuracoes, Tarefa } from '@/types/domain';
 
 /**

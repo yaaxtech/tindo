@@ -1,8 +1,8 @@
 'use client';
 
+import { cn } from '@/lib/utils';
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
 
 export function BotaoSync({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false);
@@ -40,7 +40,7 @@ export function BotaoSync({ className }: { className?: string }) {
       )}
     >
       <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-      {loading ? 'Sync...' : msg ?? 'Sync'}
+      {loading ? 'Sync...' : (msg ?? 'Sync')}
     </button>
   );
 }

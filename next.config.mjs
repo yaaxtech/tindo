@@ -16,9 +16,7 @@ const nextConfig = {
     reactCompiler: false,
   },
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: '*.supabase.co' },
-    ],
+    remotePatterns: [{ protocol: 'https', hostname: '*.supabase.co' }],
   },
 };
 

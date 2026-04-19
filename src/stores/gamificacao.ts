@@ -13,7 +13,11 @@ interface GamificacaoState {
   xpParaProximoNivel: number;
   progressoPercentual: number;
   hidratar: () => Promise<void>;
-  registrarConclusao: (tarefaId: string, tipo: 'tarefa' | 'lembrete', nota: number) => Promise<{
+  registrarConclusao: (
+    tarefaId: string,
+    tipo: 'tarefa' | 'lembrete',
+    nota: number,
+  ) => Promise<{
     xpGanho: number;
     subiuNivel: boolean;
     quebrouRecorde: boolean;

@@ -41,14 +41,14 @@ const LABELS_EXCLUIR = [
  * Ordem importa: primeiro match vence. Mais específico (lembretes) vem antes.
  */
 const PADROES_PROJETO_LEMBRETE = [
-  'lembrete',            // qualquer projeto com "lembrete" no nome
-  'falar ou ativ',       // "1. ⏲Falar ou Ativ. Rapidas"
+  'lembrete', // qualquer projeto com "lembrete" no nome
+  'falar ou ativ', // "1. ⏲Falar ou Ativ. Rapidas"
   'ativ. rapidas',
   'ativ rapidas',
 ];
 
 const PADROES_PROJETO_TAREFA = [
-  '| todo',  // "2. Maioli | ToDo"
+  '| todo', // "2. Maioli | ToDo"
   '| to do',
   ' todo',
 ];

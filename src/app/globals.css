@@ -5,44 +5,45 @@
 @layer base {
   :root {
     /* Obsidian */
-    --bg-deep: #0A0E13;
+    --bg-deep: #0a0e13;
     --bg-elevated: #121820;
-    --bg-surface: #1B222C;
-    --bg-hover: #222B38;
+    --bg-surface: #1b222c;
+    --bg-hover: #222b38;
 
     /* Text */
-    --text-primary: #E8EDF2;
-    --text-secondary: #7A8796;
-    --text-muted: #4A5563;
-    --text-inverse: #0A0E13;
+    --text-primary: #e8edf2;
+    --text-secondary: #7a8796;
+    --text-muted: #4a5563;
+    --text-inverse: #0a0e13;
 
     /* Jade */
-    --jade-primary: #198B74;
-    --jade-accent: #2CAF93;
-    --jade-dim: #0F5446;
+    --jade-primary: #198b74;
+    --jade-accent: #2caf93;
+    --jade-dim: #0f5446;
     --jade-glow: rgba(44, 175, 147, 0.35);
 
     /* Feedback */
-    --success: #198B74;
-    --warning: #F2B94B;
-    --danger: #E3546C;
-    --info: #6AA9E6;
+    --success: #198b74;
+    --warning: #f2b94b;
+    --danger: #e3546c;
+    --info: #6aa9e6;
 
     /* Borders */
     --border-subtle: rgba(232, 237, 242, 0.08);
     --border-strong: rgba(232, 237, 242, 0.15);
 
     /* Gradients */
-    --grad-jade: linear-gradient(135deg, #198B74 0%, #2CAF93 100%);
-    --grad-card: linear-gradient(180deg, #1B222C 0%, #121820 100%);
+    --grad-jade: linear-gradient(135deg, #198b74 0%, #2caf93 100%);
+    --grad-card: linear-gradient(180deg, #1b222c 0%, #121820 100%);
 
     color-scheme: dark;
   }
 
-  html, body {
+  html,
+  body {
     background-color: var(--bg-deep);
     color: var(--text-primary);
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -59,7 +60,9 @@
 
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
@@ -68,13 +71,20 @@
   }
 
   /* Scrollbars subtle */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
   ::-webkit-scrollbar-thumb {
     background: var(--border-strong);
     border-radius: 9999px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 
   /* Focus visible */
   :focus-visible {
@@ -91,12 +101,29 @@
 }
 
 @layer utilities {
-  .text-balance { text-wrap: balance; }
-  .grad-jade { background: var(--grad-jade); }
-  .grad-card { background: var(--grad-card); }
-  .glow-jade { box-shadow: var(--jade-glow) 0 0 40px; }
-  .no-select { user-select: none; -webkit-user-select: none; }
-  .no-tap { -webkit-tap-highlight-color: transparent; }
-  .safe-top { padding-top: env(safe-area-inset-top); }
-  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .grad-jade {
+    background: var(--grad-jade);
+  }
+  .grad-card {
+    background: var(--grad-card);
+  }
+  .glow-jade {
+    box-shadow: var(--jade-glow) 0 0 40px;
+  }
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .no-tap {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

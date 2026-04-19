@@ -35,7 +35,10 @@ export default function LoginPage() {
           </div>
         ) : (
           <form onSubmit={handleEnviar} className="space-y-3">
-            <label className="block text-xs uppercase tracking-wider text-text-muted" htmlFor="email">
+            <label
+              className="block text-xs uppercase tracking-wider text-text-muted"
+              htmlFor="email"
+            >
               Email
             </label>
             <input
@@ -58,7 +61,9 @@ export default function LoginPage() {
         )}
 
         <p className="mt-8 text-center text-xs text-text-muted">
-          <Link href="/" className="hover:text-text-primary">← Voltar</Link>
+          <Link href="/" className="hover:text-text-primary">
+            ← Voltar
+          </Link>
         </p>
       </div>
     </main>

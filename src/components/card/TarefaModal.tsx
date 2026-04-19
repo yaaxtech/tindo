@@ -1,10 +1,10 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { Tarefa } from '@/types/domain';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface ProjetoLite {
   id: string;
@@ -119,7 +119,10 @@ export function TarefaModal({
               </button>
             </header>
 
-            <form onSubmit={handleSubmit} className="max-h-[calc(90dvh-100px)] overflow-y-auto px-5 py-4 text-sm">
+            <form
+              onSubmit={handleSubmit}
+              className="max-h-[calc(90dvh-100px)] overflow-y-auto px-5 py-4 text-sm"
+            >
               <div className="space-y-4">
                 <Campo label="Título *">
                   <input
@@ -304,9 +307,7 @@ function Slider({
       <div className="mb-1 flex items-baseline justify-between">
         <span className="text-xs font-medium">{label}</span>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-text-muted">
-            {ativo ? valor : 'auto'}
-          </span>
+          <span className="font-mono text-xs text-text-muted">{ativo ? valor : 'auto'}</span>
           {ativo && (
             <button
               type="button"

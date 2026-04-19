@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 
 interface ConfigRow {
   peso_urgencia: number;
@@ -88,7 +88,10 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const ajustarPeso = (campo: 'peso_urgencia' | 'peso_importancia' | 'peso_facilidade', v: number) => {
+  const ajustarPeso = (
+    campo: 'peso_urgencia' | 'peso_importancia' | 'peso_facilidade',
+    v: number,
+  ) => {
     if (!cfg) return;
     // Normaliza pra somar 1: ajusta proporcionalmente os outros dois.
     const outros = (['peso_urgencia', 'peso_importancia', 'peso_facilidade'] as const).filter(
@@ -133,7 +136,10 @@ export default function ConfiguracoesPage() {
 
       <section className="mx-auto mt-6 w-full max-w-3xl space-y-8 px-6">
         {/* Pesos do scoring */}
-        <Card titulo="Pesos do Scoring" subtitulo="Como os três fatores contribuem pra nota. Devem somar 1.00.">
+        <Card
+          titulo="Pesos do Scoring"
+          subtitulo="Como os três fatores contribuem pra nota. Devem somar 1.00."
+        >
           <div className="space-y-4">
             <Slider
               label="Urgência"
@@ -161,7 +167,8 @@ export default function ConfiguracoesPage() {
                   : 'bg-danger/20 text-danger',
               )}
             >
-              Soma: {somaPesos.toFixed(2)} {Math.abs(somaPesos - 1) < 0.01 ? '✓' : '✗ deve ser 1.00'}
+              Soma: {somaPesos.toFixed(2)}{' '}
+              {Math.abs(somaPesos - 1) < 0.01 ? '✓' : '✗ deve ser 1.00'}
             </p>
           </div>
         </Card>
@@ -191,7 +198,10 @@ export default function ConfiguracoesPage() {
         </Card>
 
         {/* Bem-estar */}
-        <Card titulo="Bem-estar" subtitulo="Pode desligar sons e animações sem perder funcionalidade.">
+        <Card
+          titulo="Bem-estar"
+          subtitulo="Pode desligar sons e animações sem perder funcionalidade."
+        >
           <Toggle
             label="Som na conclusão"
             valor={cfg.audio_habilitado}
@@ -284,7 +294,9 @@ function Slider({
       <div className="mb-1 flex items-baseline justify-between">
         <div>
           <span className="text-sm font-medium">{label}</span>
-          <span className="ml-2 font-mono text-xs text-text-muted">{(valor * 100).toFixed(0)}%</span>
+          <span className="ml-2 font-mono text-xs text-text-muted">
+            {(valor * 100).toFixed(0)}%
+          </span>
         </div>
       </div>
       <input

@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
-import type { Configuracoes, Projeto, Tag, Tarefa } from '@/types/domain';
+import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import type { Configuracoes, Projeto, Tag } from '@/types/domain';
+import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 

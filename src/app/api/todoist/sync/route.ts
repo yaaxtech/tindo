@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { sincronizarTodoist } from '@/lib/todoist/sync';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
