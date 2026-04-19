@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useToasts } from '@/stores/toasts';
 import type { Tarefa } from '@/types/domain';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sparkles, X } from 'lucide-react';
+import { Scissors, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface ProjetoLite {
@@ -55,6 +55,7 @@ export function TarefaModal({
   const [salvando, setSalvando] = useState(false);
   const [classificando, setClassificando] = useState(false);
   const [explicacaoIA, setExplicacaoIA] = useState<string | null>(null);
+  const [quebrando, setQuebrando] = useState(false);
   const pushToast = useToasts((s) => s.push);
   const classificarInicioRef = useRef<number>(0);
 
@@ -157,6 +158,37 @@ export function TarefaModal({
       pushToast({ titulo: 'Erro inesperado ao classificar', icone: 'alerta' });
     } finally {
       setClassificando(false);
+    }
+  };
+
+  const quebrarComIA = async () => {
+    if (!tarefa?.id) return;
+    setQuebrando(true);
+    try {
+      const res = await fetch('/api/ai/quebrar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tarefaId: tarefa.id }),
+      });
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const err = data as { error?: string };
+        pushToast({ titulo: 'Erro ao sugerir quebra', descricao: err?.error ?? '', icone: 'alerta' });
+        return;
+      }
+      pushToast({
+        titulo: 'Sugestao de quebra criada',
+        descricao: 'Acesse /sugestoes-ia para revisar',
+        icone: 'ok',
+        acao: {
+          label: 'Ver inbox',
+          onClick: () => { window.open('/sugestoes-ia', '_blank'); },
+        },
+      });
+    } catch {
+      pushToast({ titulo: 'Erro inesperado ao sugerir quebra', icone: 'alerta' });
+    } finally {
+      setQuebrando(false);
     }
   };
 
@@ -320,6 +352,27 @@ export function TarefaModal({
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* Quebra com IA — só em modo editar com titulo+descricao > 50 chars */}
+                {modo === 'editar' &&
+                  tarefa?.id &&
+                  (form.titulo + (form.descricao ?? '')).length > 50 && (
+                    <button
+                      type="button"
+                      disabled={quebrando}
+                      aria-busy={quebrando}
+                      aria-label="Sugerir quebra em sub-tarefas via IA"
+                      onClick={quebrarComIA}
+                      className={cn(
+                        'inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors',
+                        'border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20',
+                        'disabled:cursor-not-allowed disabled:opacity-40',
+                      )}
+                    >
+                      <Scissors className={cn('h-3.5 w-3.5', quebrando && 'animate-pulse')} />
+                      {quebrando ? 'Analisando...' : 'Quebrar em sub-tarefas (IA)'}
+                    </button>
+                  )}
 
                 <Campo label="Overrides manuais (opcional — deixe em branco pro automático)">
                   <div className="space-y-3">

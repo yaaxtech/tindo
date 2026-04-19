@@ -111,32 +111,39 @@
 
 **Critério de done**: nova tarefa é classificada automaticamente em ≤3s, posso aceitar/editar.
 
-## Fase 8 — IA Batch e Quebra (meta: 3 dias)
+## Fase 8 — IA Batch e Quebra (meta: 3 dias) — DONE
 
-- [ ] `/configuracoes/ia/analisar` — rodar em batch
-- [ ] Tela "inbox" de sugestões (aceitar em lote)
-- [ ] Quebra de tarefa grande em sub-tarefas
-- [ ] Sugestão de merge/delete
+- [x] `POST /api/ai/batch` — analisa até 20 tarefas sem classificacao em serie
+- [x] `POST /api/ai/quebrar` — sugere quebra em sub-tarefas via tool_use
+- [x] `GET /api/sugestoes-ai` + `PATCH/DELETE /api/sugestoes-ai/[id]` — inbox CRUD
+- [x] Tela `/sugestoes-ia` — inbox elegante com filtros, selecao multipla, aceitar/editar/rejeitar
+- [x] Botao "Quebrar em sub-tarefas (IA)" em TarefaModal (modo editar, >50 chars)
+- [x] Link "Ver inbox de sugestoes IA" em /configuracoes secao IA
+- [x] Prompts `TOOL_QUEBRAR_TAREFA` + `montarPromptQuebra` em prompts.ts
 
 **Critério de done**: seleciono 20 tarefas, IA analisa em 30s, aceito parcial.
 
-## Fase 9 — IA Caminho Crítico (meta: 3 dias)
+## Fase 9 — IA Caminho Crítico (meta: 3 dias) — ✅ DONE
 
-- [ ] `/sugestoes` tela Tinder de sugestões
-- [ ] Sugestão de novas tarefas (swipe right = criar)
-- [ ] Histórico de sugestões e razão
+- [x] `/sugestoes` tela Tinder de sugestões com stack de cards
+- [x] Sugestão de novas tarefas (swipe right = criar, left = rejeitar, up = editar)
+- [x] Prompts `TOOL_SUGERIR_TAREFAS` + `montarPromptSugestoes` com cache ephemeral
+- [x] `POST /api/ai/sugerir-tarefas` (gera via IA) + GET (lista pendentes)
+- [x] `POST /api/ai/sugerir-tarefas/[id]/resposta` (aceitar/rejeitar)
+- [x] Histórico em `sugestoes_ai` tipo `sugerir_nova` com razão
 
 **Critério de done**: IA sugere 5 novas tarefas relevantes ao meu caminho, eu aceito 2 e elas viram cards.
 
-## Fase 10 — Recalibração (meta: 3 dias)
+## Fase 10 — Recalibração (meta: 3 dias) — ✅ DONE
 
-- [ ] View materializada `kpis_usuario_diario`
-- [ ] Cron diário que calcula KPIs S01-S07
-- [ ] Detecção de gatilhos
-- [ ] Notificação in-app "hora de recalibrar"
-- [ ] Tela slide das 5 com slider 0-100
-- [ ] Cálculo de correlação + proposta de novos pesos
-- [ ] Aplicação + recálculo batch das notas
+- [x] View materializada `kpis_usuario_diario` (migration 20260419000002)
+- [x] Função `refresh_kpis_usuario_diario()` invocada via RPC no endpoint de gatilhos
+- [x] Detecção de gatilhos (lib/recalibracao/kpis.ts, `detectarGatilhos`)
+- [x] `RecalibracaoBanner` flutuante com dismiss 24h localStorage
+- [x] Wizard `/recalibrar` 3 passos (diagnóstico + 5 sliders + proposta animada)
+- [x] Cálculo de correlação via OLS z-score (lib/recalibracao/correlacao.ts) + testes
+- [x] `/api/recalibrar/aplicar` aplica pesos novos + dispara recálculo batch das notas
+- [ ] Cron diário de refresh (ainda manual via endpoint — pg_cron/CF Cron pendente)
 
 **Critério de done**: quando KPI passa limiar, app sugere recalibração, eu faço em 60s, pesos e notas atualizam.
 

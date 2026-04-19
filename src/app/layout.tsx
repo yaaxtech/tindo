@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { RecalibracaoBanner } from '@/components/RecalibracaoBanner';
 import { Toaster } from '@/components/Toaster';
 
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="min-h-dvh bg-bg-deep text-text-primary no-tap">
         {children}
+        <RecalibracaoBanner />
         <Toaster />
       </body>
     </html>

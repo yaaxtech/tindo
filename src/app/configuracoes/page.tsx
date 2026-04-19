@@ -296,6 +296,18 @@ export default function ConfiguracoesPage() {
           </div>
         </Card>
 
+        {/* Diagnóstico e recalibração */}
+        <Link
+          href="/recalibrar"
+          className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] px-5 py-4 hover:border-[var(--jade-primary)]/40 hover:bg-[var(--bg-hover)] transition-colors"
+        >
+          <div>
+            <p className="text-sm font-medium text-text-primary">Ver diagnóstico e recalibrar</p>
+            <p className="text-xs text-text-muted mt-0.5">Analisa KPIs e propõe novos pesos</p>
+          </div>
+          <ArrowLeft className="h-4 w-4 rotate-180 text-text-muted" />
+        </Link>
+
         {/* Bem-estar */}
         <Card
           titulo="Bem-estar"
@@ -447,7 +459,22 @@ export default function ConfiguracoesPage() {
           )}
 
           {/* Salvar IA */}
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/sugestoes"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-jade-accent/40 bg-jade-dim/20 px-3 text-sm font-medium text-jade-accent hover:bg-jade-dim/40"
+              >
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                Sugestoes de caminho critico
+              </Link>
+              <Link
+                href="/sugestoes-ia"
+                className="inline-flex h-9 items-center rounded-md border border-border-strong bg-bg-surface px-3 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+              >
+                Ver inbox de sugestoes IA
+              </Link>
+            </div>
             <button
               type="button"
               onClick={salvarApiKey}
