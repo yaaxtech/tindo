@@ -15,10 +15,7 @@ interface RespostaBody {
   };
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = (await request.json()) as RespostaBody;
@@ -39,10 +36,7 @@ export async function POST(
       return NextResponse.json({ error: 'Sugestão não encontrada.' }, { status: 404 });
     }
     if (sugestao.status !== 'pendente') {
-      return NextResponse.json(
-        { error: 'Sugestão já foi respondida.' },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: 'Sugestão já foi respondida.' }, { status: 409 });
     }
 
     if (body.acao === 'rejeitar') {

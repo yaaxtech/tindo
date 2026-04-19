@@ -6,11 +6,7 @@
 
 import { calcularNovosPesos } from '@/lib/recalibracao/correlacao';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import {
-  aplicarNovosPesos,
-  registrarCalibracao,
-  verificarGatilhos,
-} from '@/services/calibracao';
+import { aplicarNovosPesos, registrarCalibracao } from '@/services/calibracao';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';

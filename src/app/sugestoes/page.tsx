@@ -231,21 +231,20 @@ function SugestaoCard({
     <motion.div
       className="absolute inset-0"
       style={{ zIndex: 10 - stackIndex }}
-      initial={
-        isTop
-          ? { scale, y: yOffset, opacity }
-          : { scale, y: yOffset, opacity }
-      }
+      initial={isTop ? { scale, y: yOffset, opacity } : { scale, y: yOffset, opacity }}
       animate={{ scale, y: yOffset, opacity }}
       transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
     >
       {isTop ? (
-        <SwipeHandler onSwipe={(dir) => {
-          if (isProcessing) return;
-          if (dir === 'right') onAceitar();
-          else if (dir === 'left') onRejeitar();
-          else if (dir === 'up') onEditar();
-        }} disabled={isProcessing}>
+        <SwipeHandler
+          onSwipe={(dir) => {
+            if (isProcessing) return;
+            if (dir === 'right') onAceitar();
+            else if (dir === 'left') onRejeitar();
+            else if (dir === 'up') onEditar();
+          }}
+          disabled={isProcessing}
+        >
           <CardInner sugestao={sugestao} isTop={isTop} />
         </SwipeHandler>
       ) : (
@@ -314,9 +313,7 @@ function CardInner({ sugestao, isTop }: { sugestao: SugestaoItem; isTop: boolean
 
       {/* Dica swipe */}
       {isTop && (
-        <p className="text-center text-[11px] text-text-muted">
-          ← Rejeitar · → Aceitar · ↑ Editar
-        </p>
+        <p className="text-center text-[11px] text-text-muted">← Rejeitar · → Aceitar · ↑ Editar</p>
       )}
     </div>
   );
@@ -429,11 +426,7 @@ export default function SugestoesPage() {
     }
   };
 
-  const responder = async (
-    id: string,
-    acao: 'aceitar' | 'rejeitar',
-    editada?: EditFormState,
-  ) => {
+  const responder = async (id: string, acao: 'aceitar' | 'rejeitar', editada?: EditFormState) => {
     setProcessando(true);
     try {
       const res = await fetch(`/api/ai/sugerir-tarefas/${id}/resposta`, {
@@ -535,7 +528,7 @@ export default function SugestoesPage() {
           {gerando ? (
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: 'linear' }}
               className="h-4 w-4 rounded-full border-2 border-jade-accent border-t-transparent"
             />
           ) : (
@@ -551,7 +544,7 @@ export default function SugestoesPage() {
           <div className="flex flex-1 items-center justify-center">
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: 'linear' }}
               className="h-8 w-8 rounded-full border-2 border-jade-accent border-t-transparent"
             />
           </div>
@@ -588,7 +581,7 @@ export default function SugestoesPage() {
               {gerando ? (
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: 'linear' }}
                   className="h-4 w-4 rounded-full border-2 border-white border-t-transparent"
                 />
               ) : (
@@ -661,7 +654,10 @@ export default function SugestoesPage() {
 
               <motion.button
                 type="button"
-                onClick={() => { const s = sugestoes[0]; if (s) setEditando(s); }}
+                onClick={() => {
+                  const s = sugestoes[0];
+                  if (s) setEditando(s);
+                }}
                 disabled={processando}
                 aria-label="Editar sugestão antes de criar"
                 whileHover={!processando ? { scale: 1.05 } : {}}

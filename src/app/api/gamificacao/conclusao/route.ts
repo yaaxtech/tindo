@@ -1,5 +1,9 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import { calcularNivelAtual } from '@/services/gamificacao';
+import {
+  aplicarFreezerSeNecessario,
+  calcularNivelAtual,
+  verificarFreezersAutomaticos,
+} from '@/services/gamificacao';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -48,13 +52,31 @@ export async function POST(request: NextRequest) {
 
     let novoStreak = atualAjustado.streakAtual;
     let xpBonus = 0;
+    let freezerConsumido = false;
     if (atualAjustado.ultimoDiaAtivo !== hojeStr) {
       // Primeiro do dia
       xpBonus += 10;
       const ontem = new Date();
       ontem.setDate(ontem.getDate() - 1);
       const ontemStr = ontem.toISOString().slice(0, 10);
-      novoStreak = atualAjustado.ultimoDiaAtivo === ontemStr ? atualAjustado.streakAtual + 1 : 1;
+      if (atualAjustado.ultimoDiaAtivo === ontemStr) {
+        novoStreak = atualAjustado.streakAtual + 1;
+      } else {
+        // Verifica se freezer pode preservar o streak
+        const freezerResult = await aplicarFreezerSeNecessario(
+          admin,
+          usuarioId,
+          atualAjustado.streakAtual,
+          atualAjustado.ultimoDiaAtivo,
+          hojeStr,
+        );
+        if (freezerResult.freezerConsumido) {
+          novoStreak = atualAjustado.streakAtual + 1;
+          freezerConsumido = true;
+        } else {
+          novoStreak = 1;
+        }
+      }
     } else if (atualAjustado.streakAtual > 0) {
       xpBonus += 5; // streak ativo
     }
@@ -87,6 +109,9 @@ export async function POST(request: NextRequest) {
       await admin.from('gamificacao').insert({ usuario_id: usuarioId, ...patch });
     }
 
+    // Verifica freezer automático a cada 7 dias de streak
+    await verificarFreezersAutomaticos(admin, usuarioId, novoStreak);
+
     return NextResponse.json({
       xpGanho: xpGanho + xpBonus,
       xpBase: xpGanho,
@@ -95,6 +120,7 @@ export async function POST(request: NextRequest) {
       subiuNivel,
       streakAtual: novoStreak,
       quebrouRecorde,
+      freezerConsumido,
     });
   } catch (err) {
     console.error('/api/gamificacao/conclusao error:', err);

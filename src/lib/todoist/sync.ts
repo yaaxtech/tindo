@@ -12,6 +12,7 @@
  */
 
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
+import { autoClassificarSeHabilitado } from '@/services/autoClassificar';
 import type { Configuracoes, Projeto, Tag } from '@/types/domain';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { TodoistClient, todoistColorHex } from './client';
@@ -226,8 +227,15 @@ export async function sincronizarTodoist(
       continue;
     }
 
+    const ehNova = !existente;
     if (existente) resultado.tarefasAtualizadas++;
     else resultado.tarefasImportadas++;
+
+    // fire-and-forget: loop IA (apenas tarefas novas, sem importancia/urgencia/facilidade)
+    if (ehNova && upserted) {
+      const tarefaId = (upserted as { id: string }).id;
+      void autoClassificarSeHabilitado({ tarefaId, usuarioId });
+    }
 
     // Reinstala tarefa_tags
     if (upserted) {

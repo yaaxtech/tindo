@@ -53,6 +53,8 @@ function adaptar(r: Record<string, unknown>) {
     ultimoDiaAtivo: r.ultimo_dia_ativo as string | null,
     tarefasConcluidasTotal: Number(r.tarefas_concluidas_total ?? 0),
     lembretesConcluidosTotal: Number(r.lembretes_concluidos_total ?? 0),
+    freezersDisponiveis: Number(r.freezers_disponiveis ?? 0),
+    totalFreezersGanhos: Number(r.total_freezers_ganhos ?? 0),
   };
 }
 

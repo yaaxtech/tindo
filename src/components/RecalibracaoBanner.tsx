@@ -94,7 +94,10 @@ export function RecalibracaoBanner() {
                   Hora de recalibrar
                 </p>
                 {motivo && (
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate" title={motivo}>
+                  <p
+                    className="text-xs text-[var(--text-secondary)] mt-0.5 truncate"
+                    title={motivo}
+                  >
                     {motivo}
                   </p>
                 )}

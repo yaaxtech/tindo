@@ -148,8 +148,7 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('/api/ai/classificar POST error:', err);
     const msg = err instanceof Error ? err.message : 'Erro ao classificar tarefa.';
-    const isClientError =
-      msg.includes('Configure sua chave') || msg.includes('não encontrada');
+    const isClientError = msg.includes('Configure sua chave') || msg.includes('não encontrada');
     return NextResponse.json({ error: msg }, { status: isClientError ? 400 : 500 });
   }
 }

@@ -9,10 +9,10 @@
 
 export interface AmostraCalibracao {
   importancia: number; // 0-100 do sistema
-  urgencia: number;    // 0-100 do sistema
-  facilidade: number;  // 0-100 do sistema
-  notaHumana: number;  // 0-100 dada pelo usuário no slider
-  notaAtual: number;   // nota calculada antes da recalibração
+  urgencia: number; // 0-100 do sistema
+  facilidade: number; // 0-100 do sistema
+  notaHumana: number; // 0-100 dada pelo usuário no slider
+  notaAtual: number; // nota calculada antes da recalibração
 }
 
 export interface ResultadoRecalibracao {
@@ -55,32 +55,39 @@ function zScore(arr: number[]): number[] {
  * Resolve X'X w = X'y via direct 3x3 inversion (closed form).
  * Retorna pesos brutos (pode ser negativo antes do clamp).
  */
-function olsSem3(
-  U: number[],
-  I: number[],
-  F: number[],
-  y: number[],
-): [number, number, number] {
+function olsSem3(U: number[], I: number[], F: number[], y: number[]): [number, number, number] {
   const n = U.length;
   // Normal equations: [X'X] * w = X'y
   // X'X é 3x3
-  let uu = 0, ui = 0, uf = 0, ii = 0, if_ = 0, ff = 0;
-  let uy = 0, iy = 0, fy = 0;
+  let uu = 0,
+    ui = 0,
+    uf = 0,
+    ii = 0,
+    if_ = 0,
+    ff = 0;
+  let uy = 0,
+    iy = 0,
+    fy = 0;
   for (let k = 0; k < n; k++) {
-    const uk = U[k] ?? 0, ik = I[k] ?? 0, fk = F[k] ?? 0, yk = y[k] ?? 0;
-    uu += uk * uk; ui += uk * ik; uf += uk * fk;
-                   ii += ik * ik; if_ += ik * fk;
-                                  ff += fk * fk;
-    uy += uk * yk; iy += ik * yk; fy += fk * yk;
+    const uk = U[k] ?? 0,
+      ik = I[k] ?? 0,
+      fk = F[k] ?? 0,
+      yk = y[k] ?? 0;
+    uu += uk * uk;
+    ui += uk * ik;
+    uf += uk * fk;
+    ii += ik * ik;
+    if_ += ik * fk;
+    ff += fk * fk;
+    uy += uk * yk;
+    iy += ik * yk;
+    fy += fk * yk;
   }
   // Cramer / determinante 3x3
   // | uu ui uf |
   // | ui ii if |
   // | uf if ff |
-  const det =
-    uu * (ii * ff - if_ * if_) -
-    ui * (ui * ff - if_ * uf) +
-    uf * (ui * if_ - ii * uf);
+  const det = uu * (ii * ff - if_ * if_) - ui * (ui * ff - if_ * uf) + uf * (ui * if_ - ii * uf);
 
   if (Math.abs(det) < 1e-12) {
     // Singular — fallback uniform
@@ -88,20 +95,11 @@ function olsSem3(
   }
 
   const w0 =
-    (uy * (ii * ff - if_ * if_) -
-      ui * (iy * ff - if_ * fy) +
-      uf * (iy * if_ - ii * fy)) /
-    det;
+    (uy * (ii * ff - if_ * if_) - ui * (iy * ff - if_ * fy) + uf * (iy * if_ - ii * fy)) / det;
   const w1 =
-    (uu * (iy * ff - if_ * fy) -
-      uy * (ui * ff - if_ * uf) +
-      uf * (ui * fy - iy * uf)) /
-    det;
+    (uu * (iy * ff - if_ * fy) - uy * (ui * ff - if_ * uf) + uf * (ui * fy - iy * uf)) / det;
   const w2 =
-    (uu * (ii * fy - iy * if_) -
-      ui * (ui * fy - iy * uf) +
-      uy * (ui * if_ - ii * uf)) /
-    det;
+    (uu * (ii * fy - iy * if_) - ui * (ui * fy - iy * uf) + uy * (ui * if_ - ii * uf)) / det;
 
   return [w0, w1, w2];
 }
@@ -156,9 +154,18 @@ export function calcularNovosPesos(
     for (let _iter = 0; _iter < 10; _iter++) {
       let excess = 0;
       let freeSum = 0;
-      if (x > MAX) { excess += x - MAX; x = MAX; } else freeSum += x;
-      if (y > MAX) { excess += y - MAX; y = MAX; } else freeSum += y;
-      if (z > MAX) { excess += z - MAX; z = MAX; } else freeSum += z;
+      if (x > MAX) {
+        excess += x - MAX;
+        x = MAX;
+      } else freeSum += x;
+      if (y > MAX) {
+        excess += y - MAX;
+        y = MAX;
+      } else freeSum += y;
+      if (z > MAX) {
+        excess += z - MAX;
+        z = MAX;
+      } else freeSum += z;
       if (excess < 1e-9) break;
       if (freeSum > 1e-9) {
         if (x < MAX) x += (x / freeSum) * excess;
@@ -166,8 +173,13 @@ export function calcularNovosPesos(
         if (z < MAX) z += (z / freeSum) * excess;
       }
       // enforce min
-      x = Math.max(MIN, x); y = Math.max(MIN, y); z = Math.max(MIN, z);
-      const s2 = x + y + z; x /= s2; y /= s2; z /= s2;
+      x = Math.max(MIN, x);
+      y = Math.max(MIN, y);
+      z = Math.max(MIN, z);
+      const s2 = x + y + z;
+      x /= s2;
+      y /= s2;
+      z /= s2;
     }
     return [x, y, z];
   };

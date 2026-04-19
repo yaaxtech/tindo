@@ -17,7 +17,7 @@ interface TestarResponse {
 export async function POST(request: NextRequest): Promise<NextResponse<TestarResponse>> {
   try {
     const body = (await request.json()) as TestarPayload;
-    const chave = ((body.chave ?? body.apiKey) ?? '').trim();
+    const chave = (body.chave ?? body.apiKey ?? '').trim();
 
     if (!chave) {
       return NextResponse.json({ ok: false, detalhe: 'Chave não informada' }, { status: 400 });

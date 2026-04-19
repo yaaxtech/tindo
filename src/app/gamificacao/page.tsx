@@ -1,8 +1,10 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import type { Aneis } from '@/lib/gamificacao/aneis';
 import { useGamificacaoStore } from '@/stores/gamificacao';
-import { ArrowLeft, Flame, Trophy, Zap } from 'lucide-react';
+import { useToasts } from '@/stores/toasts';
+import { ArrowLeft, Flame, Snowflake, Trophy, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -24,10 +26,15 @@ export default function GamificacaoPage() {
     xpNoNivelAtual,
     xpParaProximoNivel,
     progressoPercentual,
+    freezersDisponiveis,
     hidratar,
+    comprarFreezer,
   } = useGamificacaoStore();
+  const { push: pushToast } = useToasts();
 
   const [historico, setHistorico] = useState<HistoricoDia[]>([]);
+  const [aneis, setAneis] = useState<Aneis | null>(null);
+  const [comprando, setComprando] = useState(false);
 
   useEffect(() => {
     void hidratar();
@@ -40,7 +47,38 @@ export default function GamificacaoPage() {
         /* ignore */
       }
     })();
+    void (async () => {
+      try {
+        const res = await fetch('/api/gamificacao/aneis');
+        if (res.ok) {
+          const body = (await res.json()) as { aneis: Aneis };
+          setAneis(body.aneis);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
   }, [hidratar]);
+
+  async function handleComprarFreezer() {
+    if (comprando) return;
+    setComprando(true);
+    try {
+      const resultado = await comprarFreezer();
+      if (!resultado) {
+        pushToast({ titulo: 'Erro ao comprar freezer.', icone: 'alerta' });
+        return;
+      }
+      if (!resultado.ok) {
+        pushToast({ titulo: resultado.erro ?? 'Erro ao comprar freezer.', icone: 'alerta' });
+        return;
+      }
+      pushToast({ titulo: 'Freezer comprado! Seu streak está protegido.', icone: 'ok' });
+      void hidratar();
+    } finally {
+      setComprando(false);
+    }
+  }
 
   const mapaHistorico = new Map(historico.map((h) => [h.dia, h]));
   const dias = construirUltimos(90);
@@ -99,6 +137,74 @@ export default function GamificacaoPage() {
               className="h-full grad-jade transition-all duration-500"
               style={{ width: `${Math.min(100, progressoPercentual)}%` }}
             />
+          </div>
+        </section>
+
+        {/* Anéis semanais */}
+        <section className="mt-8 rounded-xl border border-border-strong bg-bg-elevated p-5">
+          <header className="mb-4">
+            <h2 className="text-sm font-semibold">Semana atual</h2>
+            <p className="text-xs text-text-muted">3 metas semanais em forma de anéis.</p>
+          </header>
+          <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
+            <AnelCircular
+              percentual={aneis?.concluir.percentual ?? 0}
+              cor="#198B74"
+              label="Concluir"
+              valor={aneis?.concluir.valor ?? 0}
+              meta={aneis?.concluir.meta ?? 7}
+              unidade="dias"
+            />
+            <AnelCircular
+              percentual={aneis?.foco.percentual ?? 0}
+              cor="#2CAF93"
+              label="Foco"
+              valor={aneis?.foco.valor ?? 0}
+              meta={aneis?.foco.meta ?? 35}
+              unidade="conclusões"
+            />
+            <AnelCircular
+              percentual={aneis?.consistencia.percentual ?? 0}
+              cor="#F2B94B"
+              label="Consistência"
+              valor={aneis?.consistencia.valor ?? 0}
+              meta={aneis?.consistencia.meta ?? 7}
+              unidade="dias no horário"
+            />
+          </div>
+        </section>
+
+        {/* Freezers de streak */}
+        <section className="mt-4 rounded-xl border border-border-strong bg-bg-elevated p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-surface text-blue-400">
+                <Snowflake className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">
+                  Freezers disponíveis:{' '}
+                  <span className="text-blue-400">{freezersDisponiveis}</span>
+                  <span className="ml-1 text-xs text-text-muted">/ 3</span>
+                </p>
+                <p className="text-xs text-text-muted">
+                  Protege seu streak quando você pula 1 dia. Ganhe 1 a cada 7 dias de streak.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={xpTotal < 200 || freezersDisponiveis >= 3 || comprando}
+              onClick={() => void handleComprarFreezer()}
+              className={cn(
+                'shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
+                xpTotal >= 200 && freezersDisponiveis < 3
+                  ? 'border-jade-accent/40 bg-jade/20 text-jade-accent hover:bg-jade/40'
+                  : 'cursor-not-allowed border-border bg-bg-surface text-text-muted opacity-50',
+              )}
+            >
+              {comprando ? 'Comprando…' : 'Comprar freezer (200 XP)'}
+            </button>
           </div>
         </section>
 
@@ -178,6 +284,64 @@ function construirUltimos(n: number): string[] {
     arr.push(d.toISOString().slice(0, 10));
   }
   return arr;
+}
+
+const ANEL_R = 36;
+const ANEL_CIRCUNFERENCIA = 2 * Math.PI * ANEL_R;
+
+function AnelCircular({
+  percentual,
+  cor,
+  label,
+  valor,
+  meta,
+  unidade,
+}: {
+  percentual: number;
+  cor: string;
+  label: string;
+  valor: number;
+  meta: number;
+  unidade: string;
+}) {
+  const offset = ANEL_CIRCUNFERENCIA * (1 - Math.min(100, percentual) / 100);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
+        {/* Track */}
+        <circle
+          cx="48"
+          cy="48"
+          r={ANEL_R}
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth="10"
+        />
+        {/* Progresso */}
+        <circle
+          cx="48"
+          cy="48"
+          r={ANEL_R}
+          fill="none"
+          stroke={cor}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={ANEL_CIRCUNFERENCIA}
+          strokeDashoffset={offset}
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+        />
+      </svg>
+      <p className="text-center text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        {label}
+      </p>
+      <p className="text-center text-sm font-bold" style={{ color: cor }}>
+        {valor}
+        <span className="text-xs font-normal text-text-muted">/{meta}</span>
+      </p>
+      <p className="text-center text-[10px] text-text-muted">{unidade}</p>
+    </div>
+  );
 }
 
 function BigCard({

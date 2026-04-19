@@ -8,10 +8,7 @@ interface PatchBody {
   editada?: Record<string, unknown>;
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = (await request.json()) as PatchBody;
@@ -61,9 +58,11 @@ export async function PATCH(
 
       // Atualiza tarefa
       const updatePayload: Record<string, unknown> = {};
-      if (importancia !== undefined && !Number.isNaN(importancia)) updatePayload.importancia = importancia;
+      if (importancia !== undefined && !Number.isNaN(importancia))
+        updatePayload.importancia = importancia;
       if (urgencia !== undefined && !Number.isNaN(urgencia)) updatePayload.urgencia = urgencia;
-      if (facilidade !== undefined && !Number.isNaN(facilidade)) updatePayload.facilidade = facilidade;
+      if (facilidade !== undefined && !Number.isNaN(facilidade))
+        updatePayload.facilidade = facilidade;
 
       if (Object.keys(updatePayload).length > 0) {
         await admin.from('tarefas').update(updatePayload).eq('id', sugestao.tarefa_id);
@@ -108,11 +107,14 @@ export async function PATCH(
     }
 
     // Marca sugestão como aceita
-    await admin.from('sugestoes_ai').update({
-      status: 'aceita',
-      resolvida_em: agora,
-      resposta_usuario: respostaFinal,
-    }).eq('id', id);
+    await admin
+      .from('sugestoes_ai')
+      .update({
+        status: 'aceita',
+        resolvida_em: agora,
+        resposta_usuario: respostaFinal,
+      })
+      .eq('id', id);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

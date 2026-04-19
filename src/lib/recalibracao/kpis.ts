@@ -74,9 +74,7 @@ export function agregarKpis(diarios: KpiDiario[], dias = 30): KpisAgregados {
 
   // Streak máximo: dias consecutivos com pelo menos 1 conclusão
   // Ordena os dias que têm concluidas
-  const diasComConclusao = new Set(
-    recentes.filter((d) => d.nConcluidas > 0).map((d) => d.dia),
-  );
+  const diasComConclusao = new Set(recentes.filter((d) => d.nConcluidas > 0).map((d) => d.dia));
   let streakMaximo = 0;
   let streakAtual = 0;
   for (let i = dias; i >= 0; i--) {

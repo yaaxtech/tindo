@@ -145,7 +145,13 @@ interface CardProps {
   onRejeitar: (id: string) => Promise<void>;
 }
 
-function SugestaoCard({ sugestao, selecionado, onToggleSelecao, onAceitar, onRejeitar }: CardProps) {
+function SugestaoCard({
+  sugestao,
+  selecionado,
+  onToggleSelecao,
+  onAceitar,
+  onRejeitar,
+}: CardProps) {
   const [editando, setEditando] = useState(false);
   const [aceitando, setAceitando] = useState(false);
   const [rejeitando, setRejeitando] = useState(false);
@@ -203,7 +209,11 @@ function SugestaoCard({ sugestao, selecionado, onToggleSelecao, onAceitar, onRej
             isClassificar ? 'bg-jade-dim/30 text-jade-accent' : 'bg-amber-500/15 text-amber-400',
           )}
         >
-          {isClassificar ? <Sparkles className="h-3.5 w-3.5" /> : <Scissors className="h-3.5 w-3.5" />}
+          {isClassificar ? (
+            <Sparkles className="h-3.5 w-3.5" />
+          ) : (
+            <Scissors className="h-3.5 w-3.5" />
+          )}
         </div>
 
         {/* Conteúdo */}
@@ -318,7 +328,11 @@ export default function SugestoesIaPage() {
   const analisarBatch = async () => {
     setAnalisando(true);
     try {
-      const res = await fetch('/api/ai/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const res = await fetch('/api/ai/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
       const body = (await res.json()) as { processadas: number; error?: string };
       if (!res.ok) {
         pushToast({ titulo: body.error ?? 'Erro ao analisar', icone: 'alerta' });
@@ -345,7 +359,11 @@ export default function SugestoesIaPage() {
     });
     if (res.ok) {
       setSugestoes((prev) => prev.filter((s) => s.id !== id));
-      setSelecionados((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      setSelecionados((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
       pushToast({ titulo: 'Sugestao aceita', icone: 'ok' });
     } else {
       pushToast({ titulo: 'Erro ao aceitar sugestao', icone: 'alerta' });
@@ -360,7 +378,11 @@ export default function SugestoesIaPage() {
     });
     if (res.ok) {
       setSugestoes((prev) => prev.filter((s) => s.id !== id));
-      setSelecionados((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      setSelecionados((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
       pushToast({ titulo: 'Sugestao rejeitada', icone: 'info' });
     } else {
       pushToast({ titulo: 'Erro ao rejeitar sugestao', icone: 'alerta' });
@@ -394,7 +416,8 @@ export default function SugestoesIaPage() {
   const toggleSelecao = (id: string) => {
     setSelecionados((prev) => {
       const n = new Set(prev);
-      if (n.has(id)) n.delete(id); else n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   };
@@ -413,7 +436,8 @@ export default function SugestoesIaPage() {
           <div className="flex-1">
             <h1 className="text-lg font-semibold">Sugestoes da IA</h1>
             <p className="text-xs text-text-muted">
-              {filtradas.length} sugestao{filtradas.length !== 1 ? 'es' : ''} pendente{filtradas.length !== 1 ? 's' : ''}
+              {filtradas.length} sugestao{filtradas.length !== 1 ? 'es' : ''} pendente
+              {filtradas.length !== 1 ? 's' : ''}
             </p>
           </div>
           <button
@@ -497,7 +521,10 @@ export default function SugestoesIaPage() {
             <p className="text-sm font-medium text-text-secondary">Nenhuma sugestao pendente.</p>
             <p className="max-w-xs text-xs text-text-muted">
               Rode analise em{' '}
-              <Link href="/configuracoes" className="text-jade-accent underline-offset-2 hover:underline">
+              <Link
+                href="/configuracoes"
+                className="text-jade-accent underline-offset-2 hover:underline"
+              >
                 /configuracoes
               </Link>{' '}
               ou clique em "Analisar" acima.

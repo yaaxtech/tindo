@@ -94,7 +94,11 @@ export function TarefaModal({
       const body =
         modo === 'editar' && tarefa?.id
           ? { tarefaId: tarefa.id }
-          : { titulo: form.titulo, descricao: form.descricao ?? undefined, projetoId: form.projeto_id ?? undefined };
+          : {
+              titulo: form.titulo,
+              descricao: form.descricao ?? undefined,
+              projetoId: form.projeto_id ?? undefined,
+            };
 
       const res = await fetch('/api/ai/classificar', {
         method: 'POST',
@@ -115,7 +119,9 @@ export function TarefaModal({
             icone: 'alerta',
             acao: {
               label: 'Configurar',
-              onClick: () => { window.open('/configuracoes', '_blank'); },
+              onClick: () => {
+                window.open('/configuracoes', '_blank');
+              },
             },
           });
         } else {
@@ -173,7 +179,11 @@ export function TarefaModal({
       const data: unknown = await res.json();
       if (!res.ok) {
         const err = data as { error?: string };
-        pushToast({ titulo: 'Erro ao sugerir quebra', descricao: err?.error ?? '', icone: 'alerta' });
+        pushToast({
+          titulo: 'Erro ao sugerir quebra',
+          descricao: err?.error ?? '',
+          icone: 'alerta',
+        });
         return;
       }
       pushToast({
@@ -182,7 +192,9 @@ export function TarefaModal({
         icone: 'ok',
         acao: {
           label: 'Ver inbox',
-          onClick: () => { window.open('/sugestoes-ia', '_blank'); },
+          onClick: () => {
+            window.open('/sugestoes-ia', '_blank');
+          },
         },
       });
     } catch {
@@ -347,7 +359,9 @@ export function TarefaModal({
                         className="flex items-start gap-2 rounded-md border border-jade-accent/30 bg-jade-dim/15 px-3 py-2"
                       >
                         <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-jade-accent" />
-                        <p className="text-[11px] leading-snug text-text-secondary">{explicacaoIA}</p>
+                        <p className="text-[11px] leading-snug text-text-secondary">
+                          {explicacaoIA}
+                        </p>
                       </motion.div>
                     )}
                   </AnimatePresence>

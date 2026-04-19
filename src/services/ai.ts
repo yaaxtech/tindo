@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import {
   type ClassificacaoMeta,
   type ContextoClassificacao,
@@ -10,6 +9,7 @@ import {
   montarPromptSugestoes,
 } from '@/lib/ai/prompts';
 import type { Projeto, Tag } from '@/types/domain';
+import Anthropic from '@anthropic-ai/sdk';
 
 export type { Classificacao, ClassificacaoMeta, Sugestao } from '@/lib/ai/prompts';
 
@@ -73,9 +73,7 @@ export interface QuebrarTarefaInput {
 export async function quebrarTarefa(input: QuebrarTarefaInput): Promise<QuebraTarefaResult> {
   const resolvedKey = input.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
-    throw new Error(
-      'Configure sua chave Claude em /configuracoes para usar a quebra por IA.',
-    );
+    throw new Error('Configure sua chave Claude em /configuracoes para usar a quebra por IA.');
   }
 
   const anthropic = new Anthropic({ apiKey: resolvedKey });
@@ -189,9 +187,7 @@ export interface SugerirTarefasResult {
 export async function sugerirTarefas(input: SugerirTarefasInput): Promise<SugerirTarefasResult> {
   const resolvedKey = input.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
-    throw new Error(
-      'Configure sua chave Claude em /configuracoes para usar sugestões por IA.',
-    );
+    throw new Error('Configure sua chave Claude em /configuracoes para usar sugestões por IA.');
   }
 
   const anthropic = new Anthropic({ apiKey: resolvedKey });
@@ -265,9 +261,7 @@ export interface ClassificarTarefaInput {
   modelo?: string;
 }
 
-export async function classificarTarefa(
-  input: ClassificarTarefaInput,
-): Promise<ClassificacaoMeta> {
+export async function classificarTarefa(input: ClassificarTarefaInput): Promise<ClassificacaoMeta> {
   const resolvedKey = input.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
     throw new Error(

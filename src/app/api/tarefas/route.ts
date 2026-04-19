@@ -1,5 +1,6 @@
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { autoClassificarSeHabilitado } from '@/services/autoClassificar';
 import type { Configuracoes, Projeto, Tag } from '@/types/domain';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -56,6 +57,11 @@ export async function POST(request: NextRequest) {
       await admin
         .from('tarefa_tags')
         .insert(body.tag_ids.map((tid) => ({ tarefa_id: tarefa.id, tag_id: tid })));
+    }
+
+    // fire-and-forget: loop IA
+    if (tarefa) {
+      void autoClassificarSeHabilitado({ tarefaId: tarefa.id, usuarioId });
     }
 
     return NextResponse.json({ ok: true, id: tarefa?.id, nota });

@@ -3,11 +3,11 @@
  * Toda leitura/escrita passa por aqui; componentes não tocam o Supabase diretamente.
  */
 
-import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import type { ResultadoRecalibracao } from '@/lib/recalibracao/correlacao';
 import type { KpiDiario, KpisAgregados, Limiares } from '@/lib/recalibracao/kpis';
 import { agregarKpis, detectarGatilhos } from '@/lib/recalibracao/kpis';
 import type { GatilhoDetectado } from '@/lib/recalibracao/kpis';
-import type { ResultadoRecalibracao } from '@/lib/recalibracao/correlacao';
+import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 
 interface ConfigRow {
   peso_urgencia: number;
@@ -62,8 +62,8 @@ export async function verificarGatilhos(): Promise<ResultadoGatilhos> {
     .from('configuracoes')
     .select(
       'peso_urgencia, peso_importancia, peso_facilidade, ' +
-      'limiar_recalibracao_reavaliacao, limiar_recalibracao_descarte, limiar_recalibracao_adiamento, ' +
-      'ultima_recalibracao_em',
+        'limiar_recalibracao_reavaliacao, limiar_recalibracao_descarte, limiar_recalibracao_adiamento, ' +
+        'ultima_recalibracao_em',
     )
     .eq('usuario_id', usuarioId)
     .maybeSingle();
@@ -211,9 +211,7 @@ export async function obterTarefasParaCalibrar(n = 5): Promise<TarefaParaCalibra
   }));
 }
 
-export async function registrarCalibracao(
-  resultado: ResultadoRecalibracao,
-): Promise<void> {
+export async function registrarCalibracao(resultado: ResultadoRecalibracao): Promise<void> {
   const admin = getAdminClient();
   const usuarioId = await getUsuarioIdMVP();
 

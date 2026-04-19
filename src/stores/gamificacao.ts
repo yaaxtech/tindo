@@ -12,7 +12,10 @@ interface GamificacaoState {
   xpNoNivelAtual: number;
   xpParaProximoNivel: number;
   progressoPercentual: number;
+  freezersDisponiveis: number;
+  totalFreezersGanhos: number;
   hidratar: () => Promise<void>;
+  comprarFreezer: () => Promise<{ ok: boolean; erro?: string } | null>;
   registrarConclusao: (
     tarefaId: string,
     tipo: 'tarefa' | 'lembrete',
@@ -34,6 +37,8 @@ export const useGamificacaoStore = create<GamificacaoState>((set) => ({
   xpNoNivelAtual: 0,
   xpParaProximoNivel: 50,
   progressoPercentual: 0,
+  freezersDisponiveis: 0,
+  totalFreezersGanhos: 0,
 
   hidratar: async () => {
     try {
@@ -50,9 +55,33 @@ export const useGamificacaoStore = create<GamificacaoState>((set) => ({
         xpNoNivelAtual: body.progresso.xpNoNivelAtual,
         xpParaProximoNivel: body.progresso.xpParaProximoNivel,
         progressoPercentual: body.progresso.progressoPercentual,
+        freezersDisponiveis: body.gamificacao.freezersDisponiveis ?? 0,
+        totalFreezersGanhos: body.gamificacao.totalFreezersGanhos ?? 0,
       });
     } catch (e) {
       console.error('hidratar gamificacao:', e);
+    }
+  },
+
+  comprarFreezer: async () => {
+    try {
+      const res = await fetch('/api/gamificacao/freezer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao: 'comprar' }),
+      });
+      const body = await res.json();
+      if (!res.ok) return { ok: false, erro: body.error as string };
+      set((s) => ({
+        xpTotal: body.xpRestante as number,
+        freezersDisponiveis: body.freezersDisponiveis as number,
+        // Recalcula campos dependentes de xpTotal
+        xpNoNivelAtual: s.xpNoNivelAtual - 200 < 0 ? 0 : s.xpNoNivelAtual - 200,
+      }));
+      return { ok: true };
+    } catch (e) {
+      console.error('comprarFreezer:', e);
+      return null;
     }
   },
 

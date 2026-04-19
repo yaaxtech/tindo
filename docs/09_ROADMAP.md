@@ -70,8 +70,8 @@
 - [x] Tela `/gamificacao` (streak, XP, nível, heatmap, conquistas)
 - [x] StreakBadge no header
 - [x] Sons variados + level up fanfare
-- [ ] Congelador de streak
-- [ ] Anéis semanais
+- [x] Congelador de streak
+- [x] Anéis semanais
 
 **Critério de done**: ganho XP ao concluir, subo de nível, streak incrementa, conquistas desbloqueiam com celebração.
 
@@ -107,7 +107,7 @@
 - [x] Modal `TarefaModal` com botão "Classificar com IA" + explicação exibida
 - [x] Aceitar/editar preenchendo sliders + tag_ids automaticamente
 - [x] Registro em `sugestoes_ai` quando há `tarefaId`
-- [ ] Auto-classificação ao criar tarefa (feature flag `ai_auto_aceita_classificacao` já existe; hook ainda pendente)
+- [x] Auto-classificação ao criar tarefa (fire-and-forget em POST /api/tarefas + sync Todoist)
 
 **Critério de done**: nova tarefa é classificada automaticamente em ≤3s, posso aceitar/editar.
 
@@ -147,12 +147,16 @@
 
 **Critério de done**: quando KPI passa limiar, app sugere recalibração, eu faço em 60s, pesos e notas atualizam.
 
-## Fase 11 — Polimento + Deploy Produção (meta: 2-3 dias)
+## Fase 11 — Polimento + Deploy Produção (meta: 2-3 dias) — parcial
 
-- [ ] Deploy Cloudflare Pages com Preview por PR
-- [ ] PWA ícones e splash completos
+- [ ] Deploy Cloudflare Pages com Preview por PR (precisa credenciais/domínio)
+- [x] PWA ícones SVG (icon, apple-touch, favicon, maskable)
+- [x] Manifest dinâmico `src/app/manifest.ts` com shortcuts (Cards, IA, Tarefas, Streak)
+- [x] OpenGraph + Twitter meta tags
+- [x] BottomNav mobile component (pronto para inclusão em shell)
+- [x] README reescrito
 - [ ] Notificações push (fase posterior)
-- [ ] Auditoria de acessibilidade
+- [ ] Auditoria de acessibilidade completa (reduzido de 45 → 42 lint errors)
 - [ ] Testes e2e com Playwright (fluxos críticos)
 - [ ] Performance audit (Lighthouse ≥ 95)
 

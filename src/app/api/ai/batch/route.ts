@@ -30,7 +30,10 @@ export async function POST(request: NextRequest) {
       .eq('usuario_id', usuarioId)
       .single();
 
-    const apiKey = (cfg?.ai_api_key_criptografada as string | null) ?? process.env.ANTHROPIC_API_KEY ?? undefined;
+    const apiKey =
+      (cfg?.ai_api_key_criptografada as string | null) ??
+      process.env.ANTHROPIC_API_KEY ??
+      undefined;
     const modelo = (cfg?.ai_modelo as string | null) ?? 'claude-sonnet-4-6';
 
     // Busca tarefas sem classificação

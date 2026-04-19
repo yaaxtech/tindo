@@ -63,7 +63,8 @@ export default function ConfiguracoesPage() {
           ai_api_key_criptografada: (c.ai_api_key_criptografada as string | null) ?? null,
           ai_modelo: (c.ai_modelo as string | null) ?? 'claude-sonnet-4-6',
           ai_auto_aceita_classificacao: Boolean(c.ai_auto_aceita_classificacao),
-          calibracao_inicial_concluida_em: (c.calibracao_inicial_concluida_em as string | null) ?? null,
+          calibracao_inicial_concluida_em:
+            (c.calibracao_inicial_concluida_em as string | null) ?? null,
         });
         // Se a key estava salva antes, não exibimos — campo fica vazio pra redigitar se quiser atualizar
       } finally {
@@ -135,7 +136,11 @@ export default function ConfiguracoesPage() {
       if (body.ok) {
         toast({ titulo: 'Chave válida', descricao: body.detalhe ?? 'Formato OK', icone: 'ok' });
       } else {
-        toast({ titulo: 'Chave inválida', descricao: body.detalhe ?? 'Verifique o formato', icone: 'alerta' });
+        toast({
+          titulo: 'Chave inválida',
+          descricao: body.detalhe ?? 'Verifique o formato',
+          icone: 'alerta',
+        });
       }
     } catch {
       toast({ titulo: 'Erro ao testar', descricao: 'Tente novamente', icone: 'alerta' });
@@ -175,7 +180,7 @@ export default function ConfiguracoesPage() {
       } else {
         toast({ titulo: 'Configurações de IA salvas', icone: 'ok' });
         if (chave) {
-          setCfg((prev) => prev ? { ...prev, ai_api_key_criptografada: chave } : prev);
+          setCfg((prev) => (prev ? { ...prev, ai_api_key_criptografada: chave } : prev));
           setApiKey('');
         }
       }
@@ -351,12 +356,14 @@ export default function ConfiguracoesPage() {
           </header>
 
           {/* Status calibração */}
-          <div className={cn(
-            'mb-4 rounded-md border p-3 text-sm',
-            cfg.calibracao_inicial_concluida_em
-              ? 'border-jade-accent/30 bg-jade-dim/20'
-              : 'border-amber-500/30 bg-amber-500/10',
-          )}>
+          <div
+            className={cn(
+              'mb-4 rounded-md border p-3 text-sm',
+              cfg.calibracao_inicial_concluida_em
+                ? 'border-jade-accent/30 bg-jade-dim/20'
+                : 'border-amber-500/30 bg-amber-500/10',
+            )}
+          >
             {cfg.calibracao_inicial_concluida_em ? (
               <p className="text-text-primary">
                 Calibrado em{' '}
@@ -394,7 +401,11 @@ export default function ConfiguracoesPage() {
                 <input
                   id="ai-api-key"
                   type={mostrarKey ? 'text' : 'password'}
-                  placeholder={cfg.ai_api_key_criptografada ? '••••• chave já salva — deixe vazio pra não alterar' : 'sk-ant-...'}
+                  placeholder={
+                    cfg.ai_api_key_criptografada
+                      ? '••••• chave já salva — deixe vazio pra não alterar'
+                      : 'sk-ant-...'
+                  }
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   className="h-10 w-full rounded-md border border-border-strong bg-bg-surface px-3 pr-10 text-sm text-text-primary placeholder:text-text-muted outline-none focus:border-jade-accent"
@@ -425,7 +436,9 @@ export default function ConfiguracoesPage() {
           </div>
 
           {/* Seletor de modelo */}
-          <div className={cn('mb-4 space-y-2', !cfg.ai_habilitado && 'pointer-events-none opacity-50')}>
+          <div
+            className={cn('mb-4 space-y-2', !cfg.ai_habilitado && 'pointer-events-none opacity-50')}
+          >
             <label htmlFor="ai-modelo" className="block text-xs font-medium text-text-secondary">
               Modelo
             </label>
@@ -450,6 +463,11 @@ export default function ConfiguracoesPage() {
               valor={cfg.ai_auto_aceita_classificacao ?? false}
               onChange={(v) => setCfg({ ...cfg, ai_auto_aceita_classificacao: v })}
             />
+            <p className="mt-1 pl-1 text-[11px] text-text-muted">
+              Ao criar uma tarefa (manual ou Todoist), a IA preenche importância/urgência/facilidade
+              automaticamente se esses campos estiverem vazios. O resultado é registrado em
+              Sugestões IA.
+            </p>
           </div>
 
           {!cfg.ai_habilitado && (

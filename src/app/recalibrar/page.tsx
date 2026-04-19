@@ -73,9 +73,7 @@ const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
 
 function SkeletonBlock({ className }: { className?: string }) {
   return (
-    <div
-      className={`animate-pulse rounded-xl bg-[var(--bg-elevated)] ${className ?? 'h-24'}`}
-    />
+    <div className={`animate-pulse rounded-xl bg-[var(--bg-elevated)] ${className ?? 'h-24'}`} />
   );
 }
 
@@ -145,8 +143,7 @@ function PassoDiagnostico({
         </p>
         {ultimaRecalibracaoEm && (
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            Última recalibração:{' '}
-            {new Date(ultimaRecalibracaoEm).toLocaleDateString('pt-BR')}
+            Última recalibração: {new Date(ultimaRecalibracaoEm).toLocaleDateString('pt-BR')}
           </p>
         )}
       </div>
@@ -166,16 +163,8 @@ function PassoDiagnostico({
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <KpiTile
-          label="Taxa de conclusão"
-          valor={kpis.taxaConclusao}
-          formato="pct"
-        />
-        <KpiTile
-          label="Taxa de pular"
-          valor={kpis.taxaPular}
-          formato="pct"
-        />
+        <KpiTile label="Taxa de conclusão" valor={kpis.taxaConclusao} formato="pct" />
+        <KpiTile label="Taxa de pular" valor={kpis.taxaPular} formato="pct" />
         <KpiTile
           label="Taxa de adiar"
           valor={kpis.taxaAdiar}
@@ -197,21 +186,9 @@ function PassoDiagnostico({
           ativo={gatilhos.some((g) => g.codigo === 'reavaliacao')}
           formato="pct"
         />
-        <KpiTile
-          label="Concluídas/dia"
-          valor={kpis.concluidasPorDia}
-          formato="num"
-        />
-        <KpiTile
-          label="Streak máximo"
-          valor={kpis.streakMaximo}
-          formato="num"
-        />
-        <KpiTile
-          label="Total mostradas"
-          valor={kpis.totalMostradas}
-          formato="num"
-        />
+        <KpiTile label="Concluídas/dia" valor={kpis.concluidasPorDia} formato="num" />
+        <KpiTile label="Streak máximo" valor={kpis.streakMaximo} formato="num" />
+        <KpiTile label="Total mostradas" valor={kpis.totalMostradas} formato="num" />
       </div>
 
       <button
@@ -413,7 +390,13 @@ function BarraPeso({
             <TrendingDown size={13} className="text-[var(--danger)]" />
           ) : null}
           <span
-            className={subiu ? 'text-[var(--jade-accent)]' : pctNovo < pctAntigo ? 'text-[var(--danger)]' : ''}
+            className={
+              subiu
+                ? 'text-[var(--jade-accent)]'
+                : pctNovo < pctAntigo
+                  ? 'text-[var(--danger)]'
+                  : ''
+            }
           >
             {pctNovo.toFixed(0)}%
           </span>
@@ -538,10 +521,7 @@ function TelaSucesso() {
     >
       <motion.div
         animate={{
-          boxShadow: [
-            '0 0 0 0 rgba(44,175,147,0.4)',
-            '0 0 0 24px rgba(44,175,147,0)',
-          ],
+          boxShadow: ['0 0 0 0 rgba(44,175,147,0.4)', '0 0 0 24px rgba(44,175,147,0)'],
         }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
         className="rounded-full p-4 bg-[var(--jade-dim)]/40"
@@ -556,9 +536,7 @@ function TelaSucesso() {
           Seus pesos foram atualizados e as notas estão sendo recalculadas.
         </p>
       </div>
-      <p className="text-xs text-[var(--text-muted)]">
-        Redirecionando para os cards…
-      </p>
+      <p className="text-xs text-[var(--text-muted)]">Redirecionando para os cards…</p>
     </motion.div>
   );
 }

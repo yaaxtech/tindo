@@ -3,14 +3,21 @@ import './globals.css';
 import { RecalibracaoBanner } from '@/components/RecalibracaoBanner';
 import { Toaster } from '@/components/Toaster';
 
+const TITLE = 'TinDo — foco por swipe';
+const DESCRIPTION =
+  'Produtividade uma-tarefa-por-vez. IA prioriza, neurociência recompensa, gamificação sustenta.';
+
 export const metadata: Metadata = {
-  title: 'TinDo — foco por swipe',
-  description:
-    'Produtividade uma-tarefa-por-vez. IA prioriza, neurociência recompensa, gamificação sustenta.',
+  title: TITLE,
+  description: DESCRIPTION,
   applicationName: 'TinDo',
   authors: [{ name: 'YaaX' }],
   keywords: ['todo', 'produtividade', 'tinder', 'tarefa', 'foco'],
-  manifest: '/manifest.json',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-touch-icon.svg',
+    shortcut: '/favicon.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -18,6 +25,17 @@ export const metadata: Metadata = {
   },
   formatDetection: {
     telephone: false,
+  },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: TITLE,
+    description: DESCRIPTION,
   },
 };
 
