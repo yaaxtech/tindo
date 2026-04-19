@@ -1,7 +1,7 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import type { Aneis } from '@/lib/gamificacao/aneis';
+import { cn } from '@/lib/utils';
 import { useGamificacaoStore } from '@/stores/gamificacao';
 import { useToasts } from '@/stores/toasts';
 import { ArrowLeft, Flame, Snowflake, Trophy, Zap } from 'lucide-react';
@@ -183,8 +183,7 @@ export default function GamificacaoPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold">
-                  Freezers disponíveis:{' '}
-                  <span className="text-blue-400">{freezersDisponiveis}</span>
+                  Freezers disponíveis: <span className="text-blue-400">{freezersDisponiveis}</span>
                   <span className="ml-1 text-xs text-text-muted">/ 3</span>
                 </p>
                 <p className="text-xs text-text-muted">
@@ -308,7 +307,7 @@ function AnelCircular({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90">
+      <svg width="96" height="96" viewBox="0 0 96 96" className="-rotate-90" aria-hidden="true">
         {/* Track */}
         <circle
           cx="48"

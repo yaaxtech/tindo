@@ -44,6 +44,11 @@ supabase/.env
 .claude/settings.local.json
 .claude/worktrees/
 
+# playwright e2e
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
 # pwa
 public/sw.js
 public/workbox-*.js

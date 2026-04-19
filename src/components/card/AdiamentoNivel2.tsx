@@ -144,7 +144,7 @@ function formatarSugestao(iso: string): string {
   const h = Math.round(diff / 3_600_000);
   const diasDaSemana = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
   const dia = diasDaSemana[d.getDay()];
-  const hora = d.getHours().toString().padStart(2, '0') + 'h';
+  const hora = `${d.getHours().toString().padStart(2, '0')}h`;
   if (h < 24) return `hoje ${hora}`;
   if (h < 48) return `amanhã ${hora}`;
   return `${dia} ${hora}`;

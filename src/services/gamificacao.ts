@@ -17,7 +17,7 @@ export interface FreezerInfo {
  * Uso server-side: passa o client admin e o usuarioId.
  */
 export async function ganharFreezerAdmin(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SupabaseClient genérico
+  // biome-ignore lint/suspicious/noExplicitAny: SupabaseClient genérico (admin vs regular)
   adminClient: any,
   usuarioId: string,
   motivo: string,
@@ -58,7 +58,7 @@ export async function ganharFreezerAdmin(
  * Compra 1 freezer por 200 XP. Retorna erro se XP insuficiente.
  */
 export async function comprarFreezerAdmin(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SupabaseClient genérico
+  // biome-ignore lint/suspicious/noExplicitAny: SupabaseClient genérico (admin vs regular)
   adminClient: any,
   usuarioId: string,
 ): Promise<{ ok: boolean; erro?: string; freezersDisponiveis: number; xpRestante: number }> {
@@ -71,7 +71,12 @@ export async function comprarFreezerAdmin(
     .maybeSingle();
 
   if (!atual) {
-    return { ok: false, erro: 'Registro de gamificação não encontrado.', freezersDisponiveis: 0, xpRestante: 0 };
+    return {
+      ok: false,
+      erro: 'Registro de gamificação não encontrado.',
+      freezersDisponiveis: 0,
+      xpRestante: 0,
+    };
   }
 
   const xpAtual = Number(atual.xp_total ?? 0);
@@ -107,7 +112,7 @@ export async function comprarFreezerAdmin(
  * Retorna: novo valor de streakAtual e se o freezer foi usado.
  */
 export async function aplicarFreezerSeNecessario(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SupabaseClient genérico
+  // biome-ignore lint/suspicious/noExplicitAny: SupabaseClient genérico (admin vs regular)
   adminClient: any,
   usuarioId: string,
   streakAtual: number,
@@ -165,7 +170,7 @@ export async function aplicarFreezerSeNecessario(
  * Chame após atualizar o streak no endpoint de conclusão.
  */
 export async function verificarFreezersAutomaticos(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SupabaseClient genérico
+  // biome-ignore lint/suspicious/noExplicitAny: SupabaseClient genérico (admin vs regular)
   adminClient: any,
   usuarioId: string,
   novoStreak: number,

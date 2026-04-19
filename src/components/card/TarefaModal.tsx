@@ -256,6 +256,7 @@ export function TarefaModal({
                   <input
                     type="text"
                     required
+                    // biome-ignore lint/a11y/noAutofocus: foco automático intencional ao abrir modal
                     autoFocus
                     value={form.titulo}
                     onChange={(e) => patch('titulo', e.target.value)}
@@ -468,6 +469,7 @@ export function TarefaModal({
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: label wraps control implicitly via children
     <label className="block">
       <span className="mb-1 block text-[11px] uppercase tracking-wider text-text-muted">
         {label}

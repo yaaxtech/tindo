@@ -12,7 +12,6 @@ import { classificarTarefa } from './ai';
 export interface AutoClassificarResult {
   pulada: boolean;
   motivo?: string;
-  // biome-ignore lint/suspicious/noExplicitAny: payload dinâmico da classificação
   classificacao?: ClassificacaoMeta;
 }
 

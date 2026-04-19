@@ -108,8 +108,7 @@ export class TodoistClient {
     const method = init?.method ?? 'GET';
     if (WRITE_DISABLED && method !== 'GET') {
       throw new Error(
-        `Todoist write bloqueada (WRITE_DISABLED=true). Tentou ${method} ${path}. ` +
-          'Pull-only por enquanto — ver docs/05_TODOIST.md.',
+        `Todoist write bloqueada (WRITE_DISABLED=true). Tentou ${method} ${path}. Pull-only por enquanto — ver docs/05_TODOIST.md.`,
       );
     }
     const res = await fetch(`${BASE}${path}`, {

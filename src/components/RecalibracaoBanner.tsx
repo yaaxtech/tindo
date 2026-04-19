@@ -110,6 +110,7 @@ export function RecalibracaoBanner() {
                 </Link>
               </div>
               <button
+                type="button"
                 onClick={fechar}
                 aria-label="Fechar aviso de recalibração"
                 className="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"

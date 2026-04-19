@@ -230,7 +230,7 @@ function TarefaRow({ tarefa }: { tarefa: Tarefa }) {
           <p className="mt-0.5 text-xs text-text-muted">
             {formatRelativeDate(tarefa.dataVencimento)}
             {tarefa.prazoConclusao && ` · prazo ${formatRelativeDate(tarefa.prazoConclusao)}`}
-            {tarefa.adiadaAte && ` · adiada`}
+            {tarefa.adiadaAte && ' · adiada'}
           </p>
         </div>
         <div

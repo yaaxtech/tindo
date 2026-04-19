@@ -192,6 +192,7 @@ function PassoDiagnostico({
       </div>
 
       <button
+        type="button"
         onClick={onAvancar}
         className={`w-full h-12 rounded-xl font-semibold text-sm transition-all ${
           deveRecalibrar
@@ -323,6 +324,7 @@ function PassoCalibracao({
       {/* Navegação */}
       <div className="flex gap-3">
         <button
+          type="button"
           onClick={() => (idx === 0 ? onVoltar() : ir(-1))}
           className="flex items-center gap-2 h-11 px-4 rounded-xl border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm"
         >
@@ -330,6 +332,7 @@ function PassoCalibracao({
           {idx === 0 ? 'Voltar' : 'Anterior'}
         </button>
         <button
+          type="button"
           onClick={() => {
             if (idx < total - 1) {
               ir(1);
@@ -498,6 +501,7 @@ function PassoProposta({
           {aplicando ? 'Aplicando…' : 'Aplicar novos pesos'}
         </motion.button>
         <button
+          type="button"
           onClick={onCancelar}
           disabled={aplicando}
           className="w-full h-11 rounded-xl border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors"
@@ -744,6 +748,7 @@ export default function RecalibrarPage() {
                   <X size={36} className="text-[var(--danger)]" />
                   <p className="text-sm text-[var(--text-secondary)]">{erroDiagnostico}</p>
                   <button
+                    type="button"
                     onClick={() => {
                       fetchedDiagnostico.current = false;
                       setCarregandoDiagnostico(true);

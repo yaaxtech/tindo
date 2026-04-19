@@ -8,7 +8,11 @@ import { useEffect, useRef } from 'react';
 export function Toaster() {
   const lista = useToasts((s) => s.lista);
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+    <output
+      aria-live="polite"
+      aria-atomic="false"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+16px)]"
+    >
       <div className="flex w-full max-w-md flex-col-reverse gap-2">
         <AnimatePresence initial={false}>
           {lista.map((t) => (
@@ -16,7 +20,7 @@ export function Toaster() {
           ))}
         </AnimatePresence>
       </div>
-    </div>
+    </output>
   );
 }
 

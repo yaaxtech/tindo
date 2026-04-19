@@ -63,7 +63,7 @@ export function SwipeHandler({ children, onSwipe, disabled }: SwipeHandlerProps)
 
   return (
     <motion.div
-      drag={disabled ? false : true}
+      drag={!disabled}
       dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
       dragElastic={0.5}
       onDragEnd={handleEnd}

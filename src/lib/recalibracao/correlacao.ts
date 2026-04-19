@@ -59,20 +59,20 @@ function olsSem3(U: number[], I: number[], F: number[], y: number[]): [number, n
   const n = U.length;
   // Normal equations: [X'X] * w = X'y
   // X'X é 3x3
-  let uu = 0,
-    ui = 0,
-    uf = 0,
-    ii = 0,
-    if_ = 0,
-    ff = 0;
-  let uy = 0,
-    iy = 0,
-    fy = 0;
+  let uu = 0;
+  let ui = 0;
+  let uf = 0;
+  let ii = 0;
+  let if_ = 0;
+  let ff = 0;
+  let uy = 0;
+  let iy = 0;
+  let fy = 0;
   for (let k = 0; k < n; k++) {
-    const uk = U[k] ?? 0,
-      ik = I[k] ?? 0,
-      fk = F[k] ?? 0,
-      yk = y[k] ?? 0;
+    const uk = U[k] ?? 0;
+    const ik = I[k] ?? 0;
+    const fk = F[k] ?? 0;
+    const yk = y[k] ?? 0;
     uu += uk * uk;
     ui += uk * ik;
     uf += uk * fk;
@@ -150,7 +150,9 @@ export function calcularNovosPesos(
   const MAX = 0.8;
   const MIN = 0.1;
   const clampMax = (a: number, b: number, c: number): [number, number, number] => {
-    let [x, y, z] = [a, b, c];
+    let x = a;
+    let y = b;
+    let z = c;
     for (let _iter = 0; _iter < 10; _iter++) {
       let excess = 0;
       let freeSum = 0;

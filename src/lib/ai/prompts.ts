@@ -303,10 +303,7 @@ export function montarPromptSugestoes(ctx: ContextoSugestoes): {
           .join('\n')
       : 'Nenhuma tarefa pendente.';
 
-  const userMessage =
-    `Últimas 10 tarefas concluídas (mais recentes primeiro):\n${linhasUltimas}\n\n` +
-    `Resumo de tarefas pendentes por projeto:\n${linhasResumo}\n\n` +
-    'Com base nisso, sugira até 5 tarefas DIFERENTES das já listadas acima que mais avançam os critérios de sucesso do usuário.';
+  const userMessage = `Últimas 10 tarefas concluídas (mais recentes primeiro):\n${linhasUltimas}\n\nResumo de tarefas pendentes por projeto:\n${linhasResumo}\n\nCom base nisso, sugira até 5 tarefas DIFERENTES das já listadas acima que mais avançam os critérios de sucesso do usuário.`;
 
   return { system, userMessage, tool: TOOL_SUGERIR_TAREFAS };
 }
@@ -320,7 +317,7 @@ export function montarPromptClassificacao(ctx: ContextoClassificacao): {
   userMessage: string;
   tool: typeof TOOL_CLASSIFICAR_TAREFA;
 } {
-  const lines: string[] = [`Classifique esta tarefa:`, `- Título: ${ctx.titulo}`];
+  const lines: string[] = ['Classifique esta tarefa:', `- Título: ${ctx.titulo}`];
 
   if (ctx.descricao) lines.push(`- Descrição: ${ctx.descricao}`);
   if (ctx.projeto) lines.push(`- Projeto: ${ctx.projeto}`);

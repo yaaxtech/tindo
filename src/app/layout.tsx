@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { AppShell } from '@/components/AppShell';
 import { RecalibracaoBanner } from '@/components/RecalibracaoBanner';
 import { Toaster } from '@/components/Toaster';
 
@@ -52,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="min-h-dvh bg-bg-deep text-text-primary no-tap">
-        {children}
+        <AppShell>{children}</AppShell>
         <RecalibracaoBanner />
         <Toaster />
       </body>

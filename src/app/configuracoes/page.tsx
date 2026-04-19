@@ -626,9 +626,13 @@ function Toggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between py-2 text-sm">
+    <div className="flex cursor-pointer items-center justify-between py-2 text-sm">
       <span>{label}</span>
-      <span
+      <button
+        type="button"
+        role="switch"
+        aria-checked={valor}
+        aria-label={label}
         onClick={() => onChange(!valor)}
         className={cn(
           'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
@@ -641,7 +645,7 @@ function Toggle({
             valor && 'translate-x-4',
           )}
         />
-      </span>
-    </label>
+      </button>
+    </div>
   );
 }

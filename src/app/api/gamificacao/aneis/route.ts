@@ -1,5 +1,5 @@
+import { type DiaAtividade, calcularAneis } from '@/lib/gamificacao/aneis';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import { calcularAneis, type DiaAtividade } from '@/lib/gamificacao/aneis';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export async function GET() {
     const agora = new Date();
     const seteDiasAtras = new Date(agora);
     seteDiasAtras.setDate(seteDiasAtras.getDate() - 6);
-    const inicioStr = seteDiasAtras.toISOString().slice(0, 10) + 'T00:00:00.000Z';
+    const inicioStr = `${seteDiasAtras.toISOString().slice(0, 10)}T00:00:00.000Z`;
 
     // Busca conclusões dos últimos 7 dias
     const { data: historico, error: errHist } = await admin
