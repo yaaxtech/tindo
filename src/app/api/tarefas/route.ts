@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { autoClassificarSeHabilitado } from '@/services/autoClassificar';

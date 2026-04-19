@@ -1,0 +1,23 @@
+# wrangler.toml — TinDo CF Pages config
+# NOTE: [triggers]/crons NÃO são suportados em Pages (só em Workers).
+# O cron diário é implementado via Worker separado em cf-worker-cron/.
+# Ver DEPLOY.md para instruções.
+
+name = "tindo-6qy"
+compatibility_date = "2026-04-19"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+[observability]
+enabled = true
+
+[vars]
+NODE_ENV = "production"
+# Secrets (setados via dashboard ou `wrangler pages secret put`):
+# NEXT_PUBLIC_SUPABASE_URL
+# SUPABASE_ANON_KEY
+# SUPABASE_SERVICE_ROLE_KEY
+# TODOIST_API_TOKEN
+# ANTHROPIC_API_KEY
+# TINDO_MVP_USER_ID
+# CRON_SECRET

@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -30,6 +32,7 @@ interface PatchPayload {
   audio_habilitado?: boolean;
   animacoes_habilitadas?: boolean;
   todoist_sync_habilitado?: boolean;
+  todoist_writeback_habilitado?: boolean;
   ai_habilitado?: boolean;
   limiar_recalibracao_reavaliacao?: number;
   limiar_recalibracao_descarte?: number;
@@ -38,6 +41,11 @@ interface PatchPayload {
   ai_api_key_criptografada?: string;
   ai_modelo?: string;
   ai_auto_aceita_classificacao?: boolean;
+  // Campos Push — opcionais (migração 20260419000005)
+  push_habilitado?: boolean;
+  push_gatilho_prazo_hoje?: boolean;
+  push_gatilho_streak_risco?: boolean;
+  push_gatilho_sugestoes_ia?: boolean;
 }
 
 export async function PATCH(request: NextRequest) {

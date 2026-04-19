@@ -1,5 +1,8 @@
+export const runtime = 'edge';
+
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { propagarParaTodoist } from '@/services/todoistWriteback';
 import type { Configuracoes, Projeto, Tag, Tarefa } from '@/types/domain';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -49,6 +52,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Recalcula a nota imediatamente
     await recalcularNotaUnica(admin, usuarioId, id);
+
+    // Propaga alterações para o Todoist se write-back habilitado
+    if (Object.keys(patch).length > 0) {
+      void propagarParaTodoist({
+        usuarioId,
+        tarefaId: id,
+        acao: 'atualizar',
+        patch: {
+          titulo: body.titulo,
+          descricao: body.descricao ?? undefined,
+          dataVencimento: body.data_vencimento,
+          prioridade: body.prioridade,
+        },
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

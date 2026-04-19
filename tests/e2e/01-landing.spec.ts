@@ -8,7 +8,8 @@ test.describe('Landing — rota raiz e metadados', () => {
     expect(response?.status()).not.toBe(500);
 
     const url = page.url();
-    const valido = url.includes('/cards') || url.includes('/login') || url === 'http://localhost:3000/';
+    const valido =
+      url.includes('/cards') || url.includes('/login') || url === 'http://localhost:3000/';
     expect(valido, `URL inesperada: ${url}`).toBe(true);
   });
 

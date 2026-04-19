@@ -3,6 +3,8 @@
  * Se houver gatilho ativo, marca recalibracao_sugerida_em e retorna motivo.
  */
 
+export const runtime = 'edge';
+
 import { marcarRecalibracaoSugerida, verificarGatilhos } from '@/services/calibracao';
 import { NextResponse } from 'next/server';
 

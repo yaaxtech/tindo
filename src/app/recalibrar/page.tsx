@@ -686,6 +686,7 @@ export default function RecalibrarPage() {
           {passo !== 'sucesso' && (
             <Link
               href="/cards"
+              aria-label="Voltar aos cards"
               className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
             >
               <ArrowLeft className="h-4 w-4" />

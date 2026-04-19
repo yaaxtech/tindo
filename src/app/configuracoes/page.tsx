@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { useToasts } from '@/stores/toasts';
 import { ArrowLeft, Eye, EyeOff, RefreshCw, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -13,6 +14,8 @@ interface ConfigRow {
   audio_habilitado: boolean;
   animacoes_habilitadas: boolean;
   todoist_sync_habilitado: boolean;
+  // Opcional — coluna adicionada em 20260419000004 (pode não existir em instâncias antigas)
+  todoist_writeback_habilitado?: boolean;
   ai_habilitado: boolean;
   limiar_recalibracao_reavaliacao: number;
   limiar_recalibracao_descarte: number;
@@ -22,6 +25,11 @@ interface ConfigRow {
   ai_modelo?: string | null;
   ai_auto_aceita_classificacao?: boolean;
   calibracao_inicial_concluida_em?: string | null;
+  // Push (opcionais — migração 20260419000005)
+  push_habilitado?: boolean;
+  push_gatilho_prazo_hoje?: boolean;
+  push_gatilho_streak_risco?: boolean;
+  push_gatilho_sugestoes_ia?: boolean;
 }
 
 const MODELOS_IA = [
@@ -40,6 +48,9 @@ export default function ConfiguracoesPage() {
   const [apiKey, setApiKey] = useState('');
   const [mostrarKey, setMostrarKey] = useState(false);
   const [testando, setTestando] = useState(false);
+  // Push section state
+  const [testandoPush, setTestandoPush] = useState(false);
+  const push = usePushSubscription();
   const toast = useToasts((s) => s.push);
 
   useEffect(() => {
@@ -56,6 +67,7 @@ export default function ConfiguracoesPage() {
           audio_habilitado: Boolean(c.audio_habilitado),
           animacoes_habilitadas: Boolean(c.animacoes_habilitadas),
           todoist_sync_habilitado: Boolean(c.todoist_sync_habilitado),
+          todoist_writeback_habilitado: Boolean(c.todoist_writeback_habilitado),
           ai_habilitado: Boolean(c.ai_habilitado),
           limiar_recalibracao_reavaliacao: Number(c.limiar_recalibracao_reavaliacao),
           limiar_recalibracao_descarte: Number(c.limiar_recalibracao_descarte),
@@ -65,6 +77,10 @@ export default function ConfiguracoesPage() {
           ai_auto_aceita_classificacao: Boolean(c.ai_auto_aceita_classificacao),
           calibracao_inicial_concluida_em:
             (c.calibracao_inicial_concluida_em as string | null) ?? null,
+          push_habilitado: Boolean(c.push_habilitado),
+          push_gatilho_prazo_hoje: c.push_gatilho_prazo_hoje !== false,
+          push_gatilho_streak_risco: c.push_gatilho_streak_risco !== false,
+          push_gatilho_sugestoes_ia: c.push_gatilho_sugestoes_ia !== false,
         });
         // Se a key estava salva antes, não exibimos — campo fica vazio pra redigitar se quiser atualizar
       } finally {
@@ -192,6 +208,25 @@ export default function ConfiguracoesPage() {
     }
   };
 
+  const testarPush = async () => {
+    setTestandoPush(true);
+    try {
+      const res = await fetch('/api/push/testar', { method: 'POST' });
+      const body = (await res.json()) as { ok?: boolean; enviadas?: number; error?: string };
+      if (body.ok && body.enviadas && body.enviadas > 0) {
+        toast({ titulo: 'Notificacao enviada', descricao: 'Verifique a notificacao no dispositivo.', icone: 'ok' });
+      } else if (body.enviadas === 0) {
+        toast({ titulo: 'Nenhum dispositivo registrado', descricao: 'Ative neste dispositivo primeiro.', icone: 'alerta' });
+      } else {
+        toast({ titulo: body.error ?? 'Erro ao testar push', icone: 'alerta' });
+      }
+    } catch {
+      toast({ titulo: 'Erro ao testar notificacao', icone: 'alerta' });
+    } finally {
+      setTestandoPush(false);
+    }
+  };
+
   const ajustarPeso = (
     campo: 'peso_urgencia' | 'peso_importancia' | 'peso_facilidade',
     v: number,
@@ -313,6 +348,129 @@ export default function ConfiguracoesPage() {
           <ArrowLeft className="h-4 w-4 rotate-180 text-text-muted" />
         </Link>
 
+        {/* Notificacoes Push */}
+        <section className="rounded-xl border border-border-strong bg-bg-elevated p-5">
+          <header className="mb-4">
+            <h2 className="text-sm font-semibold text-text-primary">Notificacoes Push</h2>
+            <p className="mt-1 text-xs text-text-muted">
+              Receba alertas no dispositivo mesmo com o app fechado. Requer HTTPS e permissao do
+              navegador.
+            </p>
+          </header>
+
+          <Toggle
+            label="Receber notificacoes push"
+            valor={cfg.push_habilitado ?? false}
+            onChange={(v) => {
+              const patch = { ...cfg, push_habilitado: v };
+              setCfg(patch);
+              void fetch('/api/configuracoes', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ push_habilitado: v }),
+              });
+            }}
+          />
+
+          {cfg.push_habilitado && (
+            <div className="mt-3 space-y-1 border-t border-border pt-3">
+              <p className="mb-2 text-xs font-medium text-text-secondary">Gatilhos</p>
+              <Toggle
+                label="Tarefas com prazo hoje"
+                valor={cfg.push_gatilho_prazo_hoje ?? true}
+                onChange={(v) => {
+                  setCfg({ ...cfg, push_gatilho_prazo_hoje: v });
+                  void fetch('/api/configuracoes', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ push_gatilho_prazo_hoje: v }),
+                  });
+                }}
+              />
+              <Toggle
+                label="Streak em risco (apos 18h sem concluir)"
+                valor={cfg.push_gatilho_streak_risco ?? true}
+                onChange={(v) => {
+                  setCfg({ ...cfg, push_gatilho_streak_risco: v });
+                  void fetch('/api/configuracoes', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ push_gatilho_streak_risco: v }),
+                  });
+                }}
+              />
+              <Toggle
+                label="Novas sugestoes da IA"
+                valor={cfg.push_gatilho_sugestoes_ia ?? true}
+                onChange={(v) => {
+                  setCfg({ ...cfg, push_gatilho_sugestoes_ia: v });
+                  void fetch('/api/configuracoes', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ push_gatilho_sugestoes_ia: v }),
+                  });
+                }}
+              />
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {push.status === 'unsupported' && (
+              <p className="text-xs text-text-muted">
+                Este navegador nao suporta notificacoes push.
+              </p>
+            )}
+            {push.status === 'denied' && (
+              <p className="text-xs text-warning">
+                Permissao bloqueada. Libere nas configuracoes do navegador.
+              </p>
+            )}
+            {push.status !== 'unsupported' && push.status !== 'granted' && push.status !== 'denied' && (
+              <button
+                type="button"
+                onClick={() => void push.subscribe()}
+                disabled={push.status === 'loading'}
+                className="inline-flex h-9 items-center rounded-md grad-jade px-4 text-sm font-medium text-text-inverse disabled:opacity-40"
+              >
+                {push.status === 'loading' ? 'Ativando...' : 'Ativar neste dispositivo'}
+              </button>
+            )}
+            {push.status === 'granted' && (
+              <>
+                <span className="inline-flex h-9 items-center rounded-md border border-jade-accent/40 bg-jade-dim/20 px-3 text-sm text-jade-accent">
+                  Ativo neste dispositivo
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void push.unsubscribe()}
+                  className="inline-flex h-9 items-center rounded-md border border-border-strong bg-bg-surface px-3 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+                >
+                  Desativar
+                </button>
+              </>
+            )}
+            {push.status === 'error' && (
+              <p className="text-xs text-danger">
+                Erro ao ativar. Verifique se o app esta em HTTPS e tente novamente.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => void testarPush()}
+              disabled={testandoPush}
+              className="inline-flex h-9 items-center rounded-md border border-border-strong bg-bg-surface px-3 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+            >
+              {testandoPush ? 'Enviando...' : 'Enviar notificacao de teste'}
+            </button>
+          </div>
+
+          {cfg.push_habilitado && (
+            <p className="mt-3 text-[11px] text-text-muted">
+              iOS: push so funciona se o app for adicionado a tela de inicio (PWA instalado).
+            </p>
+          )}
+        </section>
+
         {/* Bem-estar */}
         <Card
           titulo="Bem-estar"
@@ -332,10 +490,26 @@ export default function ConfiguracoesPage() {
 
         <Card titulo="Integrações" subtitulo="">
           <Toggle
-            label="Sync Todoist (leitura apenas por enquanto)"
+            label="Sync Todoist (leitura)"
             valor={cfg.todoist_sync_habilitado}
             onChange={(v) => setCfg({ ...cfg, todoist_sync_habilitado: v })}
           />
+          <div className="space-y-1">
+            <Toggle
+              label="Atualizar Todoist automaticamente"
+              valor={cfg.todoist_writeback_habilitado ?? false}
+              onChange={(v) => setCfg({ ...cfg, todoist_writeback_habilitado: v })}
+            />
+            <p className="pl-1 text-[11px] text-text-muted">
+              Quando você concluir, adiar ou editar uma tarefa no TinDo, o Todoist é atualizado na
+              mesma. Requer TODOIST_API_TOKEN configurado no servidor.
+            </p>
+            {cfg.todoist_writeback_habilitado && (
+              <p className="rounded-md bg-bg-surface px-3 py-2 text-xs text-warning">
+                Tarefas concluídas/excluídas no TinDo serão refletidas na sua conta Todoist.
+              </p>
+            )}
+          </div>
           <Toggle
             label="IA Claude (classificação/sugestões)"
             valor={cfg.ai_habilitado}

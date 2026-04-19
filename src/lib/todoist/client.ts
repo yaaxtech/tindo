@@ -2,16 +2,15 @@
  * Cliente minimalista para a Todoist API v1 (REST).
  * Docs: https://developer.todoist.com/api/v1/
  *
- * ⚠️ POLÍTICA ATUAL (2026-04-18): SOMENTE LEITURA.
- * Push ao Todoist está DESABILITADO por segurança. Métodos de escrita
- * levantam erro antes de fazer qualquer request.
+ * Leitura: sempre habilitada.
+ * Escrita: habilitada via funções standalone abaixo — usadas apenas quando
+ *   todoist_writeback_habilitado=true em configuracoes (ver src/services/todoistWriteback.ts).
  *
  * Todas as listagens são paginadas via `next_cursor`; o método `paginate`
  * agrega todas as páginas automaticamente.
  */
 
 const BASE = 'https://api.todoist.com/api/v1';
-const WRITE_DISABLED = true;
 
 export interface TodoistProject {
   id: string;
@@ -106,11 +105,6 @@ export class TodoistClient {
 
   private async req<T>(path: string, init?: RequestInit): Promise<T> {
     const method = init?.method ?? 'GET';
-    if (WRITE_DISABLED && method !== 'GET') {
-      throw new Error(
-        `Todoist write bloqueada (WRITE_DISABLED=true). Tentou ${method} ${path}. Pull-only por enquanto — ver docs/05_TODOIST.md.`,
-      );
-    }
     const res = await fetch(`${BASE}${path}`, {
       ...init,
       headers: {
@@ -154,6 +148,118 @@ export class TodoistClient {
     if (params?.label) qs.set('label', params.label);
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return this.paginate<TodoistTask>(`/tasks${suffix}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Funções de escrita (write-back opt-in)
+// Usadas APENAS via src/services/todoistWriteback.ts quando
+// todoist_writeback_habilitado=true. Não chamar diretamente de componentes.
+// ---------------------------------------------------------------------------
+
+/**
+ * Marca uma tarefa como concluída no Todoist.
+ * Ignora 404 silenciosamente (tarefa pode ter sido deletada no Todoist).
+ */
+export async function concluirTodoistTask(token: string, todoistId: string): Promise<void> {
+  const res = await fetch(`${BASE}/tasks/${todoistId}/close`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  if (!res.ok && res.status !== 404) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Todoist POST /tasks/${todoistId}/close → ${res.status}: ${body}`);
+  }
+  if (res.status === 404) {
+    console.warn(
+      `[todoist-client] concluirTodoistTask: tarefa ${todoistId} não encontrada — ignorado`,
+    );
+  }
+}
+
+/**
+ * Reabre uma tarefa no Todoist.
+ * Ignora 404 silenciosamente.
+ */
+export async function reabrirTodoistTask(token: string, todoistId: string): Promise<void> {
+  const res = await fetch(`${BASE}/tasks/${todoistId}/reopen`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  if (!res.ok && res.status !== 404) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Todoist POST /tasks/${todoistId}/reopen → ${res.status}: ${body}`);
+  }
+  if (res.status === 404) {
+    console.warn(
+      `[todoist-client] reabrirTodoistTask: tarefa ${todoistId} não encontrada — ignorado`,
+    );
+  }
+}
+
+export interface TodoistTaskPatch {
+  content?: string;
+  description?: string;
+  due_date?: string | null; // YYYY-MM-DD ou null para remover
+  priority?: 1 | 2 | 3 | 4; // Todoist: 1=normal, 4=urgent (inverso do TinDo)
+}
+
+/**
+ * Atualiza campos de uma tarefa no Todoist.
+ * Ignora 404 silenciosamente.
+ */
+export async function atualizarTodoistTask(
+  token: string,
+  todoistId: string,
+  patch: TodoistTaskPatch,
+): Promise<void> {
+  // Todoist usa due_string: null para remover; due_date não aceita null direto —
+  // usamos due_string vazio para limpar quando null.
+  const body: Record<string, unknown> = {};
+  if (patch.content !== undefined) body.content = patch.content;
+  if (patch.description !== undefined) body.description = patch.description;
+  if (patch.priority !== undefined) body.priority = patch.priority;
+  if (patch.due_date !== undefined) {
+    if (patch.due_date === null) {
+      body.due_string = 'no date';
+    } else {
+      body.due_date = patch.due_date;
+    }
+  }
+
+  const res = await fetch(`${BASE}/tasks/${todoistId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok && res.status !== 404) {
+    const resBody = await res.text().catch(() => '');
+    throw new Error(`Todoist POST /tasks/${todoistId} → ${res.status}: ${resBody}`);
+  }
+  if (res.status === 404) {
+    console.warn(
+      `[todoist-client] atualizarTodoistTask: tarefa ${todoistId} não encontrada — ignorado`,
+    );
+  }
+}
+
+/**
+ * Exclui uma tarefa no Todoist.
+ * Ignora 404 silenciosamente.
+ */
+export async function excluirTodoistTask(token: string, todoistId: string): Promise<void> {
+  const res = await fetch(`${BASE}/tasks/${todoistId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  if (!res.ok && res.status !== 404) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Todoist DELETE /tasks/${todoistId} → ${res.status}: ${body}`);
+  }
+  if (res.status === 404) {
+    console.warn(
+      `[todoist-client] excluirTodoistTask: tarefa ${todoistId} não encontrada — ignorado`,
+    );
   }
 }
 
