@@ -1,7 +1,7 @@
 'use client';
 
 import { type PanInfo, animate, motion, useMotionValue, useTransform } from 'framer-motion';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 export type SwipeDir = 'left' | 'right' | 'up' | 'down';
 
@@ -27,6 +27,8 @@ export function SwipeHandler({ children, onSwipe, disabled, animacaoEmCurso }: S
   const y = useMotionValue(0);
   // Rastreia se animação já foi disparada pra evitar dupla chamada
   const animandoRef = useRef<SwipeDir | null>(null);
+  // Quando true, desativa o "snap back" automático pra deixar o exit do pai fluir
+  const [saindo, setSaindo] = useState(false);
 
   const rotate = useTransform(x, [-240, 0, 240], [-10, 0, 10]);
   const borderColor = useTransform([x, y] as const, (latest: unknown) => {
@@ -95,41 +97,59 @@ export function SwipeHandler({ children, onSwipe, disabled, animacaoEmCurso }: S
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animacaoEmCurso]);
 
+  const confirmarSwipe = (dir: SwipeDir): void => {
+    setSaindo(true);
+    // Continua o movimento na direção do gesto para suavizar junto com o exit do CardStack
+    if (dir === 'right') {
+      animate(x, 600, { duration: 0.22, ease: [0.4, 0, 1, 1] });
+      animate(rotate, 14, { duration: 0.22 });
+    } else if (dir === 'left') {
+      animate(x, -600, { duration: 0.22, ease: [0.4, 0, 1, 1] });
+      animate(rotate, -14, { duration: 0.22 });
+    } else if (dir === 'up') {
+      animate(y, -500, { duration: 0.22, ease: [0.4, 0, 1, 1] });
+    } else {
+      animate(y, 500, { duration: 0.22, ease: [0.4, 0, 1, 1] });
+    }
+    onSwipe(dir);
+  };
+
   const handleEnd = (_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
     if (disabled) return;
     const { offset, velocity } = info;
     const horizontal = Math.abs(offset.x) > Math.abs(offset.y);
     if (horizontal) {
       if (offset.x > LIMIAR_DISTANCIA || velocity.x > LIMIAR_VELOCIDADE) {
-        onSwipe('right');
+        confirmarSwipe('right');
         return;
       }
       if (offset.x < -LIMIAR_DISTANCIA || velocity.x < -LIMIAR_VELOCIDADE) {
-        onSwipe('left');
+        confirmarSwipe('left');
         return;
       }
     } else {
       if (offset.y < -LIMIAR_DISTANCIA || velocity.y < -LIMIAR_VELOCIDADE) {
-        onSwipe('up');
+        confirmarSwipe('up');
         return;
       }
       if (offset.y > LIMIAR_DISTANCIA || velocity.y > LIMIAR_VELOCIDADE) {
-        onSwipe('down');
+        confirmarSwipe('down');
         return;
       }
     }
+    // Gesto não cruzou limiar — snap back ao centro via spring
+    animate(x, 0, { type: 'spring', stiffness: 300, damping: 30 });
+    animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
   };
 
   return (
     <motion.div
-      drag={!disabled}
+      drag={!disabled && !saindo}
       dragConstraints={{ top: 0, bottom: 0, left: 0, right: 0 }}
       dragElastic={0.5}
       onDragEnd={handleEnd}
       style={{ x, y, rotate, borderColor, borderWidth: 2, borderStyle: 'solid', borderRadius: 24 }}
-      animate={{ x: 0, y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      whileTap={{ scale: 0.98 }}
+      whileTap={saindo ? undefined : { scale: 0.98 }}
       className="relative h-full w-full"
     >
       {children}
