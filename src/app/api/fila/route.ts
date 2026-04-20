@@ -25,6 +25,9 @@ export async function GET() {
       .eq('status', 'pendente')
       .is('deleted_at', null)
       .or(`adiada_ate.is.null,adiada_ate.lte.${new Date().toISOString()}`)
+      // Lembretes primeiro (alfabético ascending: 'lembrete' < 'tarefa'),
+      // dentro de cada grupo por nota desc.
+      .order('tipo', { ascending: true })
       .order('nota', { ascending: false });
     if (errTarefas) throw errTarefas;
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
+import { cn } from '@/lib/utils';
 import { useToasts } from '@/stores/toasts';
 import { ArrowLeft, Eye, EyeOff, RefreshCw, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -214,9 +214,17 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/push/testar', { method: 'POST' });
       const body = (await res.json()) as { ok?: boolean; enviadas?: number; error?: string };
       if (body.ok && body.enviadas && body.enviadas > 0) {
-        toast({ titulo: 'Notificacao enviada', descricao: 'Verifique a notificacao no dispositivo.', icone: 'ok' });
+        toast({
+          titulo: 'Notificacao enviada',
+          descricao: 'Verifique a notificacao no dispositivo.',
+          icone: 'ok',
+        });
       } else if (body.enviadas === 0) {
-        toast({ titulo: 'Nenhum dispositivo registrado', descricao: 'Ative neste dispositivo primeiro.', icone: 'alerta' });
+        toast({
+          titulo: 'Nenhum dispositivo registrado',
+          descricao: 'Ative neste dispositivo primeiro.',
+          icone: 'alerta',
+        });
       } else {
         toast({ titulo: body.error ?? 'Erro ao testar push', icone: 'alerta' });
       }
@@ -425,16 +433,18 @@ export default function ConfiguracoesPage() {
                 Permissao bloqueada. Libere nas configuracoes do navegador.
               </p>
             )}
-            {push.status !== 'unsupported' && push.status !== 'granted' && push.status !== 'denied' && (
-              <button
-                type="button"
-                onClick={() => void push.subscribe()}
-                disabled={push.status === 'loading'}
-                className="inline-flex h-9 items-center rounded-md grad-jade px-4 text-sm font-medium text-text-inverse disabled:opacity-40"
-              >
-                {push.status === 'loading' ? 'Ativando...' : 'Ativar neste dispositivo'}
-              </button>
-            )}
+            {push.status !== 'unsupported' &&
+              push.status !== 'granted' &&
+              push.status !== 'denied' && (
+                <button
+                  type="button"
+                  onClick={() => void push.subscribe()}
+                  disabled={push.status === 'loading'}
+                  className="inline-flex h-9 items-center rounded-md grad-jade px-4 text-sm font-medium text-text-inverse disabled:opacity-40"
+                >
+                  {push.status === 'loading' ? 'Ativando...' : 'Ativar neste dispositivo'}
+                </button>
+              )}
             {push.status === 'granted' && (
               <>
                 <span className="inline-flex h-9 items-center rounded-md border border-jade-accent/40 bg-jade-dim/20 px-3 text-sm text-jade-accent">

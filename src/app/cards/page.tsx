@@ -1,8 +1,11 @@
 'use client';
 
 import { AdiamentoNivel2 } from '@/components/card/AdiamentoNivel2';
+import { ContadorLembretes } from '@/components/card/ContadorLembretes';
+import { EditarDataPopover } from '@/components/card/EditarDataPopover';
 import { type SwipeDir, SwipeHandler } from '@/components/card/SwipeHandler';
 import { type SalvarPayload, TarefaModal } from '@/components/card/TarefaModal';
+import type { CampoData } from '@/components/card/TaskCard';
 import { TaskCard } from '@/components/card/TaskCard';
 import { CompletionCelebration } from '@/components/celebration/CompletionCelebration';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
@@ -72,6 +75,10 @@ export default function CardsPage() {
   const [sugestaoNivel2, setSugestaoNivel2] = useState<SugestaoAdiamento | null>(null);
   const [projetosLite, setProjetosLite] = useState<{ id: string; nome: string; cor: string }[]>([]);
   const [tagsLite, setTagsLite] = useState<{ id: string; nome: string; cor: string }[]>([]);
+  // Popover de edição de data inline
+  const [popoverAberto, setPopoverAberto] = useState<CampoData | null>(null);
+  // Animação de saída disparada pelo teclado
+  const [animacaoEmCurso, setAnimacaoEmCurso] = useState<SwipeDir | null>(null);
   const tarefaAtual = atual();
 
   useEffect(() => {
@@ -192,8 +199,9 @@ export default function CardsPage() {
 
   const handleSwipe = (dir: SwipeDir): void => {
     void playSwipe(dir);
-    if (dir === 'left') proxima();
-    else if (dir === 'right') anterior();
+    // Convenção invertida em 2026-04-20: ← volta, → avança
+    if (dir === 'left') anterior();
+    else if (dir === 'right') proxima();
     else if (dir === 'up') abrirNivel2ComSugestao();
     else if (dir === 'down') {
       const alvo = tarefaAtual;
@@ -261,15 +269,55 @@ export default function CardsPage() {
     void sincronizarAcao(id, { tipo: 'excluir' });
   };
 
+  const salvarCampoData = (campo: CampoData, ate: string | null): void => {
+    if (!tarefaAtual) return;
+    const id = tarefaAtual.id;
+    // Atualiza estado local otimista
+    const filaAtualizada = fila.map((t: Tarefa) => {
+      if (t.id !== id) return t;
+      return campo === 'data_vencimento'
+        ? { ...t, dataVencimento: ate }
+        : { ...t, prazoConclusao: ate };
+    });
+    setFila(filaAtualizada);
+    setPopoverAberto(null);
+    // Persiste no backend e recalcula nota
+    void fetch(`/api/tarefas/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [campo]: ate }),
+    }).catch((e) => console.error('salvarCampoData falhou:', e));
+    pushToast({ titulo: 'Data atualizada', icone: 'ok', duracaoMs: 3000 });
+  };
+
+  // Dispara animação de saída e depois executa a ação (Tarefa 2)
+  const dispararComAnimacao = (dir: SwipeDir): void => {
+    if (!tarefaAtual || animacaoEmCurso) return;
+    setAnimacaoEmCurso(dir);
+    // handleSwipe é chamado internamente pelo SwipeHandler via onSwipe após animar
+  };
+
+  // Callback que o SwipeHandler chama após animação completar (ou no drag real)
+  const handleSwipeComReset = (dir: SwipeDir): void => {
+    setAnimacaoEmCurso(null);
+    handleSwipe(dir);
+  };
+
   useKeyboardNav({
-    onLeft: () => !nivel2Adiar && handleSwipe('left'),
-    onRight: () => !nivel2Adiar && handleSwipe('right'),
-    onUp: () => !nivel2Adiar && abrirNivel2ComSugestao(),
-    onDown: () => !nivel2Adiar && handleSwipe('down'),
-    onSpace: () => !nivel2Adiar && handleConcluir(),
-    onEnter: () => !nivel2Adiar && handleConcluir(),
-    onEscape: () => nivel2Adiar && fecharNivel2Adiar(),
-    onDelete: () => !nivel2Adiar && handleExcluir(),
+    onLeft: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('left'),
+    onRight: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('right'),
+    onUp: () => !nivel2Adiar && !popoverAberto && abrirNivel2ComSugestao(),
+    onDown: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('down'),
+    onSpace: () => !nivel2Adiar && !popoverAberto && handleConcluir(),
+    onEnter: () => !nivel2Adiar && !popoverAberto && handleConcluir(),
+    onEscape: () => {
+      if (popoverAberto) {
+        setPopoverAberto(null);
+        return;
+      }
+      if (nivel2Adiar) fecharNivel2Adiar();
+    },
+    onDelete: () => !nivel2Adiar && !popoverAberto && handleExcluir(),
   });
 
   const pendentes = fila.filter((t: Tarefa) => t.status === 'pendente');
@@ -278,9 +326,11 @@ export default function CardsPage() {
   return (
     <main className="relative flex min-h-dvh flex-col safe-top safe-bottom">
       <header className="flex items-center justify-between px-6 py-4 text-xs text-text-muted">
-        <span>
-          {pendentes.length} pendentes · {lembretesPendentes} lembretes
-          {erroCarga && <span className="ml-2 text-warning">· {erroCarga}</span>}
+        <span className="flex flex-wrap items-center gap-2">
+          <ContadorLembretes total={lembretesPendentes} />
+          <span className="text-text-muted">·</span>
+          <span>{pendentes.length} pendentes</span>
+          {erroCarga && <span className="text-warning">· {erroCarga}</span>}
         </span>
         <span className="flex items-center gap-2">
           <span
@@ -330,7 +380,7 @@ export default function CardsPage() {
                 transition={{ type: 'spring', stiffness: 260, damping: 30 }}
                 className="absolute inset-0"
               >
-                <SwipeHandler onSwipe={handleSwipe}>
+                <SwipeHandler onSwipe={handleSwipeComReset} animacaoEmCurso={animacaoEmCurso}>
                   <TaskCard
                     tarefa={tarefaAtual}
                     onConcluir={handleConcluir}
@@ -339,6 +389,24 @@ export default function CardsPage() {
                     onDependencia={() => {}}
                     onAdicionar={() => setModalAberto('criar')}
                     onListar={() => router.push('/tarefas')}
+                    onSalvarData={(campo) => setPopoverAberto(campo)}
+                  />
+                  <EditarDataPopover
+                    aberto={popoverAberto !== null}
+                    label={
+                      popoverAberto === 'data_vencimento'
+                        ? 'Data de vencimento'
+                        : 'Prazo de conclusão'
+                    }
+                    valorInicial={
+                      popoverAberto === 'data_vencimento'
+                        ? (tarefaAtual.dataVencimento?.slice(0, 10) ?? null)
+                        : (tarefaAtual.prazoConclusao?.slice(0, 10) ?? null)
+                    }
+                    onFechar={() => setPopoverAberto(null)}
+                    onSalvar={(ate) => {
+                      if (popoverAberto) salvarCampoData(popoverAberto, ate);
+                    }}
                   />
                 </SwipeHandler>
               </motion.div>

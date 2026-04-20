@@ -18,7 +18,9 @@ test.describe('Configurações — abas e seções', () => {
     await expect(mainEl).toBeVisible({ timeout: 10_000 });
 
     // Se o conteúdo carregar, verifica o título da página
-    const conteudo = page.getByText(/configurações|scoring|urgência|importância|facilidade|notif/i).first();
+    const conteudo = page
+      .getByText(/configurações|scoring|urgência|importância|facilidade|notif/i)
+      .first();
     const anyMain = page.locator('main').first();
     // Pelo menos o main existe (spinner ou conteúdo)
     await expect(anyMain.or(conteudo)).toBeVisible({ timeout: 15_000 });

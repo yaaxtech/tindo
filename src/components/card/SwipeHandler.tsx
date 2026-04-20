@@ -1,7 +1,7 @@
 'use client';
 
-import { type PanInfo, motion, useMotionValue, useTransform } from 'framer-motion';
-import { type ReactNode, useEffect } from 'react';
+import { type PanInfo, animate, motion, useMotionValue, useTransform } from 'framer-motion';
+import { type ReactNode, useEffect, useRef } from 'react';
 
 export type SwipeDir = 'left' | 'right' | 'up' | 'down';
 
@@ -9,14 +9,24 @@ interface SwipeHandlerProps {
   children: ReactNode;
   onSwipe: (dir: SwipeDir) => void;
   disabled?: boolean;
+  /** Quando setado, dispara animação de saída na direção indicada e chama onSwipe no final. */
+  animacaoEmCurso?: SwipeDir | null;
 }
 
 const LIMIAR_DISTANCIA = 120;
 const LIMIAR_VELOCIDADE = 500;
+const DURACAO_ANIMACAO = 180; // ms
 
-export function SwipeHandler({ children, onSwipe, disabled }: SwipeHandlerProps) {
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+export function SwipeHandler({ children, onSwipe, disabled, animacaoEmCurso }: SwipeHandlerProps) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+  // Rastreia se animação já foi disparada pra evitar dupla chamada
+  const animandoRef = useRef<SwipeDir | null>(null);
 
   const rotate = useTransform(x, [-240, 0, 240], [-10, 0, 10]);
   const borderColor = useTransform([x, y] as const, (latest: unknown) => {
@@ -35,6 +45,55 @@ export function SwipeHandler({ children, onSwipe, disabled }: SwipeHandlerProps)
       y.set(0);
     }
   }, [disabled, x, y]);
+
+  // Animação imperativa disparada pelo teclado
+  useEffect(() => {
+    if (!animacaoEmCurso || animandoRef.current === animacaoEmCurso) return;
+    animandoRef.current = animacaoEmCurso;
+
+    if (prefersReducedMotion()) {
+      // Sem animação — troca instantânea
+      onSwipe(animacaoEmCurso);
+      animandoRef.current = null;
+      return;
+    }
+
+    const dir = animacaoEmCurso;
+    const duration = DURACAO_ANIMACAO / 1000; // framer-motion usa segundos
+
+    const targets: { x?: number; y?: number } =
+      dir === 'left'
+        ? { x: -420 }
+        : dir === 'right'
+          ? { x: 420 }
+          : dir === 'up'
+            ? { y: -300 }
+            : { y: 200 };
+
+    const controls: Array<ReturnType<typeof animate>> = [];
+
+    if (targets.x !== undefined) {
+      controls.push(animate(x, targets.x, { duration, ease: [0.4, 0, 1, 1] }));
+      // Rotate durante saída horizontal
+      controls.push(animate(rotate, dir === 'left' ? -8 : 8, { duration, ease: [0.4, 0, 1, 1] }));
+    } else if (targets.y !== undefined) {
+      controls.push(animate(y, targets.y, { duration, ease: [0.4, 0, 1, 1] }));
+    }
+
+    const timeout = window.setTimeout(() => {
+      onSwipe(dir);
+      // Reset posição (o card vai ser removido/substituído, mas por segurança)
+      x.set(0);
+      y.set(0);
+      animandoRef.current = null;
+    }, DURACAO_ANIMACAO);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controls.forEach((c) => c.stop());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animacaoEmCurso]);
 
   const handleEnd = (_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): void => {
     if (disabled) return;
@@ -74,18 +133,18 @@ export function SwipeHandler({ children, onSwipe, disabled }: SwipeHandlerProps)
       className="relative h-full w-full"
     >
       {children}
-      {/* Overlays direcionais (convenção: esquerda=pular, direita=voltar) */}
+      {/* Overlays direcionais (convenção: esquerda=voltar, direita=avançar) */}
       <motion.div
-        className="pointer-events-none absolute inset-0 flex items-center justify-start px-6 text-xl font-bold text-jade-accent"
+        className="pointer-events-none absolute inset-0 flex items-center justify-start px-6 text-xl font-bold text-text-secondary"
         style={{ opacity: useTransform(x, [-240, -60, 0], [1, 0.4, 0]) }}
       >
-        ← Pular
+        ← Voltar
       </motion.div>
       <motion.div
-        className="pointer-events-none absolute inset-0 flex items-center justify-end px-6 text-xl font-bold text-text-secondary"
+        className="pointer-events-none absolute inset-0 flex items-center justify-end px-6 text-xl font-bold text-jade-accent"
         style={{ opacity: useTransform(x, [0, 60, 240], [0, 0.4, 1]) }}
       >
-        Voltar →
+        Avançar →
       </motion.div>
       <motion.div
         className="pointer-events-none absolute inset-0 flex items-start justify-center pt-6 text-xl font-bold text-info"

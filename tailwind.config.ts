@@ -94,6 +94,7 @@ const config: Config = {
         'fade-in': 'fadeIn 220ms cubic-bezier(0, 0, 0.2, 1) forwards',
         'slide-up': 'slideUp 320ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
         'pulse-jade': 'pulseJade 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        fadeInScale: 'fadeInScale 180ms cubic-bezier(0, 0, 0.2, 1) forwards',
       },
       keyframes: {
         fadeIn: {
@@ -107,6 +108,10 @@ const config: Config = {
         pulseJade: {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(44,175,147,0.35)' },
           '50%': { boxShadow: '0 0 0 12px rgba(44,175,147,0)' },
+        },
+        fadeInScale: {
+          '0%': { opacity: '0', transform: 'scale(0.95) translateY(4px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
         },
       },
     },

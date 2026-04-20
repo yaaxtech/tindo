@@ -49,13 +49,9 @@ async function importVapidPrivateKey(base64PrivateKey: string): Promise<CryptoKe
   };
   // Como não temos x/y (pública), usamos PKCS8 importado via DER
   // Fallback: usar sign direto com EC key via raw bytes
-  return crypto.subtle.importKey(
-    'jwk',
-    jwk,
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    false,
-    ['sign'],
-  );
+  return crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, [
+    'sign',
+  ]);
 }
 
 async function generateVapidToken(
@@ -68,9 +64,8 @@ async function generateVapidToken(
     new TextEncoder().encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })).buffer as ArrayBuffer,
   );
   const payload = base64UrlEncode(
-    new TextEncoder().encode(
-      JSON.stringify({ aud: audience, exp: now + 12 * 3600, sub: subject }),
-    ).buffer as ArrayBuffer,
+    new TextEncoder().encode(JSON.stringify({ aud: audience, exp: now + 12 * 3600, sub: subject }))
+      .buffer as ArrayBuffer,
   );
 
   const signingInput = `${header}.${payload}`;
@@ -149,7 +144,9 @@ async function encryptPayload(
   const nonce = await hkdf(ikm, saltNorm, nonceInfo, 12);
 
   // Encrypt with AES-GCM
-  const cekKey = await crypto.subtle.importKey('raw', toArrayBuffer(cek), 'AES-GCM', false, ['encrypt']);
+  const cekKey = await crypto.subtle.importKey('raw', toArrayBuffer(cek), 'AES-GCM', false, [
+    'encrypt',
+  ]);
 
   // Pad payload to hide length (2 bytes padding length + payload + padding)
   const plaintext = encoder.encode(payload);

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
-import { marcarRecalibracaoSugerida, verificarGatilhos } from '@/services/calibracao';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { marcarRecalibracaoSugerida, verificarGatilhos } from '@/services/calibracao';
 import { type NextRequest, NextResponse } from 'next/server';
 
 async function handler(request: NextRequest) {
