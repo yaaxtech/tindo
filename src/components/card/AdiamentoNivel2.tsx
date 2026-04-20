@@ -7,13 +7,13 @@ import {
   Calendar,
   CalendarPlus,
   ChevronDown,
-  Clock3,
   Moon,
   Sparkles,
   Sun,
   Sunrise,
+  Zap,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type SwipeDir, SwipeHandler } from './SwipeHandler';
 
 interface AdiamentoNivel2Props {
@@ -31,14 +31,40 @@ interface Preset {
   motivo: string;
 }
 
+function getProximoTurno(): Date {
+  const agora = new Date();
+  const hora = agora.getHours();
+  const d = new Date(agora);
+  if (hora < 14) {
+    d.setHours(14, 0, 0, 0);
+  } else if (hora < 19) {
+    d.setHours(19, 0, 0, 0);
+  } else {
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+  }
+  return d;
+}
+
+function rotuloProximoTurno(): string {
+  const hora = new Date().getHours();
+  if (hora < 14) return 'Hoje à tarde';
+  if (hora < 19) return 'Hoje à noite';
+  return 'Amanhã cedo';
+}
+
+function defaultDatetime(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function buildPresets(): Preset[] {
   const agora = new Date();
 
-  const maisUmaHora = new Date(agora.getTime() + 3_600_000);
-
-  const hojeTarde = new Date(agora);
-  hojeTarde.setHours(14, 0, 0, 0);
-  if (hojeTarde <= agora) hojeTarde.setDate(hojeTarde.getDate() + 1);
+  const proximoTurno = getProximoTurno();
 
   const hojeNoite = new Date(agora);
   hojeNoite.setHours(19, 0, 0, 0);
@@ -66,17 +92,17 @@ function buildPresets(): Preset[] {
 
   return [
     {
-      id: 'mais1h',
-      rotulo: '+1 hora',
-      relativo: fmt(maisUmaHora),
-      icon: Clock3,
-      alvo: () => new Date(new Date().getTime() + 3_600_000),
-      motivo: 'preset: +1 hora',
+      id: 'proximoTurno',
+      rotulo: rotuloProximoTurno(),
+      relativo: fmt(proximoTurno),
+      icon: Zap,
+      alvo: () => getProximoTurno(),
+      motivo: `preset: ${rotuloProximoTurno().toLowerCase()}`,
     },
     {
       id: 'hojeTarde',
       rotulo: 'Hoje à tarde',
-      relativo: fmt(hojeTarde),
+      relativo: fmt((() => { const d = new Date(); d.setHours(14,0,0,0); if (d <= agora) d.setDate(d.getDate()+1); return d; })()),
       icon: Sun,
       alvo: () => {
         const d = new Date();
@@ -169,21 +195,88 @@ function BarraConfianca({ valor }: { valor: number }) {
 
 export function AdiamentoNivel2({ sugestao, onEscolher, onCancelar }: AdiamentoNivel2Props) {
   const [customAberto, setCustomAberto] = useState(false);
-  const [datetime, setDatetime] = useState('');
+  const [datetime, setDatetime] = useState(defaultDatetime);
   const presets = buildPresets();
+
+  // Refs para manter callbacks estáveis e evitar re-registrar listener
+  const onEscolherRef = useRef(onEscolher);
+  const onCancelarRef = useRef(onCancelar);
+  useEffect(() => {
+    onEscolherRef.current = onEscolher;
+    onCancelarRef.current = onCancelar;
+  }, [onEscolher, onCancelar]);
+
+  // Listener de teclado dedicado ao overlay — registra uma única vez e captura
+  // arrow keys ANTES do handler da página (useCapture=true).
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      switch (e.key) {
+        case 'ArrowLeft': {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          d.setHours(0, 0, 0, 0);
+          onEscolherRef.current(d, 'teclado: amanhã sem horário');
+          break;
+        }
+        case 'ArrowRight': {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          const d = new Date();
+          d.setDate(d.getDate() + 1);
+          onEscolherRef.current(d, 'teclado: amanhã mesmo horário');
+          break;
+        }
+        case 'ArrowUp': {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          onEscolherRef.current(
+            getProximoTurno(),
+            `teclado: ${rotuloProximoTurno().toLowerCase()}`,
+          );
+          break;
+        }
+        case 'ArrowDown': {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          onCancelarRef.current();
+          break;
+        }
+        case 'Escape': {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          onCancelarRef.current();
+          break;
+        }
+      }
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
+  }, []);
 
   const temSugestaoReal = !!sugestao && !sugestao.fallback;
 
   const handleSwipe = (dir: SwipeDir): void => {
     if (dir === 'left') {
       const d = new Date();
-      d.setHours(14, 0, 0, 0);
-      if (d <= new Date()) d.setDate(d.getDate() + 1);
-      onEscolher(d, 'swipe: hoje à tarde');
+      d.setDate(d.getDate() + 1);
+      d.setHours(0, 0, 0, 0);
+      onEscolher(d, 'swipe: amanhã sem horário');
     } else if (dir === 'right') {
       const d = new Date();
       d.setDate(d.getDate() + 1);
       onEscolher(d, 'swipe: amanhã mesmo horário');
+    } else if (dir === 'up') {
+      onEscolher(getProximoTurno(), `swipe: ${rotuloProximoTurno().toLowerCase()}`);
     } else if (dir === 'down') {
       onCancelar();
     }
@@ -221,7 +314,7 @@ export function AdiamentoNivel2({ sugestao, onEscolher, onCancelar }: AdiamentoN
           <header className="space-y-0.5 text-center">
             <h2 className="text-lg font-semibold text-text-primary">Adiar para quando?</h2>
             <p className="text-xs text-text-secondary">
-              Swipe ← hoje à tarde · → amanhã · ↓ cancelar
+              ↑ {rotuloProximoTurno().toLowerCase()} · ← amanhã · → amanhã (mesma hora) · ↓ cancelar
             </p>
           </header>
 
