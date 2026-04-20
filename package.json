@@ -7,7 +7,7 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "cf:build": "next build && bunx opennextjs-cloudflare build && cp .open-next/worker.js .open-next/assets/_worker.js",
+    "cf:build": "next build && bunx opennextjs-cloudflare build",
     "cf:preview": "wrangler dev .open-next/worker.js --local",
     "cf:deploy": "bunx wrangler deploy",
     "lint": "biome check --write .",
