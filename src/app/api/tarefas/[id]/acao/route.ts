@@ -5,6 +5,9 @@ import {
   calcularProximaAdiada,
 } from '@/lib/adiamento/sm2';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+
+export const runtime = 'edge';
+
 import { propagarParaTodoist } from '@/services/todoistWriteback';
 import { type NextRequest, NextResponse } from 'next/server';
 

@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { type AcaoAdiamentoPassada, sugerirAdiamento } from '@/lib/adiamento/heuristica';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { type NextRequest, NextResponse } from 'next/server';

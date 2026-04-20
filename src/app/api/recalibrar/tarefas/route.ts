@@ -3,6 +3,8 @@
  * Retorna 5 tarefas pendentes espalhadas por faixa de nota para o wizard.
  */
 
+export const runtime = 'edge';
+
 import { obterTarefasParaCalibrar } from '@/services/calibracao';
 import { NextResponse } from 'next/server';
 

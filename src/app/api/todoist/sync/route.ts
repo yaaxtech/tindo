@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { sincronizarTodoist } from '@/lib/todoist/sync';
 import { type NextRequest, NextResponse } from 'next/server';
