@@ -10,7 +10,7 @@ interface Env {
 
 export default {
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext) {
-    const url = 'https://tindo-6qy.pages.dev/api/cron/diario';
+    const url = 'https://tindo.falecomyaax.workers.dev/api/cron/diario';
     const res = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
