@@ -171,14 +171,10 @@ export function TaskCard({
           </IconBtn>
         </div>
 
-        {/* Hints */}
-        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-center text-[11px] leading-snug text-text-muted">
-          <span>
-            <span className="text-text-secondary">Avançar</span> · swipe ← / tecla →
-          </span>
-          <span>
-            <span className="text-text-secondary">Voltar</span> · swipe → / tecla ←
-          </span>
+        {/* Hints de teclado (desktop) */}
+        <div className="mt-4 hidden grid-cols-2 gap-x-4 gap-y-1 text-center text-[11px] leading-snug text-text-muted md:grid">
+          <span>← voltar</span>
+          <span>avançar →</span>
           <span>↑ adiar manual</span>
           <span>↓ adiar auto</span>
         </div>

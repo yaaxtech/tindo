@@ -210,10 +210,10 @@ export default function CardsPage() {
 
   const handleSwipe = (dir: SwipeDir): void => {
     void playSwipe(dir);
-    // Convenção invertida em 2026-04-20: ← volta, → avança
-    // Convenção Tinder-like: swipe ← avança, → volta (comentário atualizado 2026-04-20)
-    if (dir === 'left') proxima();
-    else if (dir === 'right') anterior();
+    // Convenção final (2026-04-20): consistente mobile + teclado.
+    // ← volta (anterior), → avança (próxima)
+    if (dir === 'left') anterior();
+    else if (dir === 'right') proxima();
     else if (dir === 'up') abrirNivel2ComSugestao();
     else if (dir === 'down') {
       const alvo = tarefaAtual;
@@ -316,10 +316,10 @@ export default function CardsPage() {
   };
 
   useKeyboardNav({
-    // Teclado inverte em relação ao swipe: seta → (frente) = avançar (mesma anim de swipe ←);
-    // seta ← (trás) = voltar (mesma anim de swipe →). Alinha com browser back/forward.
-    onLeft: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('right'),
-    onRight: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('left'),
+    // Convenção consistente: tecla/swipe mesma direção.
+    // ← = voltar (anterior), → = avançar (próxima)
+    onLeft: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('left'),
+    onRight: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('right'),
     onUp: () => !nivel2Adiar && !popoverAberto && abrirNivel2ComSugestao(),
     onDown: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('down'),
     onSpace: () => !nivel2Adiar && !popoverAberto && handleConcluir(),

@@ -52,17 +52,28 @@ const SOMBRAS: Record<PosicaoCard, string> = {
   atras2: '0 4px 12px rgba(0,0,0,0.28)',
 };
 
-// Calcula target de exit baseado na direção
+// Calcula target de exit baseado na direção.
+// AVANÇAR (right): card sai pela direita (comportamento swipe descartar)
+// VOLTAR (left): card desce pro fundo do stack (faz espaço pra carta anterior subir)
 function calcularExitTarget(dir: SwipeDir): {
   x?: number;
   y?: number;
   rotate?: number;
+  scale?: number;
   opacity: number;
 } {
-  if (dir === 'left') return { x: -520, rotate: -12, opacity: 0 };
   if (dir === 'right') return { x: 520, rotate: 12, opacity: 0 };
+  if (dir === 'left') return { scale: 0.85, y: 40, opacity: 0 };
   if (dir === 'up') return { y: -420, opacity: 0 };
-  return { y: 320, opacity: 0 }; // down
+  return { y: 320, opacity: 0 };
+}
+
+// Calcula initial do novo card topo baseado na direção do swipe anterior.
+// Depois de VOLTAR: carta entra vinda de trás/baixo (fundo do stack) subindo pra frente.
+// Depois de AVANÇAR: carta entra vinda da posição atras1 (já estava atrás).
+function calcularInitialTopo(dir: SwipeDir): { scale: number; y: number; opacity: number } {
+  if (dir === 'left') return { scale: 0.85, y: 40, opacity: 0 };
+  return { scale: 0.95, y: 14, opacity: 0.8 };
 }
 
 // ─── componente ────────────────────────────────────────────────────────────
@@ -92,7 +103,7 @@ export function CardStack({ fila, indice, animacaoEmCurso, onSwipe, renderCard }
   if (reduzido) {
     return (
       <div className="absolute inset-0">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="popLayout">
           {tarefaTopo ? (
             <motion.div
               key={tarefaTopo.id}
@@ -162,12 +173,12 @@ export function CardStack({ fila, indice, animacaoEmCurso, onSwipe, renderCard }
       </AnimatePresence>
 
       {/* Camada 0 — topo (recebe gestos) */}
-      <AnimatePresence mode="wait" onExitComplete={() => setAnimando(false)}>
+      <AnimatePresence mode="popLayout" onExitComplete={() => setAnimando(false)}>
         {tarefaTopo ? (
           <motion.div
             key={tarefaTopo.id}
             className="absolute inset-0"
-            initial={{ scale: 0.95, y: 14, opacity: 0.8 }}
+            initial={calcularInitialTopo(exitDir)}
             animate={CAMADAS.topo}
             exit={calcularExitTarget(exitDir)}
             transition={SPRING_EXIT}
