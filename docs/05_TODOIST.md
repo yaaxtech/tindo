@@ -20,6 +20,7 @@ Sincronização **bidirecional** entre TinDo ↔ Todoist para que:
 - Mais simples que a Sync API, suficiente para MVP.
 - Autenticação: Bearer token pessoal (gerado em Todoist → Settings → Integrations).
 - Endpoints principais:
+  - `GET /workspaces` — listar workspaces (feature de times; pode retornar lista vazia)
   - `GET /tasks` — listar tarefas ativas
   - `GET /projects` — listar projetos
   - `GET /labels` — listar labels
@@ -51,6 +52,24 @@ Rate limit: 450 requests/15min por usuário.
 
 ## Mapping Todoist ↔ TinDo
 
+### Espaço de Trabalho (Workspace)
+| Todoist | TinDo | Notas |
+|---|---|---|
+| `id` | `todoist_id` | string, mantido |
+| `name` | `nome` | |
+| — | `ordem_prioridade` | definida pelo usuário em `/espacos-trabalho` |
+
+> **Usuários sem Workspace no Todoist**: criar automaticamente um espaço padrão "Pessoal" com `todoist_id = null` e associar todos os projetos importados a ele.
+
+### Projeto
+| Todoist | TinDo | Notas |
+|---|---|---|
+| `id` | `todoist_id` | |
+| `name` | `nome` | |
+| `color` | `cor` | mapear paleta Todoist → hex |
+| `order` | `ordem_prioridade` | |
+| `workspace_id` | `espaco_trabalho_id` (lookup) | via `todoist_id` do workspace |
+
 ### Tarefa
 | Todoist | TinDo | Notas |
 |---|---|---|
@@ -65,14 +84,6 @@ Rate limit: 450 requests/15min por usuário.
 | `is_completed` | `status='concluida'` | |
 | `created_at` | `created_at` | preservar |
 | — | `tipo` | derivado da label (Lembretes→lembrete, Todo→tarefa) |
-
-### Projeto
-| Todoist | TinDo |
-|---|---|
-| `id` | `todoist_id` |
-| `name` | `nome` |
-| `color` | `cor` (mapear paleta Todoist → hex) |
-| `order` | `ordem_prioridade` |
 
 ### Label
 | Todoist | TinDo |
@@ -137,11 +148,16 @@ Adiar no TinDo atualiza `adiada_ate`. No Todoist, isso pode ser refletido como:
 
 Ao habilitar Todoist pela primeira vez:
 1. Wizard pede o token.
-2. `GET /projects` + `GET /labels` + `GET /tasks` (todas).
-3. Pré-visualização: "Encontrei 120 tarefas, 5 projetos, 18 labels. Importar?"
-4. Usuário confirma → batch insert.
+2. `GET /workspaces` + `GET /projects` + `GET /labels` + `GET /tasks` (todas).
+3. Pré-visualização: "Encontrei 120 tarefas, 3 espaços de trabalho, 5 projetos, 18 labels. Importar?"
+4. Usuário confirma → batch insert (ordem: workspaces → projetos → labels → tarefas).
 5. Background job popula `notas` calculadas.
-6. Redirecionar pra `/calibracao` (ordenar projetos e classificar labels).
+6. Redirecionar pra `/calibracao` — etapas em ordem:
+   a. **Organizar Espaços de Trabalho** (ordenar, ativar/desativar) — obrigatório.
+   b. **Organizar Projetos** (ordenar, multiplicador) — opcional, pode pular.
+   c. **Classificar Labels** (tipo de peso + valor).
+
+> Se `GET /workspaces` retornar lista vazia (conta pessoal), criar espaço padrão "Pessoal" automaticamente e associar todos os projetos a ele — usuário ainda pode renomear/reorganizar.
 
 ## Testes
 

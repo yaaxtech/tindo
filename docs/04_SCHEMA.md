@@ -16,14 +16,15 @@ Arquivos em `supabase/migrations/`. Nomenclatura: `YYYYMMDDHHMMSS_descricao.sql`
 
 Ordem inicial:
 1. `20260417000001_extensions_and_helpers.sql` — extensões e triggers reutilizáveis.
-2. `20260417000002_projetos_tags.sql` — tabelas de taxonomia.
-3. `20260417000003_tarefas.sql` — tabela principal.
-4. `20260417000004_historico_acoes.sql` — log de ações.
-5. `20260417000005_gamificacao.sql` — streaks, xp, conquistas.
-6. `20260417000006_calibracao.sql` — respostas de calibração e recalibrações.
-7. `20260417000007_configuracoes.sql` — configs do usuário.
-8. `20260417000008_rls_policies.sql` — ativação e políticas RLS.
-9. `20260417000009_views_indices.sql` — views de conveniência e índices.
+2. `20260417000002_espacos_trabalho.sql` — espaços de trabalho (Todoist Workspaces).
+3. `20260417000003_projetos_tags.sql` — projetos (dentro de espaços) e tags.
+4. `20260417000004_tarefas.sql` — tabela principal.
+5. `20260417000005_historico_acoes.sql` — log de ações.
+6. `20260417000006_gamificacao.sql` — streaks, xp, conquistas.
+7. `20260417000007_calibracao.sql` — respostas de calibração e recalibrações.
+8. `20260417000008_configuracoes.sql` — configs do usuário.
+9. `20260417000009_rls_policies.sql` — ativação e políticas RLS.
+10. `20260417000010_views_indices.sql` — views de conveniência e índices.
 
 ## DDL
 
@@ -43,12 +44,30 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
-### 02 — Projetos e Tags
+### 02 — Espaços de Trabalho, Projetos e Tags
 
 ```sql
+-- Mapeia Todoist Workspaces (feature de times).
+-- Usuários sem workspace no Todoist têm uma linha default criada automaticamente.
+CREATE TABLE public.espacos_trabalho (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  usuario_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  todoist_id text,                          -- id do workspace no Todoist
+  nome text NOT NULL,
+  ordem_prioridade int NOT NULL DEFAULT 999,
+  ativo boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  deleted_at timestamptz,
+  UNIQUE (usuario_id, todoist_id)
+);
+CREATE TRIGGER set_espacos_trabalho_updated_at BEFORE UPDATE ON public.espacos_trabalho
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE TABLE public.projetos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   usuario_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  espaco_trabalho_id uuid REFERENCES public.espacos_trabalho(id) ON DELETE SET NULL,
   todoist_id text,                          -- id do projeto no Todoist (se sincronizado)
   nome text NOT NULL,
   cor varchar(7) DEFAULT '#198B74',
@@ -247,6 +266,7 @@ CREATE TRIGGER set_configuracoes_updated_at BEFORE UPDATE ON public.configuracoe
 
 ```sql
 -- Ativar RLS
+ALTER TABLE public.espacos_trabalho ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projetos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tarefas ENABLE ROW LEVEL SECURITY;
@@ -260,6 +280,8 @@ ALTER TABLE public.configuracoes ENABLE ROW LEVEL SECURITY;
 -- `conquistas` é global (catálogo), sem RLS mas só-leitura
 
 -- Policies: cada usuário vê e altera só os próprios registros
+CREATE POLICY "own rows" ON public.espacos_trabalho
+  FOR ALL USING (usuario_id = auth.uid()) WITH CHECK (usuario_id = auth.uid());
 CREATE POLICY "own rows" ON public.projetos
   FOR ALL USING (usuario_id = auth.uid()) WITH CHECK (usuario_id = auth.uid());
 -- repetir para cada tabela com usuario_id
