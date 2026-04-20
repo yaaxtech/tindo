@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { type AcaoAdiamentoPassada, rotuloMotivoManual, sugerirAdiamento } from './heuristica';
+import {
+  type AcaoAdiamentoPassada,
+  decidirHoraDoDia,
+  rotuloMotivoManual,
+  sugerirAdiamento,
+} from './heuristica';
 
 function acao(overrides: Partial<AcaoAdiamentoPassada> = {}): AcaoAdiamentoPassada {
   const criadaEm = overrides.criadaEm ?? '2026-04-15T09:00:00Z';
@@ -75,6 +80,70 @@ describe('sugerirAdiamento', () => {
     ];
     const s = sugerirAdiamento(historico, { tags: ['tagA'], projetoId: 'p1', agora });
     expect(s.motivo).toContain('tag+dia');
+  });
+});
+
+describe('decidirHoraDoDia', () => {
+  it('retorna mediana de horaDia do bucket tag+dia com ≥3 amostras', () => {
+    const agora = new Date('2026-04-19T10:00:00'); // domingo = 0
+    const diaSemana = agora.getDay();
+
+    const historico: AcaoAdiamentoPassada[] = [
+      acao({ tags: ['email'], diaSemana, horaDia: 18 }),
+      acao({ tags: ['email'], diaSemana, horaDia: 20 }),
+      acao({ tags: ['email'], diaSemana, horaDia: 19 }),
+    ];
+
+    const result = decidirHoraDoDia({ tags: ['email'], projeto_id: null }, historico, agora);
+
+    expect(result.fonte).toBe('tag+dia');
+    expect(result.hora).toBe(19); // mediana de [18, 19, 20]
+    expect(result.confianca).toBeGreaterThan(0);
+  });
+
+  it('retorna fallback por turno quando sem histórico — manhã → 14', () => {
+    const agora = new Date('2026-04-19T08:00:00');
+    const result = decidirHoraDoDia({ tags: ['x'], projeto_id: null }, [], agora);
+
+    expect(result.fonte).toBe('turno');
+    expect(result.hora).toBe(14);
+    expect(result.confianca).toBe(0);
+  });
+
+  it('retorna fallback por turno — tarde → 19', () => {
+    const agora = new Date('2026-04-19T14:00:00');
+    const result = decidirHoraDoDia({ tags: [], projeto_id: null }, [], agora);
+
+    expect(result.fonte).toBe('turno');
+    expect(result.hora).toBe(19);
+  });
+
+  it('retorna fallback por turno — noite → 9', () => {
+    const agora = new Date('2026-04-19T21:00:00');
+    const result = decidirHoraDoDia({ tags: [], projeto_id: null }, [], agora);
+
+    expect(result.fonte).toBe('turno');
+    expect(result.hora).toBe(9);
+  });
+
+  it('cai no bucket projeto+dia quando tag não tem amostras suficientes', () => {
+    const agora = new Date('2026-04-19T09:00:00');
+    const diaSemana = agora.getDay();
+
+    const historico: AcaoAdiamentoPassada[] = [
+      acao({ tags: ['outro'], projetoId: 'p1', diaSemana, horaDia: 15 }),
+      acao({ tags: ['outro'], projetoId: 'p1', diaSemana, horaDia: 16 }),
+      acao({ tags: ['outro'], projetoId: 'p1', diaSemana, horaDia: 15 }),
+    ];
+
+    const result = decidirHoraDoDia(
+      { tags: ['tag-sem-historico'], projeto_id: 'p1' },
+      historico,
+      agora,
+    );
+
+    expect(result.fonte).toBe('projeto+dia');
+    expect(result.hora).toBe(15);
   });
 });
 

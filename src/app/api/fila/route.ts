@@ -64,7 +64,13 @@ export async function GET() {
 
     const tags: Record<string, string[]> = {};
     for (const tt of tarefaTags) {
-      (tags[tt.tarefa_id] ??= []).push(tt.tag_id);
+      if (!tags[tt.tarefa_id]) {
+        tags[tt.tarefa_id] = [];
+      }
+      const tagArray = tags[tt.tarefa_id];
+      if (tagArray) {
+        tagArray.push(tt.tag_id);
+      }
     }
 
     const fila: Tarefa[] = (tarefasRows ?? []).map((r: Record<string, unknown>) => ({
@@ -102,6 +108,7 @@ export async function GET() {
       adiadaAte: (r.adiada_ate as string | null) ?? null,
       adiamentoCount: r.adiamento_count as number,
       adiamentoMotivoAuto: (r.adiamento_motivo_auto as string | null) ?? null,
+      ef: r.ef != null ? Number(r.ef) : 2.0,
       concluidaEm: (r.concluida_em as string | null) ?? null,
       tags: (tags[r.id as string] ?? [])
         .map((tid) => {

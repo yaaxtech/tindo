@@ -1,5 +1,6 @@
 'use client';
 
+import { AdiamentoTab } from '@/components/gamificacao/AdiamentoTab';
 import type { Aneis } from '@/lib/gamificacao/aneis';
 import { cn } from '@/lib/utils';
 import { useGamificacaoStore } from '@/stores/gamificacao';
@@ -7,6 +8,8 @@ import { useToasts } from '@/stores/toasts';
 import { ArrowLeft, Flame, Snowflake, Trophy, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
+type AbaGamificacao = 'evolucao' | 'adiamento';
 
 interface HistoricoDia {
   dia: string;
@@ -35,6 +38,7 @@ export default function GamificacaoPage() {
   const [historico, setHistorico] = useState<HistoricoDia[]>([]);
   const [aneis, setAneis] = useState<Aneis | null>(null);
   const [comprando, setComprando] = useState(false);
+  const [aba, setAba] = useState<AbaGamificacao>('evolucao');
 
   useEffect(() => {
     void hidratar();
@@ -95,12 +99,41 @@ export default function GamificacaoPage() {
           </Link>
           <div className="flex-1">
             <h1 className="text-lg font-semibold">Sua evolução</h1>
-            <p className="text-xs text-text-muted">Juízo humano + prazer = caminho sustentável.</p>
+            <p className="text-xs text-text-muted">
+              {aba === 'evolucao'
+                ? 'Juízo humano + prazer = caminho sustentável.'
+                : 'Como o adiamento está te servindo.'}
+            </p>
           </div>
         </div>
       </header>
 
-      <section className="mx-auto mt-6 w-full max-w-3xl px-6">
+      {/* Abas */}
+      <nav
+        aria-label="Abas de gamificação"
+        className="sticky top-[57px] z-[9] border-b border-border bg-bg-deep/80 backdrop-blur-xl"
+      >
+        <div className="mx-auto flex w-full max-w-3xl items-end gap-1 px-6">
+          <AbaBotao
+            ativo={aba === 'evolucao'}
+            onClick={() => setAba('evolucao')}
+            rotulo="Evolução"
+          />
+          <AbaBotao
+            ativo={aba === 'adiamento'}
+            onClick={() => setAba('adiamento')}
+            rotulo="Adiamento"
+          />
+        </div>
+      </nav>
+
+      {aba === 'adiamento' && (
+        <section className="mx-auto mt-6 w-full max-w-3xl px-6">
+          <AdiamentoTab />
+        </section>
+      )}
+
+      <section className={cn('mx-auto mt-6 w-full max-w-3xl px-6', aba !== 'evolucao' && 'hidden')}>
         {/* Big cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <BigCard
@@ -340,6 +373,38 @@ function AnelCircular({
       </p>
       <p className="text-center text-[10px] text-text-muted">{unidade}</p>
     </div>
+  );
+}
+
+function AbaBotao({
+  ativo,
+  onClick,
+  rotulo,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  rotulo: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={ativo}
+      onClick={onClick}
+      className={cn(
+        'relative -mb-px px-4 py-3 text-sm font-medium transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-accent/40 focus-visible:ring-offset-0',
+        ativo ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary',
+      )}
+    >
+      {rotulo}
+      {ativo && (
+        <span
+          className="absolute inset-x-3 bottom-0 h-[2px] rounded-full bg-jade-accent"
+          aria-hidden
+        />
+      )}
+    </button>
   );
 }
 

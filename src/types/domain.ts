@@ -42,6 +42,7 @@ export interface Tarefa {
   adiadaAte?: string | null;
   adiamentoCount: number;
   adiamentoMotivoAuto?: string | null;
+  ef: number;
   concluidaEm?: string | null;
   tags: Tag[];
   createdAt: string;

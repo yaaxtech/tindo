@@ -95,6 +95,7 @@ const config: Config = {
         'slide-up': 'slideUp 320ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
         'pulse-jade': 'pulseJade 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         fadeInScale: 'fadeInScale 180ms cubic-bezier(0, 0, 0.2, 1) forwards',
+        shimmer: 'shimmer 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite',
       },
       keyframes: {
         fadeIn: {
@@ -112,6 +113,10 @@ const config: Config = {
         fadeInScale: {
           '0%': { opacity: '0', transform: 'scale(0.95) translateY(4px)' },
           '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
         },
       },
     },
