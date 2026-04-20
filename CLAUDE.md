@@ -126,11 +126,13 @@ Login → Fila priorizada (cards) → Ação (concluir/pular/voltar/adiar) → P
                          Recalibração periódica quando KPIs disparam
 ```
 
-### Swipe (invertido em 2026-04-20 por preferência do usuário; originalmente confirmado 2026-04-17)
-- **← ESQUERDA**: tarefa anterior (voltar)
-- **→ DIREITA**: próxima tarefa (avançar)
+### Swipe (convenção Tinder-like — revertida em 2026-04-20 após teste do usuário)
+- **← ESQUERDA**: próxima tarefa (avançar) — carta sai pela esquerda como Tinder
+- **→ DIREITA**: tarefa anterior (voltar)
 - **↑ CIMA**: adiar manual (abre 2º nível de swipe)
 - **↓ BAIXO**: adiar automático (heurística)
+
+Histórico de mudanças: original 2026-04-17 era ←avançar/→voltar. Invertida em 2026-04-20 manhã (testes em interpretação B). Revertida pra Tinder-like na tarde após teste real — o gesto natural de "descartar pra próxima" é swipe ← (como Tinder reject).
 
 ### Botões do card
 - Concluir ✓ (com animação viciante)

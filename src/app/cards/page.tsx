@@ -211,8 +211,9 @@ export default function CardsPage() {
   const handleSwipe = (dir: SwipeDir): void => {
     void playSwipe(dir);
     // Convenção invertida em 2026-04-20: ← volta, → avança
-    if (dir === 'left') anterior();
-    else if (dir === 'right') proxima();
+    // Convenção Tinder-like: swipe ← avança, → volta (comentário atualizado 2026-04-20)
+    if (dir === 'left') proxima();
+    else if (dir === 'right') anterior();
     else if (dir === 'up') abrirNivel2ComSugestao();
     else if (dir === 'down') {
       const alvo = tarefaAtual;

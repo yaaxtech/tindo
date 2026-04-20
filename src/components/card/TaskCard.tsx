@@ -173,8 +173,8 @@ export function TaskCard({
 
         {/* Hints */}
         <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-center text-[11px] leading-snug text-text-muted">
-          <span>← voltar</span>
-          <span>avançar →</span>
+          <span>← avançar</span>
+          <span>voltar →</span>
           <span>↑ adiar manual</span>
           <span>↓ adiar auto</span>
         </div>

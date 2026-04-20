@@ -153,18 +153,18 @@ export function SwipeHandler({ children, onSwipe, disabled, animacaoEmCurso }: S
       className="relative h-full w-full"
     >
       {children}
-      {/* Overlays direcionais (convenção: esquerda=voltar, direita=avançar) */}
+      {/* Overlays direcionais (convenção Tinder: esquerda=avançar, direita=voltar) */}
       <motion.div
-        className="pointer-events-none absolute inset-0 flex items-center justify-start px-6 text-xl font-bold text-text-secondary"
+        className="pointer-events-none absolute inset-0 flex items-center justify-start px-6 text-xl font-bold text-jade-accent"
         style={{ opacity: useTransform(x, [-240, -60, 0], [1, 0.4, 0]) }}
       >
-        ← Voltar
+        ← Avançar
       </motion.div>
       <motion.div
-        className="pointer-events-none absolute inset-0 flex items-center justify-end px-6 text-xl font-bold text-jade-accent"
+        className="pointer-events-none absolute inset-0 flex items-center justify-end px-6 text-xl font-bold text-text-secondary"
         style={{ opacity: useTransform(x, [0, 60, 240], [0, 0.4, 1]) }}
       >
-        Avançar →
+        Voltar →
       </motion.div>
       <motion.div
         className="pointer-events-none absolute inset-0 flex items-start justify-center pt-6 text-xl font-bold text-info"
