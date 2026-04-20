@@ -3,6 +3,7 @@
 import { useGamificacaoStore } from '@/stores/gamificacao';
 import { motion } from 'framer-motion';
 import {
+  Briefcase,
   FolderTree,
   Inbox,
   Layers,
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: '/sugestoes-ia', label: 'Inbox IA', icon: Inbox },
   { href: '/tarefas', label: 'Tarefas', icon: ListTodo },
   { href: '/gamificacao', label: 'Gamificação', icon: Trophy },
+  { href: '/espacos-trabalho', label: 'Espaços de Trabalho', icon: Briefcase },
   { href: '/projetos', label: 'Projetos', icon: FolderTree },
   { href: '/tags', label: 'Tags', icon: Tag },
   { href: '/configuracoes/todoist', label: 'Todoist', icon: RefreshCw },
