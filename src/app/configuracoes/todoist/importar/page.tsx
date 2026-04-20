@@ -2,7 +2,15 @@
 
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, ArrowRight, Check, CheckSquare, Loader2, RefreshCw, Square } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  Check,
+  CheckSquare,
+  Loader2,
+  RefreshCw,
+  Square,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -370,7 +378,10 @@ function Passo2({
           { label: 'Tarefas', valor: previa.tasksCount },
           { label: 'Tags', valor: previa.tagsCount },
         ].map(({ label, valor }) => (
-          <div key={label} className="rounded-xl border border-border-strong bg-bg-elevated p-3 text-center">
+          <div
+            key={label}
+            className="rounded-xl border border-border-strong bg-bg-elevated p-3 text-center"
+          >
             <p className="text-xl font-bold text-jade-accent">{valor}</p>
             <p className="text-xs text-text-muted">{label}</p>
           </div>
@@ -525,7 +536,7 @@ function Passo3({
         <motion.div
           className="h-full rounded-full bg-jade"
           animate={{ x: ['-100%', '200%'] }}
-          transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+          transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5, ease: 'easeInOut' }}
           style={{ width: '50%' }}
         />
       </div>
@@ -600,14 +611,14 @@ function Passo4({ resultado }: { resultado: SyncResultado }) {
         <p className="mt-1 text-sm text-text-secondary">
           {resultado.importadas} tarefa{resultado.importadas !== 1 ? 's' : ''} importada
           {resultado.importadas !== 1 ? 's' : ''}
-          {resultado.resultado?.projetos
-            ? ` · ${resultado.resultado.projetos} projetos`
-            : ''}
+          {resultado.resultado?.projetos ? ` · ${resultado.resultado.projetos} projetos` : ''}
           {resultado.resultado?.tags ? ` · ${resultado.resultado.tags} tags` : ''}
           {resultado.atualizadas > 0 ? ` · ${resultado.atualizadas} atualizadas` : ''}
         </p>
         {resultado.erros > 0 && (
-          <p className="mt-1 text-xs text-warning">{resultado.erros} erro{resultado.erros !== 1 ? 's' : ''} (veja os logs)</p>
+          <p className="mt-1 text-xs text-warning">
+            {resultado.erros} erro{resultado.erros !== 1 ? 's' : ''} (veja os logs)
+          </p>
         )}
       </div>
 
@@ -625,7 +636,9 @@ function Passo4({ resultado }: { resultado: SyncResultado }) {
           />
           <div>
             <p className="text-sm font-medium text-text-primary">Ativar sincronização automática</p>
-            <p className="text-xs text-text-muted">O Todoist é verificado periodicamente para novas tarefas</p>
+            <p className="text-xs text-text-muted">
+              O Todoist é verificado periodicamente para novas tarefas
+            </p>
           </div>
         </label>
 

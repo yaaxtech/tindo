@@ -65,6 +65,9 @@ export function useKeyboardNav(handlers: KeyboardHandlers, enabled = true): void
           break;
         case 'n':
         case 'N':
+        case 'q':
+        case 'Q':
+          e.preventDefault();
           handlers.onNew?.();
           break;
         case 'Escape':

@@ -33,7 +33,8 @@ export interface CardStackProps {
 
 // ─── constantes de spring ──────────────────────────────────────────────────
 
-const SPRING_EXIT = { type: 'spring', stiffness: 280, damping: 24 } as const;
+const SPRING_EXIT = { type: 'spring', stiffness: 260, damping: 26 } as const;
+const SPRING_VOLTA = { type: 'spring', stiffness: 200, damping: 28 } as const;
 const SPRING_PROMO = { type: 'spring', stiffness: 240, damping: 28 } as const;
 const TWEEN_ENTRADA = { type: 'tween', duration: 0.24, ease: 'easeOut' } as const;
 
@@ -69,10 +70,10 @@ function calcularExitTarget(dir: SwipeDir): {
 }
 
 // Calcula initial do novo card topo baseado na direção do swipe anterior.
-// Depois de VOLTAR: carta entra vinda de trás/baixo (fundo do stack) subindo pra frente.
+// Depois de VOLTAR: carta começa visível no fundo do stack (atras2) e sobe para o topo.
 // Depois de AVANÇAR: carta entra vinda da posição atras1 (já estava atrás).
 function calcularInitialTopo(dir: SwipeDir): { scale: number; y: number; opacity: number } {
-  if (dir === 'left') return { scale: 0.85, y: 40, opacity: 0 };
+  if (dir === 'left') return { scale: 0.9, y: 28, opacity: 0.65 };
   return { scale: 0.95, y: 14, opacity: 0.8 };
 }
 
@@ -181,7 +182,7 @@ export function CardStack({ fila, indice, animacaoEmCurso, onSwipe, renderCard }
             initial={calcularInitialTopo(exitDir)}
             animate={CAMADAS.topo}
             exit={calcularExitTarget(exitDir)}
-            transition={SPRING_EXIT}
+            transition={exitDir === 'left' ? SPRING_VOLTA : SPRING_EXIT}
             onAnimationStart={() => setAnimando(true)}
             onAnimationComplete={() => setAnimando(false)}
             style={{

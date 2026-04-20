@@ -81,8 +81,8 @@ function Stepper({ passo }: { passo: number }) {
                   concluida
                     ? 'bg-jade text-text-inverse'
                     : ativa
-                    ? 'bg-jade text-text-inverse ring-2 ring-jade/30 ring-offset-2 ring-offset-bg-deep'
-                    : 'bg-bg-hover text-text-muted',
+                      ? 'bg-jade text-text-inverse ring-2 ring-jade/30 ring-offset-2 ring-offset-bg-deep'
+                      : 'bg-bg-hover text-text-muted',
                 )}
               >
                 {concluida ? <Check className="h-4 w-4" /> : num}
@@ -143,11 +143,12 @@ function Passo1({
     }
   }, []);
 
-  useEffect(() => { void carregar(); }, [carregar]);
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
-  const tarefasFiltradas = previa?.tarefas.filter(
-    (t) => filtro === 'ambos' || t.tipo === filtro,
-  ) ?? [];
+  const tarefasFiltradas =
+    previa?.tarefas.filter((t) => filtro === 'ambos' || t.tipo === filtro) ?? [];
 
   const projetosSemTodoist = [
     ...new Map(
@@ -185,7 +186,9 @@ function Passo1({
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
-        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
       </div>
     );
   }
@@ -211,9 +214,7 @@ function Passo1({
       <div className="rounded-xl border border-jade/30 bg-jade/5 p-6 text-center">
         <CircleCheck className="mx-auto mb-2 h-8 w-8 text-jade-accent" />
         <p className="text-sm font-semibold text-text-primary">Tudo sincronizado!</p>
-        <p className="mt-1 text-xs text-text-muted">
-          Todas as tarefas locais já estão no Todoist.
-        </p>
+        <p className="mt-1 text-xs text-text-muted">Todas as tarefas locais já estão no Todoist.</p>
         <Link
           href="/configuracoes/todoist"
           className="mt-4 block text-xs text-jade-accent hover:underline"
@@ -305,7 +306,8 @@ function Passo1({
           />
           <div>
             <p className="text-xs font-medium text-text-secondary">
-              Criar {projetosSemTodoist.length} projeto{projetosSemTodoist.length !== 1 ? 's' : ''} no Todoist
+              Criar {projetosSemTodoist.length} projeto{projetosSemTodoist.length !== 1 ? 's' : ''}{' '}
+              no Todoist
             </p>
             <p className="mt-0.5 text-[10px] text-text-muted">
               {projetosSemTodoist.map((p) => p.nome).join(', ')}
@@ -317,7 +319,12 @@ function Passo1({
       <button
         type="button"
         disabled={selecionadosCount === 0}
-        onClick={() => onProximo([...selecionados].filter((id) => tarefasFiltradas.some((t) => t.id === id)), criarProjetos)}
+        onClick={() =>
+          onProximo(
+            [...selecionados].filter((id) => tarefasFiltradas.some((t) => t.id === id)),
+            criarProjetos,
+          )
+        }
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-jade px-4 py-3 text-sm font-semibold text-text-inverse transition-colors hover:bg-jade-accent disabled:opacity-50"
       >
         <Upload className="h-4 w-4" />
@@ -365,12 +372,17 @@ function Passo2({
         onConcluido(body);
       } catch (e) {
         if (!cancelled) {
-          setLogs((prev) => [...prev, `Erro inesperado: ${e instanceof Error ? e.message : String(e)}`]);
+          setLogs((prev) => [
+            ...prev,
+            `Erro inesperado: ${e instanceof Error ? e.message : String(e)}`,
+          ]);
         }
       }
     })();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -384,7 +396,7 @@ function Passo2({
         <motion.div
           className="h-full rounded-full bg-jade"
           animate={{ x: ['-100%', '100%'] }}
-          transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
+          transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.4, ease: 'easeInOut' }}
           style={{ width: '40%' }}
         />
       </div>
@@ -408,9 +420,14 @@ function Passo3({ resultado }: { resultado: ExportResult }) {
         <CircleCheck className="mx-auto mb-2 h-10 w-10 text-jade-accent" />
         <p className="text-base font-bold text-text-primary">Exportação concluída!</p>
         <p className="mt-1 text-xs text-text-muted">
-          {resultado.tarefasExportadas} tarefa{resultado.tarefasExportadas !== 1 ? 's' : ''} enviada{resultado.tarefasExportadas !== 1 ? 's' : ''}
-          {resultado.projetosCriados > 0 ? ` · ${resultado.projetosCriados} projeto${resultado.projetosCriados !== 1 ? 's' : ''} criado${resultado.projetosCriados !== 1 ? 's' : ''}` : ''}
-          {resultado.erros.length > 0 ? ` · ${resultado.erros.length} erro${resultado.erros.length !== 1 ? 's' : ''}` : ''}
+          {resultado.tarefasExportadas} tarefa{resultado.tarefasExportadas !== 1 ? 's' : ''} enviada
+          {resultado.tarefasExportadas !== 1 ? 's' : ''}
+          {resultado.projetosCriados > 0
+            ? ` · ${resultado.projetosCriados} projeto${resultado.projetosCriados !== 1 ? 's' : ''} criado${resultado.projetosCriados !== 1 ? 's' : ''}`
+            : ''}
+          {resultado.erros.length > 0
+            ? ` · ${resultado.erros.length} erro${resultado.erros.length !== 1 ? 's' : ''}`
+            : ''}
         </p>
       </div>
 

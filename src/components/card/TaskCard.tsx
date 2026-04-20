@@ -20,6 +20,31 @@ interface TaskCardProps {
   className?: string;
 }
 
+function corDataAtrasada(data: string | null | undefined): {
+  corValor?: string;
+  corFundo?: string;
+  corBorda?: string;
+} {
+  if (!data) return {};
+  const diff = Math.floor((Date.now() - new Date(data).getTime()) / 86_400_000);
+  if (diff <= 0) return {};
+  const t = Math.min(1, diff / 14);
+  return {
+    corValor: `hsl(0, 85%, ${75 - t * 25}%)`,
+    corFundo: `hsla(0, 70%, 20%, ${0.08 + t * 0.35})`,
+    corBorda: `hsla(0, 70%, 50%, ${0.2 + t * 0.55})`,
+  };
+}
+
+function labelAdiarAutoHint(): string {
+  const agora = new Date();
+  const d = new Date(agora);
+  d.setHours(d.getHours() + 3);
+  const h = `${d.getHours().toString().padStart(2, '0')}h`;
+  const eAmanha = d.getDate() !== agora.getDate();
+  return eAmanha ? `amanhã às ${h}` : `hoje às ${h}`;
+}
+
 export function TaskCard({
   tarefa,
   onConcluir,
@@ -107,9 +132,14 @@ export function TaskCard({
               valor={formatRelativeDate(tarefa.dataVencimento)}
               aria-label="Editar data de vencimento"
               onClick={() => onSalvarData('data_vencimento', tarefa.dataVencimento ?? null)}
+              {...corDataAtrasada(tarefa.dataVencimento)}
             />
           ) : (
-            <Chip label="Data" valor={formatRelativeDate(tarefa.dataVencimento)} />
+            <Chip
+              label="Data"
+              valor={formatRelativeDate(tarefa.dataVencimento)}
+              {...corDataAtrasada(tarefa.dataVencimento)}
+            />
           )}
           {onSalvarData ? (
             <ChipButton
@@ -117,9 +147,14 @@ export function TaskCard({
               valor={formatRelativeDate(tarefa.prazoConclusao)}
               aria-label="Editar prazo de conclusão"
               onClick={() => onSalvarData('prazo_conclusao', tarefa.prazoConclusao ?? null)}
+              {...corDataAtrasada(tarefa.prazoConclusao)}
             />
           ) : (
-            <Chip label="Prazo" valor={formatRelativeDate(tarefa.prazoConclusao)} />
+            <Chip
+              label="Prazo"
+              valor={formatRelativeDate(tarefa.prazoConclusao)}
+              {...corDataAtrasada(tarefa.prazoConclusao)}
+            />
           )}
           <Chip
             label="Nota"
@@ -166,9 +201,14 @@ export function TaskCard({
           <IconBtn aria-label="Editar" onClick={onEditar}>
             <Pencil className="h-4 w-4" />
           </IconBtn>
-          <IconBtn aria-label="Adicionar" onClick={onAdicionar} variant="accent">
-            <Plus className="h-4 w-4" />
-          </IconBtn>
+          <div className="relative">
+            <IconBtn aria-label="Adicionar" onClick={onAdicionar} variant="accent">
+              <Plus className="h-4 w-4" />
+            </IconBtn>
+            <kbd className="pointer-events-none absolute -right-2 -top-2 rounded border border-jade-accent/40 bg-bg-deep px-1 py-px text-[9px] font-bold leading-none text-jade-accent">
+              Q
+            </kbd>
+          </div>
         </div>
 
         {/* Hints de teclado (desktop) */}
@@ -176,7 +216,7 @@ export function TaskCard({
           <span>← voltar</span>
           <span>avançar →</span>
           <span>↑ adiar manual</span>
-          <span>↓ adiar auto</span>
+          <span>↓ adiar pra {labelAdiarAutoHint()} (auto)</span>
         </div>
       </div>
     </motion.article>
@@ -213,26 +253,34 @@ function Chip({ label, valor, corValor, corFundo, corBorda }: ChipProps) {
 interface ChipButtonProps extends React.ComponentProps<'button'> {
   label: string;
   valor: string;
+  corValor?: string;
+  corFundo?: string;
+  corBorda?: string;
 }
 
-function ChipButton({ label, valor, ...rest }: ChipButtonProps) {
+function ChipButton({ label, valor, corValor, corFundo, corBorda, ...rest }: ChipButtonProps) {
   return (
     <button
       type="button"
       {...rest}
       className={cn(
         'flex flex-col items-center rounded-md border p-3 transition-colors',
-        'border-border-strong bg-bg-surface',
         'hover:border-jade-accent/50 hover:bg-jade-dim/20',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-accent',
         'group',
       )}
+      style={{
+        borderColor: corBorda ?? 'var(--border-strong)',
+        background: corFundo ?? 'var(--bg-surface)',
+      }}
     >
       <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-text-muted group-hover:text-jade-accent">
         {label}
         <Calendar className="h-2.5 w-2.5 opacity-0 transition-opacity group-hover:opacity-70" />
       </span>
-      <span className="mt-1 text-lg font-bold text-text-primary">{valor}</span>
+      <span className="mt-1 text-lg font-bold" style={{ color: corValor ?? 'var(--text-primary)' }}>
+        {valor}
+      </span>
     </button>
   );
 }
@@ -241,6 +289,7 @@ function IconBtn({
   children,
   onClick,
   variant,
+  className,
   ...rest
 }: React.ComponentProps<'button'> & { variant?: 'danger' | 'accent' }) {
   return (
@@ -252,6 +301,7 @@ function IconBtn({
         'inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-strong bg-bg-surface text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary',
         variant === 'danger' && 'hover:border-danger/50 hover:text-danger',
         variant === 'accent' && 'border-jade-accent/40 text-jade-accent hover:bg-jade-dim/40',
+        className,
       )}
     >
       {children}

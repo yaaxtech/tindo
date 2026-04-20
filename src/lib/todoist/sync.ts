@@ -15,10 +15,11 @@ import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
 import { autoClassificarSeHabilitado } from '@/services/autoClassificar';
 import type { Configuracoes, Projeto, Tag } from '@/types/domain';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { TodoistClient, todoistColorHex } from './client';
+import { TodoistClient, type TodoistWorkspace, todoistColorHex } from './client';
 import { deriveTipo, prioridadeTodoistParaTinDo } from './mapper';
 
 export interface SyncResultado {
+  espacos: number;
   projetos: number;
   tags: number;
   tarefasImportadas: number;
@@ -36,6 +37,7 @@ export async function sincronizarTodoist(
 ): Promise<SyncResultado> {
   const td = new TodoistClient(token);
   const resultado: SyncResultado = {
+    espacos: 0,
     projetos: 0,
     tags: 0,
     tarefasImportadas: 0,
@@ -44,6 +46,32 @@ export async function sincronizarTodoist(
     ignoradas: 0,
     erros: [],
   };
+
+  // 0. Workspaces
+  let workspaces: TodoistWorkspace[] = [];
+  try {
+    workspaces = await td.listWorkspaces();
+  } catch (err) {
+    // API pode retornar 403/404 em contas sem workspaces (plano free) — não aborta o sync.
+    resultado.erros.push(
+      `workspaces: ${err instanceof Error ? err.message : String(err)} (ignorado)`,
+    );
+  }
+  for (const w of workspaces) {
+    const { error } = await admin.from('espacos_trabalho').upsert(
+      {
+        usuario_id: usuarioId,
+        todoist_id: String(w.id),
+        nome: w.name,
+      },
+      { onConflict: 'usuario_id,todoist_id' },
+    );
+    if (error) {
+      resultado.erros.push(`workspace ${w.name}: ${error.message}`);
+      continue;
+    }
+    resultado.espacos++;
+  }
 
   // 1. Projetos
   const projetos = await td.listProjects();

@@ -121,9 +121,7 @@ export default function EspacosTrabalhoPage() {
               Arraste pra ordenar. {espacos.length} espaço{espacos.length !== 1 ? 's' : ''}.
             </p>
           </div>
-          {salvando && (
-            <span className="text-xs text-text-muted animate-pulse">Salvando...</span>
-          )}
+          {salvando && <span className="text-xs text-text-muted animate-pulse">Salvando...</span>}
         </div>
       </header>
 

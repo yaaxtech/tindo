@@ -73,9 +73,7 @@ function labelAcao(acao: string): string {
 // ---------------------------------------------------------------------------
 
 function Skeleton({ className }: { className?: string }) {
-  return (
-    <div className={cn('animate-pulse rounded bg-bg-surface', className)} />
-  );
+  return <div className={cn('animate-pulse rounded bg-bg-surface', className)} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -187,9 +185,7 @@ export default function StatusTodoistPage() {
         error?: string;
       };
       if (!res.ok || !body.ok) throw new Error(body.error ?? 'Falha no sync');
-      setMsgSync(
-        `Concluído: ${body.importadas ?? 0} novas, ${body.atualizadas ?? 0} atualizadas`,
-      );
+      setMsgSync(`Concluído: ${body.importadas ?? 0} novas, ${body.atualizadas ?? 0} atualizadas`);
       await carregar();
     } catch (err) {
       setMsgSync(err instanceof Error ? err.message : 'Erro ao sincronizar');
@@ -198,7 +194,10 @@ export default function StatusTodoistPage() {
     }
   };
 
-  const patchConfig = async (patch: { todoist_sync_habilitado?: boolean; todoist_writeback_habilitado?: boolean }) => {
+  const patchConfig = async (patch: {
+    todoist_sync_habilitado?: boolean;
+    todoist_writeback_habilitado?: boolean;
+  }) => {
     if (!status) return;
     // Otimista
     setStatus((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -377,17 +376,13 @@ export default function StatusTodoistPage() {
                   label="Sync automático (leitura)"
                   descricao="Importa novas tarefas do Todoist periodicamente"
                   valor={status.syncHabilitado}
-                  onChange={(v) =>
-                    void patchConfig({ todoist_sync_habilitado: v })
-                  }
+                  onChange={(v) => void patchConfig({ todoist_sync_habilitado: v })}
                 />
                 <ToggleInline
                   label="Write-back (escrita)"
                   descricao="Atualiza o Todoist ao concluir tarefas aqui"
                   valor={status.writebackHabilitado}
-                  onChange={(v) =>
-                    void patchConfig({ todoist_writeback_habilitado: v })
-                  }
+                  onChange={(v) => void patchConfig({ todoist_writeback_habilitado: v })}
                 />
                 <div className="pt-1 border-t border-border">
                   <Link
@@ -414,10 +409,7 @@ function Cabecalho() {
         <h1 className="text-xl font-bold text-text-primary">Status do Todoist</h1>
         <p className="mt-0.5 text-xs text-text-muted">Integração e sincronização</p>
       </div>
-      <Link
-        href="/configuracoes"
-        className="text-xs text-text-muted hover:text-text-secondary"
-      >
+      <Link href="/configuracoes" className="text-xs text-text-muted hover:text-text-secondary">
         ← Configurações
       </Link>
     </div>

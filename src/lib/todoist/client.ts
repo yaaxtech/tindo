@@ -37,6 +37,14 @@ export interface TodoistProject {
   access?: unknown;
 }
 
+export interface TodoistWorkspace {
+  id: number | string; // a API retorna number
+  name: string;
+  description?: string;
+  plan?: string;
+  is_deleted?: boolean;
+}
+
 export interface TodoistLabel {
   id: string;
   name: string;
@@ -132,6 +140,11 @@ export class TodoistClient {
       cursor = page.next_cursor ?? null;
     } while (cursor);
     return todos;
+  }
+
+  listWorkspaces(): Promise<TodoistWorkspace[]> {
+    // /workspaces retorna array plano (sem paginação)
+    return this.req<TodoistWorkspace[]>('/workspaces');
   }
 
   listProjects(): Promise<TodoistProject[]> {

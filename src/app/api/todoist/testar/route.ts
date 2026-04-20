@@ -50,9 +50,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      detalhe: user.email
-        ? `Conectado como ${user.full_name ?? user.email}`
-        : 'Token válido',
+      detalhe: user.email ? `Conectado como ${user.full_name ?? user.email}` : 'Token válido',
     });
   } catch (err) {
     console.error('/api/todoist/testar error:', err);

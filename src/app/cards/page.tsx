@@ -332,6 +332,7 @@ export default function CardsPage() {
       if (nivel2Adiar) fecharNivel2Adiar();
     },
     onDelete: () => !nivel2Adiar && !popoverAberto && handleExcluir(),
+    onNew: () => !nivel2Adiar && !popoverAberto && setModalAberto('criar'),
   });
 
   const pendentes = fila.filter((t: Tarefa) => t.status === 'pendente');
@@ -375,16 +376,6 @@ export default function CardsPage() {
               >
                 <div className="h-12 w-12 animate-pulse-jade rounded-full bg-jade" />
               </motion.div>
-            ) : nivel2Adiar ? (
-              <AdiamentoNivel2
-                key="nivel2"
-                sugestao={sugestaoNivel2}
-                onEscolher={handleAdiarManual}
-                onCancelar={() => {
-                  setSugestaoNivel2(null);
-                  fecharNivel2Adiar();
-                }}
-              />
             ) : tarefaAtual ? (
               <CardStack
                 key="cardstack"
@@ -444,6 +435,30 @@ export default function CardsPage() {
                 <p className="mt-2 text-sm text-text-secondary">
                   Sincronize com Todoist ou adicione uma tarefa nova.
                 </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {nivel2Adiar && (
+              <motion.div
+                key="nivel2"
+                className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-4"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 24 }}
+                transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+              >
+                <div className="w-full max-w-md">
+                  <AdiamentoNivel2
+                    sugestao={sugestaoNivel2}
+                    onEscolher={handleAdiarManual}
+                    onCancelar={() => {
+                      setSugestaoNivel2(null);
+                      fecharNivel2Adiar();
+                    }}
+                  />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

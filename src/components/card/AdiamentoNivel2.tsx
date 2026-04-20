@@ -102,7 +102,14 @@ function buildPresets(): Preset[] {
     {
       id: 'hojeTarde',
       rotulo: 'Hoje à tarde',
-      relativo: fmt((() => { const d = new Date(); d.setHours(14,0,0,0); if (d <= agora) d.setDate(d.getDate()+1); return d; })()),
+      relativo: fmt(
+        (() => {
+          const d = new Date();
+          d.setHours(14, 0, 0, 0);
+          if (d <= agora) d.setDate(d.getDate() + 1);
+          return d;
+        })(),
+      ),
       icon: Sun,
       alvo: () => {
         const d = new Date();
@@ -194,7 +201,7 @@ function BarraConfianca({ valor }: { valor: number }) {
 }
 
 export function AdiamentoNivel2({ sugestao, onEscolher, onCancelar }: AdiamentoNivel2Props) {
-  const [customAberto, setCustomAberto] = useState(false);
+  const [customAberto, setCustomAberto] = useState(true);
   const [datetime, setDatetime] = useState(defaultDatetime);
   const presets = buildPresets();
 
@@ -232,8 +239,9 @@ export function AdiamentoNivel2({ sugestao, onEscolher, onCancelar }: AdiamentoN
           e.preventDefault();
           e.stopImmediatePropagation();
           const d = new Date();
-          d.setDate(d.getDate() + 1);
-          onEscolherRef.current(d, 'teclado: amanhã mesmo horário');
+          d.setDate(d.getDate() + 7);
+          d.setHours(0, 0, 0, 0);
+          onEscolherRef.current(d, 'teclado: próxima semana mesmo dia');
           break;
         }
         case 'ArrowUp': {
@@ -273,8 +281,9 @@ export function AdiamentoNivel2({ sugestao, onEscolher, onCancelar }: AdiamentoN
       onEscolher(d, 'swipe: amanhã sem horário');
     } else if (dir === 'right') {
       const d = new Date();
-      d.setDate(d.getDate() + 1);
-      onEscolher(d, 'swipe: amanhã mesmo horário');
+      d.setDate(d.getDate() + 7);
+      d.setHours(0, 0, 0, 0);
+      onEscolher(d, 'swipe: próxima semana mesmo dia');
     } else if (dir === 'up') {
       onEscolher(getProximoTurno(), `swipe: ${rotuloProximoTurno().toLowerCase()}`);
     } else if (dir === 'down') {
@@ -306,15 +315,15 @@ export function AdiamentoNivel2({ sugestao, onEscolher, onCancelar }: AdiamentoN
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 16 }}
       transition={{ duration: 0.28, ease: [0.2, 0.8, 0.2, 1] }}
-      className="relative h-full w-full"
+      className="relative w-full"
     >
       <SwipeHandler onSwipe={handleSwipe}>
-        <div className="grad-card flex h-full w-full flex-col gap-5 rounded-2xl border border-border-strong px-5 py-6">
+        <div className="grad-card flex w-full flex-col gap-4 rounded-2xl border border-border-strong px-5 py-5 shadow-2xl">
           {/* Header */}
           <header className="space-y-0.5 text-center">
             <h2 className="text-lg font-semibold text-text-primary">Adiar para quando?</h2>
             <p className="text-xs text-text-secondary">
-              ↑ {rotuloProximoTurno().toLowerCase()} · ← amanhã · → amanhã (mesma hora) · ↓ cancelar
+              ↑ {rotuloProximoTurno().toLowerCase()} · ← amanhã · → próxima semana · ↓ cancelar
             </p>
           </header>
 
@@ -454,7 +463,7 @@ export function AdiamentoNivel2({ sugestao, onEscolher, onCancelar }: AdiamentoN
           </AnimatePresence>
 
           {/* Footer */}
-          <div className="mt-auto text-center">
+          <div className="text-center">
             <button
               type="button"
               onClick={onCancelar}

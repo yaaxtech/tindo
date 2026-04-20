@@ -143,10 +143,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Salva todoist_id na tarefa
-        await admin
-          .from('tarefas')
-          .update({ todoist_id: created.id })
-          .eq('id', tarefa.id);
+        await admin.from('tarefas').update({ todoist_id: created.id }).eq('id', tarefa.id);
 
         // Registra em historico_acoes
         await admin.from('historico_acoes').insert({
