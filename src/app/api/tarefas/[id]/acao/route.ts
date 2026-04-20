@@ -1,4 +1,5 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { propagarParaTodoist } from '@/services/todoistWriteback';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           tarefa_id: id,
           acao: 'concluida',
         });
+        void propagarParaTodoist({ usuarioId, tarefaId: id, acao: 'concluir' });
         return NextResponse.json({ ok: true });
       }
       case 'adiar': {
@@ -57,6 +59,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           tarefa_id: id,
           acao: body.automatico ? 'adiada_auto' : 'adiada_manual',
           dados: { ateISO: body.ate, motivo: body.motivoAuto ?? null },
+        });
+        // Propaga data de vencimento para o Todoist (YYYY-MM-DD)
+        void propagarParaTodoist({
+          usuarioId,
+          tarefaId: id,
+          acao: 'atualizar',
+          patch: { dataVencimento: body.ate.slice(0, 10) },
         });
         return NextResponse.json({ ok: true });
       }
@@ -84,6 +93,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           acao: 'voltada',
           dados: { origem: 'desfazer_adiamento' },
         });
+        void propagarParaTodoist({
+          usuarioId,
+          tarefaId: id,
+          acao: 'atualizar',
+          patch: { dataVencimento: null },
+        });
         return NextResponse.json({ ok: true });
       }
       case 'excluir': {
@@ -101,6 +116,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           tarefa_id: id,
           acao: 'excluida',
         });
+        void propagarParaTodoist({ usuarioId, tarefaId: id, acao: 'excluir' });
         return NextResponse.json({ ok: true });
       }
     }

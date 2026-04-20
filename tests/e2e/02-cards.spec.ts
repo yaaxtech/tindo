@@ -25,7 +25,9 @@ test.describe('Cards — tela principal', () => {
   test('StreakBadge ou indicador de gamificação visível', async ({ page }) => {
     // Aceita streak badge, XP, nível ou qualquer indicador de gamificação
     const gamificacao = page.getByText(/streak|xp|nível|dia/i).first();
-    const badge = page.locator('[class*="streak"], [class*="badge"], [data-testid*="streak"]').first();
+    const badge = page
+      .locator('[class*="streak"], [class*="badge"], [data-testid*="streak"]')
+      .first();
 
     await expect(gamificacao.or(badge)).toBeVisible({ timeout: 10_000 });
   });
