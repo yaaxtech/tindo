@@ -1,13 +1,24 @@
 'use client';
 
-import { AdiamentoNivel2 } from '@/components/card/AdiamentoNivel2';
+import { CardStack } from '@/components/card/CardStack';
 import { ContadorLembretes } from '@/components/card/ContadorLembretes';
 import { EditarDataPopover } from '@/components/card/EditarDataPopover';
-import { type SwipeDir, SwipeHandler } from '@/components/card/SwipeHandler';
-import { type SalvarPayload, TarefaModal } from '@/components/card/TarefaModal';
+import type { SwipeDir } from '@/components/card/SwipeHandler';
+import type { SalvarPayload } from '@/components/card/TarefaModal';
 import type { CampoData } from '@/components/card/TaskCard';
 import { TaskCard } from '@/components/card/TaskCard';
 import { CompletionCelebration } from '@/components/celebration/CompletionCelebration';
+import dynamic from 'next/dynamic';
+
+// Dynamic imports pra reduzir bundle inicial (~40kb framer-motion + anim code)
+const TarefaModal = dynamic(
+  () => import('@/components/card/TarefaModal').then((m) => ({ default: m.TarefaModal })),
+  { ssr: false, loading: () => null },
+);
+const AdiamentoNivel2 = dynamic(
+  () => import('@/components/card/AdiamentoNivel2').then((m) => ({ default: m.AdiamentoNivel2 })),
+  { ssr: false, loading: () => null },
+);
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { type SugestaoAdiamento, rotuloMotivoManual } from '@/lib/adiamento/heuristica';
 import { playCompletion, playLevelUp, playSwipe } from '@/lib/audio/tones';
@@ -372,44 +383,50 @@ export default function CardsPage() {
                 }}
               />
             ) : tarefaAtual ? (
-              <motion.div
-                key={tarefaAtual.id}
-                initial={{ y: 80, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -120, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-                className="absolute inset-0"
-              >
-                <SwipeHandler onSwipe={handleSwipeComReset} animacaoEmCurso={animacaoEmCurso}>
-                  <TaskCard
-                    tarefa={tarefaAtual}
-                    onConcluir={handleConcluir}
-                    onExcluir={handleExcluir}
-                    onEditar={() => setModalAberto('editar')}
-                    onDependencia={() => {}}
-                    onAdicionar={() => setModalAberto('criar')}
-                    onListar={() => router.push('/tarefas')}
-                    onSalvarData={(campo) => setPopoverAberto(campo)}
-                  />
-                  <EditarDataPopover
-                    aberto={popoverAberto !== null}
-                    label={
-                      popoverAberto === 'data_vencimento'
-                        ? 'Data de vencimento'
-                        : 'Prazo de conclusão'
-                    }
-                    valorInicial={
-                      popoverAberto === 'data_vencimento'
-                        ? (tarefaAtual.dataVencimento?.slice(0, 10) ?? null)
-                        : (tarefaAtual.prazoConclusao?.slice(0, 10) ?? null)
-                    }
-                    onFechar={() => setPopoverAberto(null)}
-                    onSalvar={(ate) => {
-                      if (popoverAberto) salvarCampoData(popoverAberto, ate);
-                    }}
-                  />
-                </SwipeHandler>
-              </motion.div>
+              <CardStack
+                key="cardstack"
+                fila={fila.filter((t: Tarefa) => t.status === 'pendente')}
+                indice={fila
+                  .filter((t: Tarefa) => t.status === 'pendente')
+                  .findIndex((t) => t.id === tarefaAtual.id)}
+                animacaoEmCurso={animacaoEmCurso}
+                onSwipe={handleSwipeComReset}
+                renderCard={(tarefa, posicao) => (
+                  <>
+                    <TaskCard
+                      tarefa={tarefa}
+                      onConcluir={posicao === 'topo' ? handleConcluir : () => {}}
+                      onExcluir={posicao === 'topo' ? handleExcluir : () => {}}
+                      onEditar={posicao === 'topo' ? () => setModalAberto('editar') : () => {}}
+                      onDependencia={() => {}}
+                      onAdicionar={posicao === 'topo' ? () => setModalAberto('criar') : () => {}}
+                      onListar={posicao === 'topo' ? () => router.push('/tarefas') : () => {}}
+                      onSalvarData={
+                        posicao === 'topo' ? (campo) => setPopoverAberto(campo) : undefined
+                      }
+                    />
+                    {posicao === 'topo' && (
+                      <EditarDataPopover
+                        aberto={popoverAberto !== null}
+                        label={
+                          popoverAberto === 'data_vencimento'
+                            ? 'Data de vencimento'
+                            : 'Prazo de conclusão'
+                        }
+                        valorInicial={
+                          popoverAberto === 'data_vencimento'
+                            ? (tarefa.dataVencimento?.slice(0, 10) ?? null)
+                            : (tarefa.prazoConclusao?.slice(0, 10) ?? null)
+                        }
+                        onFechar={() => setPopoverAberto(null)}
+                        onSalvar={(ate) => {
+                          if (popoverAberto) salvarCampoData(popoverAberto, ate);
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              />
             ) : (
               <motion.div
                 key="empty"

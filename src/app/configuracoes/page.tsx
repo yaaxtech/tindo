@@ -30,6 +30,9 @@ interface ConfigRow {
   push_gatilho_prazo_hoje?: boolean;
   push_gatilho_streak_risco?: boolean;
   push_gatilho_sugestoes_ia?: boolean;
+  // Todoist sync metadata
+  todoist_ultimo_sync?: string | null;
+  todoist_token?: string | null;
 }
 
 const MODELOS_IA = [
@@ -81,6 +84,8 @@ export default function ConfiguracoesPage() {
           push_gatilho_prazo_hoje: c.push_gatilho_prazo_hoje !== false,
           push_gatilho_streak_risco: c.push_gatilho_streak_risco !== false,
           push_gatilho_sugestoes_ia: c.push_gatilho_sugestoes_ia !== false,
+          todoist_ultimo_sync: (c.todoist_ultimo_sync as string | null) ?? null,
+          todoist_token: (c.todoist_token as string | null) ?? null,
         });
         // Se a key estava salva antes, não exibimos — campo fica vazio pra redigitar se quiser atualizar
       } finally {
@@ -499,6 +504,30 @@ export default function ConfiguracoesPage() {
         </Card>
 
         <Card titulo="Integrações" subtitulo="">
+          {/* CTA Todoist — aparece antes dos toggles */}
+          {!cfg.todoist_ultimo_sync ? (
+            <Link
+              href="/configuracoes/todoist/importar"
+              className="mb-3 flex items-center justify-between rounded-xl border border-jade/40 bg-jade/5 px-4 py-3 hover:bg-jade/10 transition-colors"
+            >
+              <div>
+                <p className="text-sm font-semibold text-jade-accent">Importar do Todoist</p>
+                <p className="text-xs text-text-muted">Conecte sua conta e importe suas tarefas</p>
+              </div>
+              <ArrowLeft className="h-4 w-4 rotate-180 text-jade-accent" />
+            </Link>
+          ) : (
+            <Link
+              href="/configuracoes/todoist/status"
+              className="mb-3 flex items-center justify-between rounded-xl border border-border-strong bg-bg-surface px-4 py-2.5 hover:bg-bg-hover transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-success" />
+                <p className="text-sm text-text-secondary">Sincronização Todoist ativa</p>
+              </div>
+              <span className="text-xs text-jade-accent">Ver status →</span>
+            </Link>
+          )}
           <Toggle
             label="Sync Todoist (leitura)"
             valor={cfg.todoist_sync_habilitado}

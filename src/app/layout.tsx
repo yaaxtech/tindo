@@ -44,8 +44,9 @@ export const viewport: Viewport = {
   themeColor: '#0A0E13',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Permitimos zoom por acessibilidade (WCAG 1.4.4). PWA still feels nativo.
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: 'cover',
 };
 

@@ -32,6 +32,7 @@ export async function sincronizarTodoist(
   admin: SupabaseClient,
   usuarioId: string,
   token?: string,
+  projetoIds?: string[],
 ): Promise<SyncResultado> {
   const td = new TodoistClient(token);
   const resultado: SyncResultado = {
@@ -160,7 +161,15 @@ export async function sincronizarTodoist(
 
   const tasks = await td.listTasks();
 
+  // Conjunto de IDs de projeto selecionados (filtro opcional)
+  const projetoIdSet = projetoIds && projetoIds.length > 0 ? new Set(projetoIds) : null;
+
   for (const t of tasks) {
+    // Filtra por projeto se IDs foram passados
+    if (projetoIdSet && !projetoIdSet.has(t.project_id)) {
+      resultado.ignoradas++;
+      continue;
+    }
     if (t.checked || t.is_deleted) {
       resultado.ignoradas++;
       continue;

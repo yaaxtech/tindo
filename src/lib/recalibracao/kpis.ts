@@ -24,7 +24,7 @@ export interface KpisAgregados {
   /** S03: adiadas / mostradas — taxa de adiamento */
   taxaAdiar: number;
   /** S04: puladas / mostradas — taxa de pular */
-  taxaPular: number;
+  taxaAvancar: number;
   /** S06: concluidas / dias com atividade — média diária de conclusões */
   concluidasPorDia: number;
   /** taxa de conclusão bruta: concluidas / mostradas */
@@ -95,7 +95,7 @@ export function agregarKpis(diarios: KpiDiario[], dias = 30): KpisAgregados {
     taxaReavaliacao: safe(totalEditadas, totalMostradas),
     taxaDescarte: safe(totalExcluidas, totalMostradas),
     taxaAdiar: safe(totalAdiadas, totalMostradas),
-    taxaPular: safe(totalPuladas, totalMostradas),
+    taxaAvancar: safe(totalPuladas, totalMostradas),
     concluidasPorDia: safe(totalConcluidas, diasComAtividade),
     taxaConclusao: safe(totalConcluidas, totalMostradas),
     streakMaximo,
