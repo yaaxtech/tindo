@@ -1,5 +1,6 @@
 'use client';
 
+import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { cn } from '@/lib/utils';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { useToasts } from '@/stores/toasts';
@@ -30,6 +31,9 @@ interface ConfigRow {
   push_gatilho_prazo_hoje?: boolean;
   push_gatilho_streak_risco?: boolean;
   push_gatilho_sugestoes_ia?: boolean;
+  // Todoist sync metadata
+  todoist_ultimo_sync?: string | null;
+  todoist_token?: string | null;
 }
 
 const MODELOS_IA = [
@@ -81,6 +85,8 @@ export default function ConfiguracoesPage() {
           push_gatilho_prazo_hoje: c.push_gatilho_prazo_hoje !== false,
           push_gatilho_streak_risco: c.push_gatilho_streak_risco !== false,
           push_gatilho_sugestoes_ia: c.push_gatilho_sugestoes_ia !== false,
+          todoist_ultimo_sync: (c.todoist_ultimo_sync as string | null) ?? null,
+          todoist_token: (c.todoist_token as string | null) ?? null,
         });
         // Se a key estava salva antes, não exibimos — campo fica vazio pra redigitar se quiser atualizar
       } finally {
@@ -214,9 +220,17 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/push/testar', { method: 'POST' });
       const body = (await res.json()) as { ok?: boolean; enviadas?: number; error?: string };
       if (body.ok && body.enviadas && body.enviadas > 0) {
-        toast({ titulo: 'Notificacao enviada', descricao: 'Verifique a notificacao no dispositivo.', icone: 'ok' });
+        toast({
+          titulo: 'Notificacao enviada',
+          descricao: 'Verifique a notificacao no dispositivo.',
+          icone: 'ok',
+        });
       } else if (body.enviadas === 0) {
-        toast({ titulo: 'Nenhum dispositivo registrado', descricao: 'Ative neste dispositivo primeiro.', icone: 'alerta' });
+        toast({
+          titulo: 'Nenhum dispositivo registrado',
+          descricao: 'Ative neste dispositivo primeiro.',
+          icone: 'alerta',
+        });
       } else {
         toast({ titulo: body.error ?? 'Erro ao testar push', icone: 'alerta' });
       }
@@ -425,16 +439,18 @@ export default function ConfiguracoesPage() {
                 Permissao bloqueada. Libere nas configuracoes do navegador.
               </p>
             )}
-            {push.status !== 'unsupported' && push.status !== 'granted' && push.status !== 'denied' && (
-              <button
-                type="button"
-                onClick={() => void push.subscribe()}
-                disabled={push.status === 'loading'}
-                className="inline-flex h-9 items-center rounded-md grad-jade px-4 text-sm font-medium text-text-inverse disabled:opacity-40"
-              >
-                {push.status === 'loading' ? 'Ativando...' : 'Ativar neste dispositivo'}
-              </button>
-            )}
+            {push.status !== 'unsupported' &&
+              push.status !== 'granted' &&
+              push.status !== 'denied' && (
+                <button
+                  type="button"
+                  onClick={() => void push.subscribe()}
+                  disabled={push.status === 'loading'}
+                  className="inline-flex h-9 items-center rounded-md grad-jade px-4 text-sm font-medium text-text-inverse disabled:opacity-40"
+                >
+                  {push.status === 'loading' ? 'Ativando...' : 'Ativar neste dispositivo'}
+                </button>
+              )}
             {push.status === 'granted' && (
               <>
                 <span className="inline-flex h-9 items-center rounded-md border border-jade-accent/40 bg-jade-dim/20 px-3 text-sm text-jade-accent">
@@ -489,27 +505,23 @@ export default function ConfiguracoesPage() {
         </Card>
 
         <Card titulo="Integrações" subtitulo="">
-          <Toggle
-            label="Sync Todoist (leitura)"
-            valor={cfg.todoist_sync_habilitado}
-            onChange={(v) => setCfg({ ...cfg, todoist_sync_habilitado: v })}
-          />
-          <div className="space-y-1">
-            <Toggle
-              label="Atualizar Todoist automaticamente"
-              valor={cfg.todoist_writeback_habilitado ?? false}
-              onChange={(v) => setCfg({ ...cfg, todoist_writeback_habilitado: v })}
-            />
-            <p className="pl-1 text-[11px] text-text-muted">
-              Quando você concluir, adiar ou editar uma tarefa no TinDo, o Todoist é atualizado na
-              mesma. Requer TODOIST_API_TOKEN configurado no servidor.
-            </p>
-            {cfg.todoist_writeback_habilitado && (
-              <p className="rounded-md bg-bg-surface px-3 py-2 text-xs text-warning">
-                Tarefas concluídas/excluídas no TinDo serão refletidas na sua conta Todoist.
+          {/* Card único Todoist → novo hub */}
+          <Link
+            href="/configuracoes/todoist"
+            className="mb-3 flex items-center justify-between rounded-xl border border-jade/40 bg-jade/5 px-4 py-3 hover:bg-jade/10 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-semibold text-jade-accent">
+                {cfg.todoist_ultimo_sync ? 'Gerenciar Todoist' : 'Conectar Todoist'}
               </p>
-            )}
-          </div>
+              <p className="text-xs text-text-muted">
+                {cfg.todoist_ultimo_sync
+                  ? 'Importar, exportar e sincronizar'
+                  : 'Importe, exporte e sincronize suas tarefas'}
+              </p>
+            </div>
+            <ArrowLeft className="h-4 w-4 rotate-180 text-jade-accent" />
+          </Link>
           <Toggle
             label="IA Claude (classificação/sugestões)"
             valor={cfg.ai_habilitado}

@@ -1,5 +1,3 @@
-export const runtime = 'edge';
-
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { type NextRequest, NextResponse } from 'next/server';
 

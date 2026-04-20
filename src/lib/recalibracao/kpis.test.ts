@@ -32,7 +32,7 @@ describe('agregarKpis', () => {
     const r = agregarKpis(diarios, 30);
     expect(r.totalMostradas).toBe(10);
     expect(r.taxaConclusao).toBeCloseTo(0.5);
-    expect(r.taxaPular).toBeCloseTo(0.2);
+    expect(r.taxaAvancar).toBeCloseTo(0.2);
     expect(r.taxaAdiar).toBeCloseTo(0.2);
     expect(r.taxaDescarte).toBeCloseTo(0.1);
     expect(r.taxaReavaliacao).toBeCloseTo(0.3);

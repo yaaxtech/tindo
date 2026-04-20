@@ -22,9 +22,7 @@ test.describe('Sugestões IA — inbox de sugestões', () => {
     // Deve mostrar algum conteúdo — header com "Sugestoes da IA", filtros ou loading
     // O header sempre renderiza: "Sugestoes da IA" (h1) + botão "Analisar sem classificacao"
     // Filtros: "Todos", "Classificar", "Quebrar" — sempre visíveis
-    const conteudo = page
-      .getByText(/sugestoes|classificar|quebrar|analisar|IA/i)
-      .first();
+    const conteudo = page.getByText(/sugestoes|classificar|quebrar|analisar|IA/i).first();
     await expect(conteudo).toBeVisible({ timeout: 10_000 });
   });
 
@@ -40,9 +38,7 @@ test.describe('Sugestões IA — inbox de sugestões', () => {
 
     // O botão tem texto exato "Analisar sem classificacao" (sem acento)
     // Regex cobre variações: "analisar" (palavra-chave robusta)
-    const botaoAnalisar = page
-      .getByRole('button', { name: /analisar/i })
-      .first();
+    const botaoAnalisar = page.getByRole('button', { name: /analisar/i }).first();
     await expect(botaoAnalisar).toBeVisible({ timeout: 10_000 });
   });
 

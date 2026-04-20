@@ -3,5 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-04-19"
 
 [triggers]
-crons = ["0 6 * * *"]
-# Roda às 06:00 UTC (03h BRT) todos os dias.
+crons = [
+  "0 6 * * *",      # Cron diário completo (KPIs + sync + push) às 06h UTC (03h BRT)
+  "*/5 * * * *"     # Sync Todoist rápido a cada 5 min
+]

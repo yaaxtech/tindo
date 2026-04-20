@@ -4,7 +4,9 @@ import { corUrgencia } from '@/lib/urgency-color';
 import { cn, formatRelativeDate } from '@/lib/utils';
 import type { Tarefa } from '@/types/domain';
 import { motion } from 'framer-motion';
-import { Check, Link2, List, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Check, Link2, List, Pencil, Plus, Trash2 } from 'lucide-react';
+
+export type CampoData = 'data_vencimento' | 'prazo_conclusao';
 
 interface TaskCardProps {
   tarefa: Tarefa;
@@ -14,6 +16,7 @@ interface TaskCardProps {
   onDependencia: () => void;
   onAdicionar: () => void;
   onListar: () => void;
+  onSalvarData?: (campo: CampoData, ate: string | null) => void;
   className?: string;
 }
 
@@ -25,6 +28,7 @@ export function TaskCard({
   onDependencia,
   onAdicionar,
   onListar,
+  onSalvarData,
   className,
 }: TaskCardProps) {
   const corProjeto = tarefa.projeto?.cor ?? '#2CAF93';
@@ -97,8 +101,26 @@ export function TaskCard({
 
         {/* Chips */}
         <div className="mt-5 grid grid-cols-3 gap-3">
-          <Chip label="Data" valor={formatRelativeDate(tarefa.dataVencimento)} />
-          <Chip label="Prazo" valor={formatRelativeDate(tarefa.prazoConclusao)} />
+          {onSalvarData ? (
+            <ChipButton
+              label="Data"
+              valor={formatRelativeDate(tarefa.dataVencimento)}
+              aria-label="Editar data de vencimento"
+              onClick={() => onSalvarData('data_vencimento', tarefa.dataVencimento ?? null)}
+            />
+          ) : (
+            <Chip label="Data" valor={formatRelativeDate(tarefa.dataVencimento)} />
+          )}
+          {onSalvarData ? (
+            <ChipButton
+              label="Prazo"
+              valor={formatRelativeDate(tarefa.prazoConclusao)}
+              aria-label="Editar prazo de conclusão"
+              onClick={() => onSalvarData('prazo_conclusao', tarefa.prazoConclusao ?? null)}
+            />
+          ) : (
+            <Chip label="Prazo" valor={formatRelativeDate(tarefa.prazoConclusao)} />
+          )}
           <Chip
             label="Nota"
             valor={String(tarefa.nota)}
@@ -149,10 +171,10 @@ export function TaskCard({
           </IconBtn>
         </div>
 
-        {/* Hints */}
-        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-center text-[11px] leading-snug text-text-muted">
-          <span>← pular</span>
-          <span>voltar →</span>
+        {/* Hints de teclado (desktop) */}
+        <div className="mt-4 hidden grid-cols-2 gap-x-4 gap-y-1 text-center text-[11px] leading-snug text-text-muted md:grid">
+          <span>← voltar</span>
+          <span>avançar →</span>
           <span>↑ adiar manual</span>
           <span>↓ adiar auto</span>
         </div>
@@ -185,6 +207,33 @@ function Chip({ label, valor, corValor, corFundo, corBorda }: ChipProps) {
         {valor}
       </span>
     </div>
+  );
+}
+
+interface ChipButtonProps extends React.ComponentProps<'button'> {
+  label: string;
+  valor: string;
+}
+
+function ChipButton({ label, valor, ...rest }: ChipButtonProps) {
+  return (
+    <button
+      type="button"
+      {...rest}
+      className={cn(
+        'flex flex-col items-center rounded-md border p-3 transition-colors',
+        'border-border-strong bg-bg-surface',
+        'hover:border-jade-accent/50 hover:bg-jade-dim/20',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jade-accent',
+        'group',
+      )}
+    >
+      <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-text-muted group-hover:text-jade-accent">
+        {label}
+        <Calendar className="h-2.5 w-2.5 opacity-0 transition-opacity group-hover:opacity-70" />
+      </span>
+      <span className="mt-1 text-lg font-bold text-text-primary">{valor}</span>
+    </button>
   );
 }
 

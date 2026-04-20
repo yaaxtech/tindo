@@ -21,9 +21,7 @@ test.describe('Recalibrar — diagnóstico e calibração', () => {
 
     // Passo 1 = diagnóstico — o header sempre mostra "Recalibração" (h1) e "Diagnóstico" (subtitle)
     // Aceita "recalibr" (case-insensitive) que aparece em "Recalibração" no h1 do header
-    const passo1 = page
-      .getByText(/recalibr|diagnóstico|calibr/i)
-      .first();
+    const passo1 = page.getByText(/recalibr|diagnóstico|calibr/i).first();
     await expect(passo1).toBeVisible({ timeout: 15_000 });
   });
 

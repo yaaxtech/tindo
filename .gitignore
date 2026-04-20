@@ -57,4 +57,7 @@ public/worker-*.js
 public/sw.js.map
 public/workbox-*.js.map
 public/worker-*.js.map
-.env.local.vapid-tmp
+
+# opennextjs cloudflare
+.open-next/
+.wrangler/

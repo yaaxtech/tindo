@@ -23,7 +23,7 @@ interface KpisAgregados {
   taxaReavaliacao: number;
   taxaDescarte: number;
   taxaAdiar: number;
-  taxaPular: number;
+  taxaAvancar: number;
   concluidasPorDia: number;
   taxaConclusao: number;
   streakMaximo: number;
@@ -164,7 +164,7 @@ function PassoDiagnostico({
 
       <div className="grid grid-cols-2 gap-3">
         <KpiTile label="Taxa de conclusão" valor={kpis.taxaConclusao} formato="pct" />
-        <KpiTile label="Taxa de pular" valor={kpis.taxaPular} formato="pct" />
+        <KpiTile label="Taxa de avançar" valor={kpis.taxaAvancar} formato="pct" />
         <KpiTile
           label="Taxa de adiar"
           valor={kpis.taxaAdiar}

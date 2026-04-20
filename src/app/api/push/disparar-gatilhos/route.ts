@@ -1,8 +1,6 @@
 // Chamado pelo cron diário após refresh KPIs e sync Todoist.
 // Auth: header `Authorization: Bearer <CRON_SECRET>`.
 
-export const runtime = 'edge';
-
 import { getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { verificarEDispararGatilhos } from '@/services/push';
 import { type NextRequest, NextResponse } from 'next/server';

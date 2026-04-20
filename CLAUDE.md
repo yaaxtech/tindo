@@ -126,11 +126,23 @@ Login → Fila priorizada (cards) → Ação (concluir/pular/voltar/adiar) → P
                          Recalibração periódica quando KPIs disparam
 ```
 
-### Swipe (convenção confirmada 2026-04-17)
-- **← ESQUERDA**: próxima tarefa (pular)
-- **→ DIREITA**: tarefa anterior (voltar)
-- **↑ CIMA**: adiar manual (abre 2º nível de swipe)
-- **↓ BAIXO**: adiar automático (heurística)
+### Swipe / teclado (convenção híbrida — final em 2026-04-20)
+
+**Mobile (swipe)** — segue convenção Tinder:
+- **Swipe ESQUERDA (←)**: avançar (próxima)
+- **Swipe DIREITA (→)**: voltar (anterior)
+
+**Desktop (teclado)** — segue convenção browser (back/forward):
+- **Seta ← (voltar)**: volta para tarefa anterior (equivalente a swipe →)
+- **Seta → (avançar)**: avança para próxima (equivalente a swipe ←)
+
+**Ambos**:
+- **↑** adiar manual (abre 2º nível)
+- **↓** adiar automático (heurística)
+
+A animação visual do card é SEMPRE igual entre swipe e teclado equivalentes: avançar faz carta voar pra esquerda; voltar faz carta voar pra direita.
+
+Histórico: original 2026-04-17 era ←avançar/→voltar. Invertida (B) na manhã 2026-04-20. Revertida Tinder-like na tarde 2026-04-20. Final: mobile Tinder + teclado browser (convenção híbrida).
 
 ### Botões do card
 - Concluir ✓ (com animação viciante)
