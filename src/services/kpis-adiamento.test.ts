@@ -132,10 +132,10 @@ describe('calcularKpisAdiamento — TRA', () => {
   it('2 de 4 re-adiamentos → 50% → dentroDaMeta=false', async () => {
     // 4 ações adiada_auto; 2 têm próxima ação = adiada_auto (re-adiamento)
     const acoesAuto = [
-      { id: '1', tarefa_id: 'ta', criado_em: '2026-04-01T10:00:00Z' },
-      { id: '2', tarefa_id: 'tb', criado_em: '2026-04-02T10:00:00Z' },
-      { id: '3', tarefa_id: 'tc', criado_em: '2026-04-03T10:00:00Z' },
-      { id: '4', tarefa_id: 'td', criado_em: '2026-04-04T10:00:00Z' },
+      { id: '1', tarefa_id: 'ta', created_at: '2026-04-01T10:00:00Z' },
+      { id: '2', tarefa_id: 'tb', created_at: '2026-04-02T10:00:00Z' },
+      { id: '3', tarefa_id: 'tc', created_at: '2026-04-03T10:00:00Z' },
+      { id: '4', tarefa_id: 'td', created_at: '2026-04-04T10:00:00Z' },
     ];
 
     // proximas: 2 re-adiamentos, 1 conclusão, 1 null (skip)
@@ -174,10 +174,10 @@ describe('calcularKpisAdiamento — TCA', () => {
 
   it('3 de 4 concluídos → 75% → dentroDaMeta=true', async () => {
     const acoesAuto = [
-      { id: '1', tarefa_id: 'ta', criado_em: '2026-04-01T10:00:00Z' },
-      { id: '2', tarefa_id: 'tb', criado_em: '2026-04-02T10:00:00Z' },
-      { id: '3', tarefa_id: 'tc', criado_em: '2026-04-03T10:00:00Z' },
-      { id: '4', tarefa_id: 'td', criado_em: '2026-04-04T10:00:00Z' },
+      { id: '1', tarefa_id: 'ta', created_at: '2026-04-01T10:00:00Z' },
+      { id: '2', tarefa_id: 'tb', created_at: '2026-04-02T10:00:00Z' },
+      { id: '3', tarefa_id: 'tc', created_at: '2026-04-03T10:00:00Z' },
+      { id: '4', tarefa_id: 'td', created_at: '2026-04-04T10:00:00Z' },
     ];
 
     const client = makeClient({

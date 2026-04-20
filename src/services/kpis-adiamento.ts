@@ -84,11 +84,11 @@ export async function calcularKpisAdiamento(
 
   const { data: acoesAuto, error: errAuto } = await supabase
     .from('historico_acoes')
-    .select('id, tarefa_id, criado_em')
+    .select('id, tarefa_id, created_at')
     .eq('usuario_id', usuarioId)
     .eq('acao', 'adiada_auto')
-    .gte('criado_em', inicioPeriodo)
-    .order('criado_em', { ascending: true });
+    .gte('created_at', inicioPeriodo)
+    .order('created_at', { ascending: true });
 
   if (errAuto) throw errAuto;
 
@@ -107,8 +107,8 @@ export async function calcularKpisAdiamento(
         .select('acao')
         .eq('usuario_id', usuarioId)
         .eq('tarefa_id', acaoAuto.tarefa_id)
-        .gt('criado_em', acaoAuto.criado_em)
-        .order('criado_em', { ascending: true })
+        .gt('created_at', acaoAuto.created_at)
+        .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
 
