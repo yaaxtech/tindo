@@ -140,6 +140,13 @@ Login → Fila priorizada (cards) → Ação (concluir/pular/voltar/adiar) → P
 - **↑** adiar manual (abre 2º nível)
 - **↓** adiar automático (heurística)
 
+**Somente teclado (atalhos de ação)**:
+- **q** (ou n) → abre modal de nova tarefa (`e.preventDefault()` obrigatório para não digitar no 1º campo)
+- **e** / **E** → editar tarefa atual
+- **d** / **D** → excluir tarefa atual
+- **Space / Enter** → concluir tarefa atual
+- **Ctrl+Z / Cmd+Z** → desfazer último adiamento
+
 A animação visual do card é SEMPRE igual entre swipe e teclado equivalentes: avançar faz carta voar pra esquerda; voltar faz carta voar pra direita.
 
 Histórico: original 2026-04-17 era ←avançar/→voltar. Invertida (B) na manhã 2026-04-20. Revertida Tinder-like na tarde 2026-04-20. Final: mobile Tinder + teclado browser (convenção híbrida).
@@ -254,6 +261,11 @@ WITH CHECK (usuario_id = auth.uid())
 | RN-09 | Dependência: tarefa com dependência não-concluída não entra na fila principal |
 | RN-10 | Adiamento automático usa heurística por hora/dia; manual pergunta ao usuário |
 | RN-11 | Tarefas concluídas via Todoist API refletem no TinDo em ≤1 min (polling ou webhook) |
+| RN-12 | Adiamento automático usa SM-2 adaptado: `base(score) × EF^(n-1)`, ver `docs/11_ADIAMENTO_ESPACADO.md` |
+| RN-13 | Mínimo de adiamento = próximo turno (mesmo score 100) |
+| RN-14 | Teto de adiamento = 1 dia antes do `prazo_conclusao` às 09:00 |
+| RN-15 | Conclusão decai EF em `-0.30` (só da tarefa concluída) |
+| RN-16 | Score do adiamento = sempre o atual no momento do cálculo |
 
 ---
 

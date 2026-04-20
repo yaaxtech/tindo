@@ -167,6 +167,24 @@
 
 **Critério de done**: app em `tindo.yaax.tech` (ou domínio escolhido), LCP < 1.5s, instalável em iOS/Android/desktop.
 
+## Fase 12 — Adiamento Espaçado v2 (SM-2)
+
+Spec: `docs/11_ADIAMENTO_ESPACADO.md`
+
+Substitui a heurística pura por SM-2 adaptado — intervalo cresce com adiamento, travado pelo score 0-100. Heurística passa a decidir só a hora-do-dia.
+
+- [ ] M1 Migração `ef numeric(3,2)` em `tarefas`
+- [ ] M2 `src/lib/adiamento/sm2.ts` (core da fórmula, função pura)
+- [ ] M3 Refator `src/lib/adiamento/heuristica.ts` (expõe `decidirHoraDoDia`)
+- [ ] M4 API route `/api/tarefas/[id]/acao` usa SM-2
+- [ ] M5 Serviço `src/services/kpis-adiamento.ts` (TRA/TCA/TEX/MAC/SAE)
+- [ ] M6 Aba "Adiamento" em `/gamificacao` (UI dos KPIs)
+- [ ] M7 Testes Vitest (unit + integration)
+- [ ] M8 RN-12 a RN-16 em `CLAUDE.md`
+- [ ] M9 Esta entrada no roadmap
+
+**Critério de done**: adiamento inteligente com SM-2 funciona, próximo intervalo segue fórmula, KPIs refletem qualidade dos adiamentos.
+
 ## Fase 12+ — Futuro
 
 - Multi-usuário com convites
