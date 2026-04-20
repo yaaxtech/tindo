@@ -316,8 +316,10 @@ export default function CardsPage() {
   };
 
   useKeyboardNav({
-    onLeft: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('left'),
-    onRight: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('right'),
+    // Teclado inverte em relação ao swipe: seta → (frente) = avançar (mesma anim de swipe ←);
+    // seta ← (trás) = voltar (mesma anim de swipe →). Alinha com browser back/forward.
+    onLeft: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('right'),
+    onRight: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('left'),
     onUp: () => !nivel2Adiar && !popoverAberto && abrirNivel2ComSugestao(),
     onDown: () => !nivel2Adiar && !popoverAberto && dispararComAnimacao('down'),
     onSpace: () => !nivel2Adiar && !popoverAberto && handleConcluir(),
