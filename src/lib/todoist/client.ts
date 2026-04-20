@@ -263,6 +263,85 @@ export async function excluirTodoistTask(token: string, todoistId: string): Prom
   }
 }
 
+// ---------------------------------------------------------------------------
+// Criação (exportação manual)
+// ---------------------------------------------------------------------------
+
+export interface TodoistTaskCreate {
+  content: string;
+  description?: string;
+  project_id?: string;
+  due_date?: string; // YYYY-MM-DD
+  priority?: 1 | 2 | 3 | 4;
+  labels?: string[];
+}
+
+export interface TodoistTaskCreated {
+  id: string;
+  content: string;
+  project_id: string;
+}
+
+/**
+ * Cria uma tarefa no Todoist.
+ * Usada pela exportação manual.
+ */
+export async function criarTodoistTask(
+  token: string,
+  dados: TodoistTaskCreate,
+): Promise<TodoistTaskCreated> {
+  const body: Record<string, unknown> = { content: dados.content };
+  if (dados.description) body.description = dados.description;
+  if (dados.project_id) body.project_id = dados.project_id;
+  if (dados.due_date) body.due_date = dados.due_date;
+  if (dados.priority) body.priority = dados.priority;
+  if (dados.labels?.length) body.labels = dados.labels;
+
+  const res = await fetch(`${BASE}/tasks`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const resBody = await res.text().catch(() => '');
+    throw new Error(`Todoist POST /tasks → ${res.status}: ${resBody}`);
+  }
+  return (await res.json()) as TodoistTaskCreated;
+}
+
+export interface TodoistProjectCreate {
+  name: string;
+  color?: string;
+}
+
+export interface TodoistProjectCreated {
+  id: string;
+  name: string;
+}
+
+/**
+ * Cria um projeto no Todoist.
+ * Usada pela exportação manual quando a tarefa pertence a um projeto local sem todoist_id.
+ */
+export async function criarTodoistProject(
+  token: string,
+  dados: TodoistProjectCreate,
+): Promise<TodoistProjectCreated> {
+  const body: Record<string, unknown> = { name: dados.name };
+  if (dados.color) body.color = dados.color;
+
+  const res = await fetch(`${BASE}/projects`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const resBody = await res.text().catch(() => '');
+    throw new Error(`Todoist POST /projects → ${res.status}: ${resBody}`);
+  }
+  return (await res.json()) as TodoistProjectCreated;
+}
+
 /**
  * Paleta de cores Todoist → hex.
  */

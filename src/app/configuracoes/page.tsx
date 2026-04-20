@@ -504,51 +504,23 @@ export default function ConfiguracoesPage() {
         </Card>
 
         <Card titulo="Integrações" subtitulo="">
-          {/* CTA Todoist — aparece antes dos toggles */}
-          {!cfg.todoist_ultimo_sync ? (
-            <Link
-              href="/configuracoes/todoist/importar"
-              className="mb-3 flex items-center justify-between rounded-xl border border-jade/40 bg-jade/5 px-4 py-3 hover:bg-jade/10 transition-colors"
-            >
-              <div>
-                <p className="text-sm font-semibold text-jade-accent">Importar do Todoist</p>
-                <p className="text-xs text-text-muted">Conecte sua conta e importe suas tarefas</p>
-              </div>
-              <ArrowLeft className="h-4 w-4 rotate-180 text-jade-accent" />
-            </Link>
-          ) : (
-            <Link
-              href="/configuracoes/todoist/status"
-              className="mb-3 flex items-center justify-between rounded-xl border border-border-strong bg-bg-surface px-4 py-2.5 hover:bg-bg-hover transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-success" />
-                <p className="text-sm text-text-secondary">Sincronização Todoist ativa</p>
-              </div>
-              <span className="text-xs text-jade-accent">Ver status →</span>
-            </Link>
-          )}
-          <Toggle
-            label="Sync Todoist (leitura)"
-            valor={cfg.todoist_sync_habilitado}
-            onChange={(v) => setCfg({ ...cfg, todoist_sync_habilitado: v })}
-          />
-          <div className="space-y-1">
-            <Toggle
-              label="Atualizar Todoist automaticamente"
-              valor={cfg.todoist_writeback_habilitado ?? false}
-              onChange={(v) => setCfg({ ...cfg, todoist_writeback_habilitado: v })}
-            />
-            <p className="pl-1 text-[11px] text-text-muted">
-              Quando você concluir, adiar ou editar uma tarefa no TinDo, o Todoist é atualizado na
-              mesma. Requer TODOIST_API_TOKEN configurado no servidor.
-            </p>
-            {cfg.todoist_writeback_habilitado && (
-              <p className="rounded-md bg-bg-surface px-3 py-2 text-xs text-warning">
-                Tarefas concluídas/excluídas no TinDo serão refletidas na sua conta Todoist.
+          {/* Card único Todoist → novo hub */}
+          <Link
+            href="/configuracoes/todoist"
+            className="mb-3 flex items-center justify-between rounded-xl border border-jade/40 bg-jade/5 px-4 py-3 hover:bg-jade/10 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-semibold text-jade-accent">
+                {cfg.todoist_ultimo_sync ? 'Gerenciar Todoist' : 'Conectar Todoist'}
               </p>
-            )}
-          </div>
+              <p className="text-xs text-text-muted">
+                {cfg.todoist_ultimo_sync
+                  ? 'Importar, exportar e sincronizar'
+                  : 'Importe, exporte e sincronize suas tarefas'}
+              </p>
+            </div>
+            <ArrowLeft className="h-4 w-4 rotate-180 text-jade-accent" />
+          </Link>
           <Toggle
             label="IA Claude (classificação/sugestões)"
             valor={cfg.ai_habilitado}

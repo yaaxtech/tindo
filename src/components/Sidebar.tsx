@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { href: '/gamificacao', label: 'Gamificação', icon: Trophy },
   { href: '/projetos', label: 'Projetos', icon: FolderTree },
   { href: '/tags', label: 'Tags', icon: Tag },
-  { href: '/configuracoes/todoist/status', label: 'Todoist', icon: RefreshCw },
+  { href: '/configuracoes/todoist', label: 'Todoist', icon: RefreshCw },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ] as const;
 
