@@ -173,15 +173,15 @@ Spec: `docs/11_ADIAMENTO_ESPACADO.md`
 
 Substitui a heurística pura por SM-2 adaptado — intervalo cresce com adiamento, travado pelo score 0-100. Heurística passa a decidir só a hora-do-dia.
 
-- [ ] M1 Migração `ef numeric(3,2)` em `tarefas`
-- [ ] M2 `src/lib/adiamento/sm2.ts` (core da fórmula, função pura)
-- [ ] M3 Refator `src/lib/adiamento/heuristica.ts` (expõe `decidirHoraDoDia`)
-- [ ] M4 API route `/api/tarefas/[id]/acao` usa SM-2
-- [ ] M5 Serviço `src/services/kpis-adiamento.ts` (TRA/TCA/TEX/MAC/SAE)
-- [ ] M6 Aba "Adiamento" em `/gamificacao` (UI dos KPIs)
-- [ ] M7 Testes Vitest (unit + integration)
-- [ ] M8 RN-12 a RN-16 em `CLAUDE.md`
-- [ ] M9 Esta entrada no roadmap
+- [x] M1 Migração `ef numeric(3,2)` em `tarefas`
+- [x] M2 `src/lib/adiamento/sm2.ts` (core da fórmula, função pura) — 12 testes
+- [x] M3 Refator `src/lib/adiamento/heuristica.ts` (expõe `decidirHoraDoDia`)
+- [x] M4 API route `/api/tarefas/[id]/acao` usa SM-2
+- [x] M5 Serviço `src/services/kpis-adiamento.ts` (TRA/TCA/TEX/MAC/SAE) via DI
+- [x] M6 Aba "Adiamento" em `/gamificacao` (UI dos KPIs, cópia pt-BR humanizada)
+- [x] M7 Testes Vitest (20 novos: 12 KPIs + 8 integration sm2+heurística)
+- [x] M8 RN-12 a RN-16 em `CLAUDE.md`
+- [x] M9 Esta entrada no roadmap
 
 **Critério de done**: adiamento inteligente com SM-2 funciona, próximo intervalo segue fórmula, KPIs refletem qualidade dos adiamentos.
 
