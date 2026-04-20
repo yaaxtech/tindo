@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { propagarParaTodoist } from '@/services/todoistWriteback';
 import { type NextRequest, NextResponse } from 'next/server';

@@ -3,6 +3,8 @@
  * Refresha a view materializada de KPIs e retorna diagnóstico de recalibração.
  */
 
+export const runtime = 'edge';
+
 import { getAdminClient } from '@/lib/supabase/admin';
 import { verificarGatilhos } from '@/services/calibracao';
 import { NextResponse } from 'next/server';

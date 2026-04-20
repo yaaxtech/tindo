@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import type { Tarefa } from '@/types/domain';
 import { NextResponse } from 'next/server';

@@ -2,6 +2,7 @@
 
 import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { cn } from '@/lib/utils';
+import { usePushSubscription } from '@/hooks/usePushSubscription';
 import { useToasts } from '@/stores/toasts';
 import { ArrowLeft, Eye, EyeOff, RefreshCw, Sparkles } from 'lucide-react';
 import Link from 'next/link';

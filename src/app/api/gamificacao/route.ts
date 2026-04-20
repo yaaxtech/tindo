@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { calcularNivelAtual, xpParaNivel } from '@/services/gamificacao';
 import { NextResponse } from 'next/server';

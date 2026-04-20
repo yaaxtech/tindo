@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { classificarTarefa } from '@/services/ai';
 import { type NextRequest, NextResponse } from 'next/server';

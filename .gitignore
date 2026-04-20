@@ -43,6 +43,7 @@ supabase/.env
 # claude
 .claude/settings.local.json
 .claude/worktrees/
+.deploy-info.md
 
 # playwright e2e
 /test-results/
