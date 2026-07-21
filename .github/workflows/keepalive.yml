@@ -1,14 +1,16 @@
 name: Keep Supabase Alive
 
 # O plano Free do Supabase pausa projetos com pouca atividade de banco em 7 dias.
-# Este workflow faz uma query real na REST API a cada 2 dias — direto no Supabase,
+# Este workflow faz uma query real na REST API todo dia — direto no Supabase,
 # sem passar pelo app, para não depender do deploy do Cloudflare estar saudável.
 # Repositório público: minutos de Actions são gratuitos e ilimitados.
+# Diário (e não a cada 2 dias) porque o custo é o mesmo e a margem sobe: o cron do
+# GitHub é best-effort, e assim toleramos 6 execuções perdidas seguidas antes da pausa.
 
 on:
   schedule:
-    # 11:23 UTC (08:23 BRT) a cada 2 dias — minuto quebrado evita a fila de horas cheias
-    - cron: '23 11 */2 * *'
+    # 11:23 UTC (08:23 BRT) — minuto quebrado evita a fila das horas cheias
+    - cron: '23 11 * * *'
   workflow_dispatch:
 
 permissions:
