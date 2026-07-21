@@ -1,0 +1,52 @@
+name: Keep Supabase Alive
+
+# O plano Free do Supabase pausa projetos com pouca atividade de banco em 7 dias.
+# Este workflow faz uma query real na REST API a cada 2 dias — direto no Supabase,
+# sem passar pelo app, para não depender do deploy do Cloudflare estar saudável.
+# Repositório público: minutos de Actions são gratuitos e ilimitados.
+
+on:
+  schedule:
+    # 11:23 UTC (08:23 BRT) a cada 2 dias — minuto quebrado evita a fila de horas cheias
+    - cron: '23 11 */2 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Query no Supabase (mantém o banco ativo)
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          STATUS=$(curl -sS -o /tmp/resposta.txt -w '%{http_code}' \
+            --max-time 30 --retry 3 --retry-delay 20 --retry-all-errors \
+            "${SUPABASE_URL}/rest/v1/tarefas?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+          echo "HTTP ${STATUS}"
+          head -c 200 /tmp/resposta.txt || true
+          # 200 (query rodou, RLS pode devolver lista vazia) é o único resultado saudável.
+          if [ "${STATUS}" != "200" ]; then
+            echo "::error::Supabase respondeu ${STATUS} — projeto pode estar pausado ou a chave expirou."
+            exit 1
+          fi
+
+      - name: Evita auto-disable do cron pelo GitHub (60 dias sem commit)
+        run: |
+          set -euo pipefail
+          DIAS=$(( ( $(date +%s) - $(git log -1 --format=%ct) ) / 86400 ))
+          echo "Último commit há ${DIAS} dias."
+          if [ "${DIAS}" -ge 45 ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit --allow-empty -m 'chore(keepalive): mantém o cron do Actions ativo [skip ci]'
+            git push
+          fi
