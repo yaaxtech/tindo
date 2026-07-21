@@ -21,7 +21,9 @@ jobs:
       - run: bun run pages:build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # O app lê NEXT_PUBLIC_SUPABASE_ANON_KEY (src/lib/supabase/client.ts);
+          # o secret SUPABASE_ANON_KEY existe no repo, mas está vazio.
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       - uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
