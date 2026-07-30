@@ -11,7 +11,9 @@ const withPWA = createPWA({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  // BlockNote (RoadMapMind editor) does not yet support StrictMode on React 19
+  // (TypeCellOS/BlockNote#1347) — risk accepted in ticket 02 of the wayfinder map.
+  reactStrictMode: false,
   experimental: {
     reactCompiler: false,
   },

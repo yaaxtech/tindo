@@ -1,6 +1,6 @@
 'use client';
 
-import { Layers, List, Settings, Sparkles, Trophy } from 'lucide-react';
+import { Layers, List, Network, Settings, Sparkles, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/cards', label: 'Cards', icon: Layers },
   { href: '/tarefas', label: 'Tarefas', icon: List },
   { href: '/sugestoes-ia', label: 'Sugestões', icon: Sparkles },
+  { href: '/docs', label: 'Docs', icon: Network },
   { href: '/gamificacao', label: 'Streak', icon: Trophy },
   { href: '/configuracoes', label: 'Config', icon: Settings },
 ] as const;
