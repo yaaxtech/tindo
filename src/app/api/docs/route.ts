@@ -1,4 +1,4 @@
-import { carregarDocumento, garantirRaiz, salvarDocumento } from '@/services/doc';
+import { carregarDocumento, carregarEspelhos, garantirRaiz, salvarDocumento } from '@/services/doc';
 import type { DocLinha } from '@/types/doc';
 // RoadMapMind — API do documento. GET carrega (garante a raiz); PUT sincroniza.
 // Toda lógica de dados vive em src/services/doc.ts.
@@ -13,7 +13,8 @@ export async function GET() {
   try {
     const raiz = await garantirRaiz();
     const linhas = await carregarDocumento();
-    return NextResponse.json({ raiz, linhas });
+    const espelhos = await carregarEspelhos();
+    return NextResponse.json({ raiz, linhas, espelhos });
   } catch (e) {
     return NextResponse.json({ erro: mensagemErro(e) }, { status: 500 });
   }

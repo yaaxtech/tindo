@@ -7,7 +7,12 @@
 
 import './roadmapmind.css';
 
-import { type BlocoBN, blocosParaLinhas, linhasParaBlocos } from '@/services/doc-markdown';
+import {
+  type BlocoBN,
+  type DocEspelho,
+  blocosParaLinhas,
+  linhasParaBlocos,
+} from '@/services/doc-markdown';
 import type { DocLinha } from '@/types/doc';
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { pt } from '@blocknote/core/locales';
@@ -62,19 +67,28 @@ function snapshotChecks(blocks: Block[], acc: Map<string, boolean>): Map<string,
   return acc;
 }
 
-function contarTarefas(blocks: Block[]): { total: number; feitas: number } {
+// espelhos não contam: a tarefa é UMA só, mesmo aparecendo em várias mães
+function contarTarefas(blocks: Block[], ignorar?: Set<string>): { total: number; feitas: number } {
   let total = 0;
   let feitas = 0;
   for (const b of blocks) {
-    if (b.type === 'checkListItem') {
+    if (b.type === 'checkListItem' && !ignorar?.has(b.id)) {
       total += 1;
       if (b.props.checked === true) feitas += 1;
     }
-    const sub = contarTarefas(b.children ?? []);
+    const sub = contarTarefas(b.children ?? [], ignorar);
     total += sub.total;
     feitas += sub.feitas;
   }
   return { total, feitas };
+}
+
+function snapshotTextos(blocks: Block[], acc: Map<string, string>): Map<string, string> {
+  for (const b of blocks) {
+    acc.set(b.id, extrairTexto(b));
+    snapshotTextos(b.children ?? [], acc);
+  }
+  return acc;
 }
 
 // clona um bloco PRESERVANDO os ids (o id do bloco = id da linha no banco;
@@ -118,6 +132,15 @@ export default function RoadMapMind() {
     dentro: number;
   } | null>(null);
   const [erroMapa, setErroMapa] = useState<string | null>(null);
+  // espelhos: espelhoBlockId -> linhaOriginalId (ref é a fonte no onChange)
+  const espelhosRef = useRef<Map<string, string>>(new Map());
+  const [espelhos, setEspelhos] = useState<Map<string, string>>(new Map());
+  const textosRef = useRef<Map<string, string>>(new Map());
+  const [avisoEspelhos, setAvisoEspelhos] = useState<{
+    id: string;
+    texto: string;
+    espelhoIds: string[];
+  } | null>(null);
   // no celular o menu nasce fechado (um painel por vez); só client (ssr:false)
   // menu de documentos: 'auto' = aberto no desktop e fechado no celular, via
   // CSS media query (no mount o innerWidth ainda vem 0 — não dá pra medir aqui)
@@ -183,12 +206,20 @@ export default function RoadMapMind() {
         if (!res.ok) throw new Error(data?.erro ?? 'Falha ao carregar');
         setRaizId(data.raiz.id);
         if (data.raiz.textoMd) setTitulo(data.raiz.textoMd);
-        const blocos = linhasParaBlocos((data.linhas ?? []) as DocLinha[], data.raiz.id);
+        const listaEspelhos = (data.espelhos ?? []) as DocEspelho[];
+        espelhosRef.current = new Map(listaEspelhos.map((e) => [e.id, e.linhaId]));
+        setEspelhos(new Map(espelhosRef.current));
+        const blocos = linhasParaBlocos(
+          (data.linhas ?? []) as DocLinha[],
+          data.raiz.id,
+          listaEspelhos,
+        );
         if (blocos.length > 0) {
           editor.replaceBlocks(editor.document, blocos as unknown as PartialBlock[]);
         }
         checksRef.current = snapshotChecks(editor.document, new Map());
-        setProgresso(contarTarefas(editor.document));
+        textosRef.current = snapshotTextos(editor.document, new Map());
+        setProgresso(contarTarefas(editor.document, new Set(espelhosRef.current.keys())));
         setDoc(editor.document);
         carregado.current = true;
         setStatus('ok');
@@ -205,7 +236,11 @@ export default function RoadMapMind() {
     if (!raizId) return;
     setStatus('salvando');
     try {
-      const linhas = blocosParaLinhas(editor.document as unknown as BlocoBN[], raizId);
+      const linhas = blocosParaLinhas(
+        editor.document as unknown as BlocoBN[],
+        raizId,
+        new Set(espelhosRef.current.keys()),
+      );
       const res = await fetch('/api/docs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -238,8 +273,61 @@ export default function RoadMapMind() {
         }
       }
     }
+    const checksAntes = checksRef.current;
     checksRef.current = atual;
-    setProgresso(contarTarefas(editor.document));
+
+    // ESPELHOS: quem mudou propaga texto E check pro par (a linha é "uma só");
+    // espelho que SUMIU do documento é removido no servidor
+    if (espelhosRef.current.size > 0) {
+      const antes = textosRef.current;
+      let mudouMapa = false;
+      for (const [espId, origId] of espelhosRef.current) {
+        const esp = acharBloco(editor.document, espId);
+        const orig = acharBloco(editor.document, origId);
+        if (!esp) {
+          // usuário apagou a linha-espelho no editor → remove só o espelho
+          espelhosRef.current.delete(espId);
+          mudouMapa = true;
+          void fetch('/api/docs/espelhos', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: espId }),
+          });
+          continue;
+        }
+        if (!orig) continue; // original sumiu: o aviso é tratado na exclusão
+        // check: quem mudou arrasta o par
+        if (esp.type === 'checkListItem' && orig.type === 'checkListItem') {
+          const cEsp = esp.props.checked === true;
+          const cOrig = orig.props.checked === true;
+          if (cEsp !== cOrig) {
+            revertendo.current = true;
+            if (cEsp !== (checksAntes.get(espId) ?? false)) {
+              editor.updateBlock(orig, { props: { checked: cEsp } });
+              checksRef.current.set(origId, cEsp);
+            } else {
+              editor.updateBlock(esp, { props: { checked: cOrig } });
+              checksRef.current.set(espId, cOrig);
+            }
+            revertendo.current = false;
+          }
+        }
+        const tEsp = extrairTexto(esp);
+        const tOrig = extrairTexto(orig);
+        if (tEsp === tOrig) continue;
+        revertendo.current = true;
+        if (tEsp !== (antes.get(espId) ?? '')) {
+          editor.updateBlock(orig, { content: tEsp }); // editou no espelho → original acompanha
+        } else if (tOrig !== (antes.get(origId) ?? '')) {
+          editor.updateBlock(esp, { content: tOrig }); // editou no original → espelho acompanha
+        }
+        revertendo.current = false;
+      }
+      if (mudouMapa) setEspelhos(new Map(espelhosRef.current));
+    }
+    textosRef.current = snapshotTextos(editor.document, new Map());
+
+    setProgresso(contarTarefas(editor.document, new Set(espelhosRef.current.keys())));
     setDoc(editor.document);
     atualizarCursor();
     agendarSalvar(() => void salvar());
@@ -255,7 +343,7 @@ export default function RoadMapMind() {
       editor.updateBlock(block, { props: { checked: true } });
       revertendo.current = false;
       checksRef.current = snapshotChecks(editor.document, new Map());
-      setProgresso(contarTarefas(editor.document));
+      setProgresso(contarTarefas(editor.document, new Set(espelhosRef.current.keys())));
       setDoc(editor.document);
       void salvar();
     }
@@ -432,6 +520,19 @@ export default function RoadMapMind() {
     (id: string) => {
       const block = acharBloco(editor.document, id);
       if (!block) return;
+      // se for um bloco-espelho, apagar só desfaz o reflexo
+      if (espelhosRef.current.has(id)) {
+        editor.removeBlocks([id]); // o onChange detecta e chama o DELETE
+        return;
+      }
+      // linha original que TEM espelhos: aviso com opções
+      const meus = [...espelhosRef.current.entries()]
+        .filter(([, orig]) => orig === id)
+        .map(([espId]) => espId);
+      if (meus.length > 0) {
+        setAvisoEspelhos({ id, texto: extrairTexto(block), espelhoIds: meus });
+        return;
+      }
       const dentro = (block.children ?? []).length;
       if (dentro > 0) {
         setConfirmarExclusao({ id, texto: extrairTexto(block), dentro });
@@ -441,6 +542,24 @@ export default function RoadMapMind() {
     },
     [editor, executarExclusao],
   );
+
+  // "Apagar tudo" do aviso de espelhos: some a linha e todos os reflexos
+  const excluirComEspelhos = useCallback(() => {
+    if (!avisoEspelhos) return;
+    for (const espId of avisoEspelhos.espelhoIds) {
+      espelhosRef.current.delete(espId);
+      void fetch('/api/docs/espelhos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: espId }),
+      });
+      const bloco = acharBloco(editor.document, espId);
+      if (bloco) editor.removeBlocks([espId]);
+    }
+    setEspelhos(new Map(espelhosRef.current));
+    executarExclusao(avisoEspelhos.id);
+    setAvisoEspelhos(null);
+  }, [avisoEspelhos, editor, executarExclusao]);
 
   const aoRenomear = useCallback(
     (id: string, texto: string) => {
@@ -510,6 +629,55 @@ export default function RoadMapMind() {
       editor.removeBlocks([id]);
       const alvoAtual = acharBloco(editor.document, alvoId);
       if (alvoAtual) editor.insertBlocks([copia], alvoAtual, 'after');
+    },
+    [editor],
+  );
+
+  // Alt + arrastar no mapa: cria um ESPELHO da linha sob a nova mãe
+  const aoEspelhar = useCallback(
+    (id: string, novaMaeId: string) => {
+      if (id === RAIZ_ID || novaMaeId === RAIZ_ID || id === novaMaeId) return;
+      if (espelhosRef.current.has(id)) return; // espelho de espelho não existe
+      const orig = acharBloco(editor.document, id);
+      const mae = acharBloco(editor.document, novaMaeId);
+      if (!orig || !mae) return;
+      if (acharBloco([orig], novaMaeId)) {
+        setErroMapa('Não dá para espelhar um item dentro dele mesmo.');
+        return;
+      }
+      // duplicidade exata (mesma linha na mesma mãe) é barrada pelo unique do banco
+      void (async () => {
+        try {
+          const res = await fetch('/api/docs/espelhos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ linhaId: id, maeId: novaMaeId, ordem: 'zz' }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.erro ?? 'Falha ao espelhar');
+          const esp = data.espelho as DocEspelho;
+          espelhosRef.current.set(esp.id, esp.linhaId);
+          setEspelhos(new Map(espelhosRef.current));
+          const maeAtual = acharBloco(editor.document, novaMaeId);
+          if (maeAtual) {
+            editor.updateBlock(maeAtual, {
+              children: [
+                ...((maeAtual.children ?? []) as PartialBlock[]),
+                {
+                  id: esp.id,
+                  // biome-ignore lint/suspicious/noExplicitAny: união discriminada do BlockNote
+                  type: orig.type as any,
+                  // biome-ignore lint/suspicious/noExplicitAny: idem
+                  props: orig.props as any,
+                  content: extrairTexto(orig),
+                },
+              ],
+            });
+          }
+        } catch (e) {
+          setErroMapa(e instanceof Error ? e.message : 'Falha ao espelhar');
+        }
+      })();
     },
     [editor],
   );
@@ -810,13 +978,61 @@ export default function RoadMapMind() {
                 aoExcluir={aoExcluir}
                 aoRenomear={aoRenomear}
                 aoReplugar={aoReplugar}
+                aoEspelhar={aoEspelhar}
+                espelhos={espelhos}
               />
             </section>
           )}
         </div>
       </div>
 
+      {/* espelhos: marcador ↻ nas linhas-reflexo do editor */}
+      {espelhos.size > 0 && (
+        <style>
+          {[...espelhos.keys()]
+            .map(
+              (id) => `
+              .bn-block-outer[data-id="${id}"] > .bn-block > .bn-block-content::before {
+                content: '↻' !important; color: #2caf93 !important; font-weight: 700;
+              }`,
+            )
+            .join('\n')}
+        </style>
+      )}
+
       {erroMapa && <div className="rmm-toast">{erroMapa}</div>}
+
+      {avisoEspelhos && (
+        // biome-ignore lint/a11y/useSemanticElements: modal custom com backdrop próprio (sem <dialog> nativo)
+        <div className="rmm-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="rmm-modal">
+            <h3>
+              “{avisoEspelhos.texto}” tem {avisoEspelhos.espelhoIds.length} espelho
+              {avisoEspelhos.espelhoIds.length > 1 ? 's' : ''}
+            </h3>
+            <p>
+              Esta linha aparece em outros lugares. Apagar a original apaga também todos os reflexos
+              dela.
+            </p>
+            <div className="rmm-modal-actions">
+              <button
+                type="button"
+                className="rmm-btn-secundario"
+                onClick={() => setAvisoEspelhos(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="rmm-btn-primario rmm-btn-perigo"
+                onClick={excluirComEspelhos}
+              >
+                Apagar tudo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmarExclusao && (
         // biome-ignore lint/a11y/useSemanticElements: modal custom com backdrop próprio (sem <dialog> nativo)

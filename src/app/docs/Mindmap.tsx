@@ -93,6 +93,7 @@ function montarNosEArestas(
   cores: string[],
   orientacao: Orientacao,
   rotuloRaiz: string | null,
+  espelhos: Map<string, string>,
   handlers: Handlers,
 ): {
   nodes: NoMapa[];
@@ -109,8 +110,11 @@ function montarNosEArestas(
   // linha vazia de LISTA continua no mapa (como "…") — senão o zoom pula ao criar
   // linha nova; só parágrafo vazio (a linha-fantasma do fim do doc) fica de fora
   const conta = (c: Block) => c.type !== 'paragraph' || extrairTexto(c).trim() !== '';
+  // espelhos NÃO viram nó próprio — viram uma 2ª aresta apontando pro nó original
   const filhosVisiveis = (b: Block): Block[] =>
-    colapsados.has(b.id) ? [] : (b.children ?? []).filter(conta);
+    colapsados.has(b.id) ? [] : (b.children ?? []).filter((c) => conta(c) && !espelhos.has(c.id));
+  const filhosEspelho = (b: Block): Block[] =>
+    colapsados.has(b.id) ? [] : (b.children ?? []).filter((c) => espelhos.has(c.id));
 
   function folhas(b: Block): number {
     const fs = filhosVisiveis(b);
@@ -154,6 +158,18 @@ function montarNosEArestas(
       b.id,
       fs.map((f) => f.id),
     );
+    // aresta pontilhada da mãe-espelho direto pro nó ORIGINAL (um nó, duas mães)
+    for (const esp of filhosEspelho(b)) {
+      const origId = espelhos.get(esp.id);
+      if (origId) {
+        edges.push({
+          id: `${b.id}~${origId}`,
+          source: b.id,
+          target: origId,
+          style: { stroke: 'rgba(44, 175, 147, 0.8)', strokeDasharray: '6 4', opacity: 0.8 },
+        });
+      }
+    }
     for (const f of fs) {
       pais.set(f.id, b.id);
       const corAresta = cores[(profundidade - base) % cores.length] ?? cores[0];
@@ -365,6 +381,8 @@ export type MindmapProps = {
   aoExcluir: (id: string) => void;
   aoRenomear: (id: string, texto: string) => void;
   aoReplugar: (id: string, novoPaiId: string) => void;
+  aoEspelhar: (id: string, novaMaeId: string) => void;
+  espelhos: Map<string, string>; // espelhoBlockId -> linhaOriginalId
 };
 
 type MenuCtx = { id: string; x: number; y: number };
@@ -386,6 +404,8 @@ function MindmapInterno({
   aoExcluir,
   aoRenomear,
   aoReplugar,
+  aoEspelhar,
+  espelhos,
 }: MindmapProps) {
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const [manuais, setManuais] = useState<Map<string, { x: number; y: number }>>(new Map());
@@ -441,18 +461,27 @@ function MindmapInterno({
 
   const { nodes, edges, pais, filhos } = useMemo(
     () =>
-      montarNosEArestas(base, colapsados, cursorId, cores, orientacao, focoId ? null : rotuloRaiz, {
-        onToggle: alternar,
-        onToggleTarefa: aoToggleTarefa,
-        onRenomear: (id, texto) => {
-          aoRenomear(id, texto);
-          aoFimEdicaoNo();
+      montarNosEArestas(
+        base,
+        colapsados,
+        cursorId,
+        cores,
+        orientacao,
+        focoId ? null : rotuloRaiz,
+        espelhos,
+        {
+          onToggle: alternar,
+          onToggleTarefa: aoToggleTarefa,
+          onRenomear: (id, texto) => {
+            aoRenomear(id, texto);
+            aoFimEdicaoNo();
+          },
+          onEdicao: (v) => {
+            setEmEdicao(v);
+            if (v) setMenu(null); // edição aberta = menu some
+          },
         },
-        onEdicao: (v) => {
-          setEmEdicao(v);
-          if (v) setMenu(null); // edição aberta = menu some
-        },
-      }),
+      ),
     [
       base,
       colapsados,
@@ -461,6 +490,7 @@ function MindmapInterno({
       orientacao,
       focoId,
       rotuloRaiz,
+      espelhos,
       alternar,
       aoToggleTarefa,
       aoRenomear,
@@ -480,20 +510,22 @@ function MindmapInterno({
         const classes: string[] = [];
         if (n.id === alvoDrop) classes.push('mm-alvo');
         if (n.id === selecionado) classes.push('mm-sel');
+        // nó original que TEM espelhos ganha o ↻
+        if ([...espelhos.values()].includes(n.id)) classes.push('mm-espelho');
         if (classes.length) extra.className = classes.join(' ');
         if (n.id === editarNoId) extra.data = { ...n.data, editarInicial: true };
         return { ...n, ...extra };
       }),
-    [nodes, manuais, alvoDrop, editarNoId, selecionado],
+    [nodes, manuais, alvoDrop, editarNoId, selecionado, espelhos],
   );
 
   const [nosEstado, setNosEstado] = useState<NoMapa[]>(nodesFinais);
   useEffect(() => setNosEstado(nodesFinais), [nodesFinais]);
 
   const aoSoltarNo = useCallback(
-    (no: NoMapa) => {
+    (no: NoMapa, comAlt: boolean) => {
       if (no.id === RAIZ_ID) return;
-      // perto de outro nó (raio 100px) = re-plugar como filho dele
+      // perto de outro nó (raio 100px) = re-plugar (ou espelhar, com Alt) como filho dele
       let alvo: NoMapa | null = null;
       let menor = 100;
       for (const outro of nosEstado) {
@@ -510,13 +542,14 @@ function MindmapInterno({
           novo.delete(no.id);
           return novo;
         });
-        aoReplugar(no.id, alvo.id);
+        if (comAlt) aoEspelhar(no.id, alvo.id);
+        else aoReplugar(no.id, alvo.id);
       } else {
         // longe de tudo: fica onde soltou (modo manual)
         setManuais((m) => new Map(m).set(no.id, { ...no.position }));
       }
     },
-    [nosEstado, aoReplugar],
+    [nosEstado, aoReplugar, aoEspelhar],
   );
 
   // fitView do React Flow devolve uma Promise — rejeição silenciosa (animação
@@ -610,9 +643,9 @@ function MindmapInterno({
           }
           setAlvoDrop(alvo);
         }}
-        onNodeDragStop={(_, n) => {
+        onNodeDragStop={(e, n) => {
           setAlvoDrop(null);
-          aoSoltarNo(n as NoMapa);
+          aoSoltarNo(n as NoMapa, e.altKey);
         }}
         fitView
         proOptions={{ hideAttribution: true }}
@@ -634,7 +667,8 @@ function MindmapInterno({
         <div className="mm-dica">Enter: salvar · Shift+Enter: pular linha · Esc: cancelar</div>
       ) : selecionado && selecionado !== RAIZ_ID ? (
         <div className="mm-dica">
-          arraste: mudar de mãe · Enter: filha · Shift+Enter: irmã · Delete: excluir
+          arraste: mudar de mãe · Alt (⌥) + arraste: ligar a 2ª mãe · Enter: filha · Shift+Enter:
+          irmã · Delete: excluir
         </div>
       ) : null}
 

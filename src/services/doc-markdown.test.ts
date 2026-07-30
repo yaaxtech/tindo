@@ -108,3 +108,28 @@ describe('derivarTextoMd', () => {
     expect(derivarTextoMd([])).toBe('');
   });
 });
+
+describe('espelhos (Fatia 7)', () => {
+  const linhasBase = blocosParaLinhas(blocosExemplo, RAIZ);
+  // espelho da linha 'c' (Legenda) aparecendo também sob 'd' (Site)
+  const espelhos = [{ id: 'esp-1', linhaId: 'c', maeId: 'd', ordem: 'a0' }];
+
+  it('linhasParaBlocos materializa o espelho sob a mãe, com o conteúdo do original e sem filhos', () => {
+    const blocos = linhasParaBlocos(linhasBase, RAIZ, espelhos);
+    const d = blocos.find((b) => b.id === 'd');
+    expect(d?.children).toHaveLength(1);
+    const esp = d?.children?.[0];
+    expect(esp?.id).toBe('esp-1');
+    expect(esp?.type).toBe('checkListItem');
+    expect(esp?.content).toEqual([{ type: 'text', text: 'Legenda', styles: {} }]);
+    expect(esp?.children ?? []).toHaveLength(0);
+  });
+
+  it('blocosParaLinhas IGNORA blocos-espelho (não viram linha própria)', () => {
+    const blocos = linhasParaBlocos(linhasBase, RAIZ, espelhos);
+    const linhas = blocosParaLinhas(blocos as never, RAIZ, new Set(['esp-1']));
+    expect(linhas.find((l) => l.id === 'esp-1')).toBeUndefined();
+    // e as linhas reais continuam todas lá
+    expect(linhas.map((l) => l.id).sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+});

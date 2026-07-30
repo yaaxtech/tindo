@@ -968,3 +968,13 @@
   border-color: #d4dae1 !important;
   box-shadow: 0 16px 48px rgba(27, 34, 44, 0.16) !important;
 }
+
+/* nó-espelho no mapa: original com espelhos ganha ↻ e borda tracejada */
+.react-flow__node.mm-espelho .mm-no {
+  border-style: dashed;
+}
+.react-flow__node.mm-espelho .mm-label::before {
+  content: "↻ ";
+  color: #2caf93;
+  font-weight: 700;
+}

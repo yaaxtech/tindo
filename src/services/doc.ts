@@ -7,7 +7,7 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import type { DocLinha } from '@/types/doc';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { derivarTextoMd } from './doc-markdown';
+import { type DocEspelho, derivarTextoMd } from './doc-markdown';
 
 // `doc_linhas` ainda não está em database.ts (não dá pra rodar `gen types` na
 // conta do TinDo). Usamos um client destipado nesta camada; a tipagem forte
@@ -151,6 +151,71 @@ export async function removerLinhas(ids: string[]): Promise<void> {
     .update({ deleted_at: new Date().toISOString() })
     .eq('usuario_id', usuarioId)
     .in('id', ids);
+  if (error) throw error;
+}
+
+/** Espelhos vivos do usuário (a UI os materializa como blocos sob a mãe). */
+export async function carregarEspelhos(): Promise<DocEspelho[]> {
+  const usuarioId = await getUsuarioIdMVP();
+  const { data, error } = await db()
+    .from('doc_espelhos')
+    .select('id, linha_id, mae_id, ordem')
+    .eq('usuario_id', usuarioId)
+    .is('deleted_at', null);
+  if (error) throw error;
+  return ((data ?? []) as { id: string; linha_id: string; mae_id: string; ordem: string }[]).map(
+    (r) => ({ id: r.id, linhaId: r.linha_id, maeId: r.mae_id, ordem: r.ordem }),
+  );
+}
+
+/** Cria um espelho (a linha passa a aparecer também sob `maeId`). Bloqueia ciclo. */
+export async function criarEspelho(
+  linhaId: string,
+  maeId: string,
+  ordem: string,
+): Promise<DocEspelho> {
+  const usuarioId = await getUsuarioIdMVP();
+  await checarPosse(usuarioId, linhaId);
+  await checarPosse(usuarioId, maeId);
+  if (linhaId === maeId) throw new Error('Não dá para espelhar um item dentro dele mesmo.');
+  // ciclo: a mãe do espelho não pode estar DENTRO da subárvore da linha
+  const { data: sub, error: eSub } = await db()
+    .from('doc_linhas')
+    .select('id, pai_id')
+    .eq('usuario_id', usuarioId)
+    .is('deleted_at', null);
+  if (eSub) throw eSub;
+  const filhosDe = new Map<string, string[]>();
+  for (const r of (sub ?? []) as { id: string; pai_id: string | null }[]) {
+    if (!r.pai_id) continue;
+    const arr = filhosDe.get(r.pai_id) ?? [];
+    arr.push(r.id);
+    filhosDe.set(r.pai_id, arr);
+  }
+  const fila = [linhaId];
+  while (fila.length) {
+    const atual = fila.pop() as string;
+    if (atual === maeId) throw new Error('Não dá para espelhar um item dentro dele mesmo.');
+    fila.push(...(filhosDe.get(atual) ?? []));
+  }
+  const { data, error } = await db()
+    .from('doc_espelhos')
+    .insert({ usuario_id: usuarioId, linha_id: linhaId, mae_id: maeId, ordem })
+    .select('id, linha_id, mae_id, ordem')
+    .single();
+  if (error) throw error;
+  const r = data as { id: string; linha_id: string; mae_id: string; ordem: string };
+  return { id: r.id, linhaId: r.linha_id, maeId: r.mae_id, ordem: r.ordem };
+}
+
+/** Remove um espelho (soft delete SÓ em doc_espelhos — a linha original fica). */
+export async function removerEspelho(espelhoId: string): Promise<void> {
+  const usuarioId = await getUsuarioIdMVP();
+  const { error } = await db()
+    .from('doc_espelhos')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', espelhoId)
+    .eq('usuario_id', usuarioId);
   if (error) throw error;
 }
 
