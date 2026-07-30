@@ -275,3 +275,42 @@ Implementação em `src/lib/audio/tones.ts`. Respeita `prefers-reduced-motion` e
 - Português BR.
 - Lembrar o propósito: "Prioridade aqui é o que MAIS te desprecupa, não o que é mais urgente."
 - Feedback sempre positivo ou neutro. Nunca culpar o usuário.
+
+## Convenções herdadas do padrão YaaX (2026-07-30)
+
+> Decisões de UX validadas em outro app do dono, adaptadas ao TinDo. Não
+> mexem nos tokens (Obsidian+Jade continuam os únicos). Cada item marca se já
+> está satisfeito no TinDo ou é convenção a seguir dali pra frente.
+
+- **Modais responsivos** — escala semântica `sm`→`5xl` + `mobileFullScreen`
+  (tela cheia <640px, footer fixo, corpo rola); confirmação curta (1 ação,
+  ≤1 campo) fica centralizada mesmo no mobile. *A seguir ao criar/editar
+  modais novos ou maiores que o `TarefaModal` atual.*
+- **FormGrid row-major** — formulários com 5+ campos em modal largo usam
+  grid 2 colunas no desktop preservando ordem de leitura esquerda→direita→
+  baixo, idêntica ao mobile (1 coluna). Nunca column-major.
+- **Decimal pt-BR (vírgula)** em todo INPUT DE TEXTO decimal — nunca
+  `<input type="number">`. Não se aplica a `<input type="range">` (o
+  multiplicador de projeto em `/projetos` já é seguro por ser slider).
+- **Datas via calendário customizado** — nunca `<input type="date">`
+  nativo. *Gap atual*: `EditarDataPopover.tsx` e `TarefaModal.tsx` usam o
+  input nativo hoje; convenção vale pra código novo/pontos tocados, sem
+  retrofit automático.
+- **Multiselect com selecionados no topo** (snapshot na abertura, sem
+  "pular") — relevante quando a seleção de tags crescer além de um
+  `<select>` simples.
+- **Combobox de busca foca o campo ao abrir** — mesma condição acima.
+- **Dialogs:** Enter = ação primária (respeita `disabled`), Esc = cancelar.
+- **Skeleton só no 1º load** — refetch/sync silencioso (Todoist, recalcular
+  notas) nunca pisca a tela; mutações que puderem ser otimistas (atualizar
+  estado local + persistir em background) evitam refetch de tela cheia.
+- **Validação:** asterisco vermelho no campo obrigatório + borda/ring
+  vermelho + scroll/flash até o 1º campo inválido ao salvar.
+- **Empty state = ícone + título + descrição + CTA**, nunca tela vazia crua
+  — o TinDo já tem um bom exemplo ("Tudo feito por agora 🌿" + CTA de sync),
+  vira o padrão a repetir em qualquer lista/fila vazia nova.
+- **Ícones lucide (`currentColor`)** — já seguido no projeto; nunca `<img>`
+  de SVG/webp colorido (some ao trocar de fundo).
+- **Status com badge colorido** — o TinDo já faz isso pra urgência (escala
+  HSL âmbar→vermelho); estender o mesmo princípio (cor mapeada por
+  semântica de estado) a qualquer status novo (ex.: sync Todoist).

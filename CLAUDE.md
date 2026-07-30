@@ -13,6 +13,19 @@ Se houver conflito entre documentos, PARE e avise.
 
 ---
 
+## 🚩 GOTCHAS — NÃO REGREDIR
+
+> Seção começa vazia. Cada erro caro do projeto vira um G-XX aqui: a REGRA em
+> poucas linhas, o detalhe numa skill/doc citada. Antes de escrever um gotcha,
+> pergunte: existe um CHECK de máquina (lint, teste, reviewer) que pega a
+> classe inteira do erro? Se existe, instale o check E escreva o gotcha. Nada
+> nasce gotcha por precaução — só por repetição ou incidente caro real (ver
+> `.claude/memoria-ciclo-de-vida.md`).
+
+*(sem gotchas registrados ainda)*
+
+---
+
 ## AUTONOMIA — REGRAS DE DECISÃO AUTÔNOMA
 
 > Reduzem input necessário. Siga antes de perguntar.
@@ -30,6 +43,7 @@ Se houver conflito entre documentos, PARE e avise.
 | Typecheck/lint após edição | Rode e corrija sem pedir permissão |
 | Mensagem de commit | Analise diff e decida |
 | Nome de variável/função | Siga convenções do projeto |
+| PR/branch com CI verde (typecheck+lint+test) | Merge e push sozinho, sem perguntar |
 
 > **Transparência:** ao executar autonomamente, declare premissas no início da resposta.
 
@@ -38,8 +52,33 @@ Se houver conflito entre documentos, PARE e avise.
 - Ambiguidade genuína de regra de negócio não coberta nos docs
 - Mudança que afeta múltiplos domínios não relacionados
 - Ação destrutiva irreversível (drop de tabela, push --force, delete de dados reais)
+- Migration ou UPDATE/DELETE em massa contra dados de produção — mesmo que
+  reversível em tese, sempre mostrar o que vai rodar e esperar OK
 - Requisito que contradiz algo nos docs internos
 - Adição/troca de dependências não previstas na stack
+
+---
+
+## MODO DE EXECUÇÃO — BACKGROUND POR PADRÃO
+
+O usuário NÃO acompanha a execução; só faz o juízo de valor no resultado
+final e precisa poder chamar a qualquer momento.
+- Execução substancial (feature, build, auditoria, script, migration,
+  refactor) = SEMPRE `run_in_background` (subagente ou Bash). Disparar,
+  devolver o canal na hora, reportar só o resultado fechado — sem narrar
+  passo a passo.
+- O canal principal fica SEMPRE livre pra ele interromper; pergunta dele
+  nunca espera worker.
+- Worker roda sozinho e não pausa pra perguntar: mandar instruções
+  COMPLETAS de cara — decisão pendente se resolve ANTES do spawn.
+- **Anti-travamento:** (a) NUNCA `nohup`/processo destacado para trabalho que
+  a sessão espera — só background RASTREADO pelo harness (`run_in_background`,
+  Agent), que reacorda a sessão ao concluir. (b) Ao encerrar turno com worker
+  externo rodando, deixar wake-up de segurança agendado (~20min). (c) Turno
+  nunca termina em "vou despachar X": despacha ANTES de encerrar.
+- **Orquestração de workers** (Codex/Kimi/Claude, escadinha de quota, ledger
+  de despachos) segue o regime do `~/.claude/CLAUDE.md` global — nada
+  duplicado aqui, pra não desatualizar se o global mudar.
 
 ---
 
@@ -48,9 +87,78 @@ Se houver conflito entre documentos, PARE e avise.
 1. **Plan Mode** para tarefas complexas (>3 arquivos).
 2. **Critérios de verificação antes de implementar** — o que significa "pronto" para esta task (ex: "typecheck passa, card faz swipe, som toca no concluir").
 3. Implemente seguindo as regras abaixo.
-4. Rode `bun run typecheck` e `bun run lint` antes de commitar.
+4. Rode `bun run typecheck`, `bun run lint` e `bun run test` (suíte completa,
+   não só typecheck/lint) antes de commitar/mergear. Em PR, confira a
+   CONCLUSÃO explícita do CI (`gh pr checks` ou `--json statusCheckRollup`) —
+   não confie só na saída do `gh pr checks --watch`, que pode sair antes do
+   job de teste concluir.
 5. Verifique os critérios definidos no passo 2.
 6. Ao finalizar uma feature, atualize o checklist em `docs/09_ROADMAP.md`.
+
+---
+
+## POLÍTICA DE VELOCIDADE
+
+- **Teste flaky → quarentena imediata**: falhou sem bug real → `.skip` +
+  item em `PERGUNTAS_ABERTAS.md` (ou `docs/09_ROADMAP.md`) no mesmo PR;
+  nunca re-rodar o CI torcendo.
+- **Proporcionalidade de teste**: fix puramente visual/copy não exige teste
+  novo; lógica, scoring e dados continuam exigindo.
+- **Feature grande → fatiar em PRs incrementais mergeáveis.** Cada fatia
+  sobe, roda CI e mergeia antes da próxima — bug aparece horas antes, não no
+  fim. Fixes pequenos da mesma família continuam agrupados num PR só.
+- **Nota sobre CI do TinDo:** diferente de outros projetos do dono, o
+  `.github/workflows/deploy.yml` roda `typecheck`+`test`+`build` em TODO push
+  pra `main` (sem filtro de path) — não existe hoje uma "via rápida" pra
+  mudanças só de `docs/`/`.claude/`. Commitar doc direto na main ainda é
+  seguro (baixo risco), só não é "de graça" em tempo de CI.
+
+---
+
+## COMUNICAÇÃO COM O DONO (não-dev)
+
+O dono NÃO é desenvolvedor; ele confia nas recomendações e frequentemente
+aceita opções sem ler.
+
+- **Precisou de algo dele (decisão/aprovação/resultado de teste) → opções
+  clicáveis**, com "(Recomendado)" em primeiro.
+- **Semáforo de risco:** 🟢 = reversível, pode aceitar sem ler (maioria). 🔴
+  LEIA ANTES = irreversível (dados reais em massa, push --force, drop de
+  tabela) — explicar em 1–2 frases leigas o que acontece; NUNCA posicionar
+  ação 🔴 como clique-automático.
+- **Teste dele:** bloco destacado `🧪 PRECISO DO SEU TESTE` + link clicável
+  já na rota certa + passo a passo numerado em termos leigos — nunca "confira
+  se está tudo ok".
+- **Nunca peça trabalho de peão:** se dá pra rodar o comando, editar o
+  arquivo, criar a branch ou aplicar o SQL, faça. Só vai pra ele o que exige
+  acesso ou juízo DELE: testar na tela, aprovar 🔴, senha/2FA, deploy manual.
+- **Fim de tarefa:** fechar SEMPRE com resumo em 3 blocos — **O que foi feito
+  / O que vem a seguir / O que você precisa testar** (ou "nada").
+- **Ações pendentes** vão NO FINAL, em bloco separado:
+
+  ```
+  ═══ ⚠️ PENDENTE: ═══
+  <confirmação / decisão / escolha, com a recomendação em uma linha>
+  ═══
+  ```
+
+- **Sessão finalizada:** quando não sobrar NADA pendente e NADA a fazer, a
+  última linha da resposta é exatamente:
+  `═══ ✅ SESSÃO FINALIZADA ═══`
+  Critério: tudo mergeado, branch fechada e verificado. Conclusão parcial =
+  dizer o que falta, SEM a linha.
+
+---
+
+## GESTÃO DE CONTEXTO
+
+- **Âncoras vivas do TinDo:** `ESTADO_ATUAL.md` (o que está funcionando
+  ponta-a-ponta), `PERGUNTAS_ABERTAS.md` (decisões pendentes) e
+  `docs/09_ROADMAP.md` (fase atual + checklist) — mantenha-os atualizados ao
+  fechar uma frente para que compactar/abrir janela nova NUNCA perca contexto.
+- **Avisar o momento de fechar:** frente terminada, assunto pivotou, ou o
+  histórico virou peso morto → 1 linha: "pode compactar" / "pode abrir janela
+  nova". O gerenciamento em si segue silencioso.
 
 ---
 
@@ -279,3 +387,15 @@ WITH CHECK (usuario_id = auth.uid())
 - Alterar stack (Next/Bun/Supabase/etc) sem aprovação explícita do usuário
 - Desabilitar RLS em tabelas com dados de usuário
 - Push --force em `main` sem aprovação
+
+---
+
+## LEARNED FROM MISTAKES
+
+> Antes de escrever uma linha nova aqui, pergunte: **que CHECK pega a CLASSE
+> inteira deste erro?** (teste, lint na CI, dry-run, reviewer). Se existe,
+> instale o check e NÃO escreva a regra. Se só resta prosa: 1 linha datada
+> apontando pro locus canônico — nunca 2ª cópia do fato. Linha cujo padrão
+> virou check, ou que virou gotcha acima, sai daqui.
+
+*(sem entradas ainda)*
