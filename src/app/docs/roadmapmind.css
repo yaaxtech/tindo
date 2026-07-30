@@ -938,10 +938,6 @@
   .rmm-editor {
     padding: 16px 12px 40vh;
   }
-  /* TinDo tem bottom nav no celular — não cobrir na tela normal */
-  .rmm-root:not(.rmm-tela-cheia) {
-    height: calc(100dvh - 56px);
-  }
 }
 
 /* menu 'auto': no celular começa fechado (o estado explícito vence) */
