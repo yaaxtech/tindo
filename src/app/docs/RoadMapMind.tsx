@@ -13,6 +13,7 @@ import {
   blocosParaLinhas,
   linhasParaBlocos,
 } from '@/services/doc-markdown';
+import { useTinDoMenuStore } from '@/stores/tindoMenu';
 import type { DocLinha } from '@/types/doc';
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { pt } from '@blocknote/core/locales';
@@ -153,6 +154,19 @@ export default function RoadMapMind() {
       return window.matchMedia('(max-width: 767px)').matches ? 'aberto' : 'fechado';
     });
   }, []);
+  // saber se o menu de documentos está VISÍVEL (pra o botão ☰ mostrar recolher)
+  const [ehMobile, setEhMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const upd = () => setEhMobile(mq.matches);
+    upd();
+    mq.addEventListener('change', upd);
+    return () => mq.removeEventListener('change', upd);
+  }, []);
+  const menuVisivel = menuEstado === 'aberto' || (menuEstado === 'auto' && !ehMobile);
+  // menu PRINCIPAL do TinDo (gaveta global): ☰ da topbar abre/fecha
+  const tindoMenuAberto = useTinDoMenuStore((s) => s.aberto);
+  const alternarMenuTinDo = useTinDoMenuStore((s) => s.alternar);
   const [tema, setTema] = useState<'dark' | 'light'>(() =>
     typeof localStorage !== 'undefined' && localStorage.getItem('rmm-tema') === 'light'
       ? 'light'
@@ -749,12 +763,28 @@ export default function RoadMapMind() {
           .rmm-foco .bn-block-outer[data-id="${focoBloco.id}"] > .bn-block > .bn-block-group::before { display: none !important; }
         `}</style>
       )}
+      {/* Puxador discreto na borda: abre/fecha a lista de Documentos do RoadMapMind
+          (menu SECUNDÁRIO — a navegação global do TinDo é o ☰ na topbar) */}
+      {!menuVisivel && (
+        <button
+          type="button"
+          aria-label="Mostrar lista de documentos"
+          title="Documentos"
+          onClick={alternarMenu}
+          className="rmm-puxador-docs"
+        >
+          <span className="rmm-puxador-seta">›</span>
+        </button>
+      )}
+
       <header className="rmm-topbar">
         <button
           type="button"
-          className="rmm-icone"
-          title="Menu de documentos"
-          onClick={alternarMenu}
+          className={`rmm-icone ${tindoMenuAberto ? 'ativo' : ''}`}
+          title="Menu do TinDo"
+          aria-label="Menu do TinDo"
+          aria-expanded={tindoMenuAberto}
+          onClick={alternarMenuTinDo}
         >
           ☰
         </button>
@@ -885,6 +915,7 @@ export default function RoadMapMind() {
             aoDuplicar={aoDuplicar}
             aoExcluir={aoExcluir}
             aoMover={aoMoverDoc}
+            aoRecolher={() => setMenuEstado('fechado')}
           />
         )}
 

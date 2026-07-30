@@ -213,8 +213,14 @@
   letter-spacing: -0.02em;
 }
 
-/* BlockNote vestido de Obsidian + Jade */
-.rmm-editor .bn-container {
+/* BlockNote vestido de Obsidian + Jade.
+   [data-color-scheme] no seletor: o próprio BlockNote define essas vars com
+   ESSA MESMA especificidade em `.bn-root[data-color-scheme="dark"]`
+   (o elemento .bn-container É o .bn-root — mesma classe, mesmo nó); sem o
+   atributo aqui, o empate de especificidade vira loteria de ordem no bundle
+   e às vezes a cor default do BlockNote (#1f1f1f) ganha, aparecendo como
+   uma "caixa cinza" atrás do texto. Com o atributo, a nossa sempre vence. */
+.rmm-editor .bn-container[data-color-scheme] {
   --bn-colors-editor-background: transparent;
   --bn-colors-editor-text: #e8edf2;
   --bn-colors-menu-background: #121820;
@@ -621,14 +627,64 @@
   min-height: 0;
 }
 .rmm-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #7a8796;
   font-size: 16px;
   cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
 .rmm-icone:hover {
   color: #2caf93;
+  background: #1b222c;
+}
+/* menu do TinDo ABERTO: botão em destaque jade — clicar recolhe */
+.rmm-icone.ativo {
+  color: #2caf93;
+  background: rgba(25, 139, 116, 0.18);
+  border-color: rgba(44, 175, 147, 0.35);
+}
+
+/* puxador discreto na borda: abre a lista de Documentos (menu secundário,
+   interno ao RoadMapMind — o ☰ da topbar é a navegação global do TinDo) */
+.rmm-puxador-docs {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 56px;
+  border-radius: 0 10px 10px 0;
+  border: 1px solid #232c38;
+  border-left: none;
+  background: rgba(18, 24, 32, 0.9);
+  color: #4a5563;
+  cursor: pointer;
+  transition: width 0.15s, color 0.15s, border-color 0.15s;
+}
+.rmm-puxador-docs:hover {
+  width: 18px;
+  color: #2caf93;
+  border-color: rgba(44, 175, 147, 0.4);
+}
+.rmm-puxador-seta {
+  font-size: 13px;
+  line-height: 1;
+}
+.rmm-tema-light .rmm-puxador-docs {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #d4dae1;
+  color: #7a8796;
 }
 .rmm-nav {
   width: 230px;
@@ -638,13 +694,39 @@
   padding: 12px 8px;
   overflow-y: auto;
 }
+.rmm-nav-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px 10px;
+}
 .rmm-nav-titulo {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: #4a5563;
   text-transform: uppercase;
-  padding: 4px 10px 8px;
+}
+.rmm-nav-recolher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #4a5563;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.rmm-nav-recolher:hover {
+  color: #2caf93;
+  background: #1b222c;
+}
+.rmm-tema-light .rmm-nav-recolher:hover {
+  background: #e3e7ec;
 }
 .rmm-nav-item {
   display: block;
@@ -947,8 +1029,10 @@
   }
 }
 
-/* tema claro dentro do BlockNote (vars + menus) */
-.rmm-tema-light .rmm-editor .bn-container {
+/* tema claro dentro do BlockNote (vars + menus) — [data-color-scheme] no
+   seletor pelo mesmo motivo do tema escuro acima (ganha do default do
+   BlockNote por especificidade, não por sorte de ordem no bundle) */
+.rmm-tema-light .rmm-editor .bn-container[data-color-scheme] {
   --bn-colors-editor-background: transparent;
   --bn-colors-editor-text: #1b222c;
   --bn-colors-menu-background: #ffffff;

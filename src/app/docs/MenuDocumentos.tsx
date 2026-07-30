@@ -50,6 +50,7 @@ export interface MenuDocumentosProps {
   aoDuplicar: (id: string) => void;
   aoExcluir: (id: string) => void;
   aoMover: (id: string, alvoId: string) => void;
+  aoRecolher: () => void;
 }
 
 export default function MenuDocumentos({
@@ -61,6 +62,7 @@ export default function MenuDocumentos({
   aoDuplicar,
   aoExcluir,
   aoMover,
+  aoRecolher,
 }: MenuDocumentosProps) {
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<MenuCtx | null>(null);
@@ -77,7 +79,18 @@ export default function MenuDocumentos({
 
   return (
     <aside className="rmm-nav">
-      <div className="rmm-nav-titulo">Documentos</div>
+      <div className="rmm-nav-cabecalho">
+        <span className="rmm-nav-titulo">Documentos</span>
+        <button
+          type="button"
+          className="rmm-nav-recolher"
+          title="Recolher lista de documentos"
+          aria-label="Recolher lista de documentos"
+          onClick={aoRecolher}
+        >
+          ‹
+        </button>
+      </div>
       <Link
         className={`rmm-nav-item ${focoId === null ? 'ativo' : ''}`}
         href="/docs"
