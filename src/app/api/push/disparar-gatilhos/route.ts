@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 // Chamado pelo cron diário após refresh KPIs e sync Todoist.
 // Auth: header `Authorization: Bearer <CRON_SECRET>`.
 
