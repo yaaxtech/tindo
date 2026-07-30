@@ -1,12 +1,13 @@
 /* RoadMapMind — tema Obsidian + Jade sobre o BlockNote (Fatias 1-2). */
 
 .rmm-root {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: #0a0e13;
   color: #e8edf2;
-  font-family: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* paleta das guias de indentação: uma cor por nível, dessaturada e translúcida */
   --guia-n1: rgba(110, 155, 220, 0.45);
   --guia-n2: rgba(210, 170, 115, 0.45);
@@ -55,10 +56,10 @@
   font-size: 13px;
   color: #7a8796;
 }
-.rmm-status[data-status='ok'] {
+.rmm-status[data-status="ok"] {
   color: #2caf93;
 }
-.rmm-status[data-status='erro'] {
+.rmm-status[data-status="erro"] {
   color: #e3546c;
 }
 .rmm-btn {
@@ -74,12 +75,135 @@
   background: #2caf93;
 }
 
+/* ---------- painéis (editor · divisor · mapa) ---------- */
+.rmm-paineis {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.rmm-painel-editor {
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+.rmm-divisor {
+  width: 7px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: #1b222c;
+  position: relative;
+}
+.rmm-divisor::after {
+  /* grip: mostra que dá pra arrastar */
+  content: "⋮⋮";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #4a5563;
+  font-size: 11px;
+  letter-spacing: -2px;
+  pointer-events: none;
+}
+.rmm-divisor:hover {
+  background: rgba(44, 175, 147, 0.5);
+}
+.rmm-divisor:hover::after {
+  color: #0a0e13;
+}
+.rmm-painel-mapa {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #0d1219;
+  border-left: 1px solid #1b222c;
+}
+.rmm-painel-mapa .react-flow {
+  flex: 1;
+  min-height: 0;
+}
+.rmm-mapa-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #7a8796;
+}
+.rmm-mapa-botao {
+  font-size: 11px;
+  background: transparent;
+  color: #7a8796;
+  border: 1px solid #2a3340;
+  border-radius: 999px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+.rmm-mapa-botao.ativo {
+  background: rgba(25, 139, 116, 0.18);
+  color: #2caf93;
+  border-color: rgba(44, 175, 147, 0.35);
+}
+
+/* seletor de modo de visualização (Documento / Lado a lado / Mapa) */
+.rmm-modos {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+.rmm-modos button {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #7a8796;
+  cursor: pointer;
+}
+.rmm-modos button.ativo {
+  background: #1b222c;
+  color: #2caf93;
+  border-color: rgba(44, 175, 147, 0.35);
+}
+
+/* painel 🎨 de cores dos níveis */
+.rmm-cores {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #0d1219;
+  border-bottom: 1px solid #1b222c;
+  font-size: 12px;
+  color: #7a8796;
+}
+.rmm-cores input[type="color"] {
+  width: 28px;
+  height: 24px;
+  border: 1px solid #2a3340;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 1px;
+}
+.rmm-cores button {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #2a3340;
+  background: #1b222c;
+  color: #e8edf2;
+  cursor: pointer;
+}
+
 /* ---------- palco do editor ---------- */
 .rmm-editor {
-  flex: 1;
   width: 100%;
-  max-width: 820px;
-  margin: 0 auto;
+  max-width: 760px;
   padding: 28px 24px 45vh; /* respiro pro menu "/" não cortar no rodapé */
 }
 .rmm-doc-titulo {
@@ -114,7 +238,7 @@
   display: none !important;
 }
 .rmm-editor .bn-block-group .bn-block-group::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 2px;
@@ -149,11 +273,11 @@
   counter-reset: nivel;
 }
 .rmm-numeros
-  .bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type='bulletListItem']) {
+  .bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type="bulletListItem"]) {
   counter-increment: nivel;
 }
-.rmm-numeros .bn-block-content[data-content-type='bulletListItem']::before {
-  content: counters(nivel, '.') '. ' !important;
+.rmm-numeros .bn-block-content[data-content-type="bulletListItem"]::before {
+  content: counters(nivel, ".") ". " !important;
   color: #2caf93;
   font-variant-numeric: tabular-nums;
   font-size: 0.85em;
@@ -163,18 +287,18 @@
 
 /* ---------- dobrar/expandir linha (clique no marcador) ---------- */
 .rmm-editor .bn-block-outer:has(.bn-block-group) > .bn-block > .bn-block-content:hover::before {
-  content: '⌄' !important;
+  content: "⌄" !important;
   color: #2caf93 !important;
   font-weight: 700;
   cursor: pointer;
 }
 
 /* ---------- tarefas: concluída fica riscada ---------- */
-.rmm-editor [data-content-type='checkListItem'][data-checked='true'] .bn-inline-content {
+.rmm-editor [data-content-type="checkListItem"][data-checked="true"] .bn-inline-content {
   text-decoration: line-through;
   opacity: 0.55;
 }
-.rmm-editor input[type='checkbox'] {
+.rmm-editor input[type="checkbox"] {
   accent-color: #198b74;
 }
 
@@ -256,7 +380,124 @@
 .bn-suggestion-menu-item {
   border-radius: 8px !important;
 }
-.bn-suggestion-menu-item[aria-selected='true'],
+.bn-suggestion-menu-item[aria-selected="true"],
 .bn-suggestion-menu-item:hover {
   background: rgba(25, 139, 116, 0.2) !important;
+}
+
+/* =========================================================================
+   MINDMAP (Fatia 4) — nós, alça de recolher, dica; portado do protótipo
+   ========================================================================= */
+.mm-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mm-no {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1b222c;
+  color: #e8edf2;
+  border: 1px solid #2a3340;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  max-width: 260px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.mm-no-raiz {
+  background: #198b74;
+  border-color: #2caf93;
+  color: #fff;
+  font-weight: 600;
+}
+.mm-no-ativo {
+  border-color: #2caf93;
+  box-shadow: 0 0 0 2px rgba(44, 175, 147, 0.35);
+}
+.mm-no-concluida .mm-label {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.mm-label {
+  /* respeita as quebras de linha dentro do nó */
+  white-space: pre-line;
+  overflow: hidden;
+  max-height: 6em;
+}
+.mm-checkbox {
+  accent-color: #198b74;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+/* botão de recolher: pendurado na borda direita do nó, estilo "alça" */
+.mm-toggle {
+  flex-shrink: 0;
+  position: absolute;
+  right: -11px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #2a3340;
+  background: #121820;
+  color: #7a8796;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mm-toggle:hover {
+  border-color: #2caf93;
+  color: #2caf93;
+}
+.mm-toggle-fechado {
+  background: #198b74;
+  border-color: #2caf93;
+  color: #fff;
+}
+/* variante vertical da alça de recolher (pendurada embaixo) */
+.mm-toggle-v {
+  right: auto;
+  top: auto;
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.mm-handle {
+  opacity: 0;
+  pointer-events: none;
+}
+/* animação suave quando o mapa reorganiza (relayout) */
+.react-flow__node {
+  transition: transform 0.35s ease;
+}
+.react-flow__node.dragging {
+  transition: none;
+}
+/* controles +/−/fit no tema escuro */
+.rmm-painel-mapa .react-flow__controls {
+  box-shadow: none;
+}
+.rmm-painel-mapa .react-flow__controls-button {
+  background: #121820;
+  border-bottom: 1px solid #2a3340;
+  color: #7a8796;
+  fill: #7a8796;
+}
+.rmm-painel-mapa .react-flow__controls-button:hover {
+  background: #1b222c;
+  color: #2caf93;
+  fill: #2caf93;
 }

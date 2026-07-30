@@ -5,7 +5,7 @@
 
 import dynamic from 'next/dynamic';
 
-const Editor = dynamic(() => import('./Editor'), {
+const RoadMapMind = dynamic(() => import('./RoadMapMind'), {
   ssr: false,
   loading: () => (
     <div style={{ minHeight: '100dvh', background: '#0A0E13', color: '#7A8796', padding: 32 }}>
@@ -15,5 +15,5 @@ const Editor = dynamic(() => import('./Editor'), {
 });
 
 export default function DocsPage() {
-  return <Editor />;
+  return <RoadMapMind />;
 }
