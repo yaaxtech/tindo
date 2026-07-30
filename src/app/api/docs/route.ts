@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { carregarDocumento, carregarEspelhos, garantirRaiz, salvarDocumento } from '@/services/doc';
 import type { DocLinha } from '@/types/doc';
 // RoadMapMind — API do documento. GET carrega (garante a raiz); PUT sincroniza.

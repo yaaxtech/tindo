@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { criarEspelho, removerEspelho } from '@/services/doc';
 // RoadMapMind — espelhos (Fatia 7). POST cria; DELETE remove (soft).
 // Toda lógica de dados vive em src/services/doc.ts.

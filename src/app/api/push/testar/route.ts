@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { enviarPush } from '@/services/push';
 import { NextResponse } from 'next/server';

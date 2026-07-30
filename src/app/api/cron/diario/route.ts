@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 export const dynamic = 'force-dynamic';
 
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';

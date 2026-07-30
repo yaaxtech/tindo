@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { calcularKpisAdiamento } from '@/services/kpis-adiamento';
 import { NextResponse } from 'next/server';
