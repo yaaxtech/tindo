@@ -118,7 +118,24 @@ export default function RoadMapMind() {
     dentro: number;
   } | null>(null);
   const [erroMapa, setErroMapa] = useState<string | null>(null);
-  const [menuAberto, setMenuAberto] = useState(true);
+  // no celular o menu nasce fechado (um painel por vez); só client (ssr:false)
+  // menu de documentos: 'auto' = aberto no desktop e fechado no celular, via
+  // CSS media query (no mount o innerWidth ainda vem 0 — não dá pra medir aqui)
+  const [menuEstado, setMenuEstado] = useState<'auto' | 'aberto' | 'fechado'>('auto');
+  const alternarMenu = useCallback(() => {
+    setMenuEstado((e) => {
+      if (e === 'aberto') return 'fechado';
+      if (e === 'fechado') return 'aberto';
+      // no clique a largura já é real: inverte o que o 'auto' está mostrando
+      return window.matchMedia('(max-width: 767px)').matches ? 'aberto' : 'fechado';
+    });
+  }, []);
+  const [tema, setTema] = useState<'dark' | 'light'>(() =>
+    typeof localStorage !== 'undefined' && localStorage.getItem('rmm-tema') === 'light'
+      ? 'light'
+      : 'dark',
+  );
+  const [telaCheia, setTelaCheia] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const carregado = useRef(false);
@@ -516,6 +533,22 @@ export default function RoadMapMind() {
     };
   }, [setLarguraEditor]);
 
+  const alternarTema = useCallback(() => {
+    setTema((t) => {
+      const novo = t === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('rmm-tema', novo);
+      } catch {
+        /* storage indisponível — só não persiste */
+      }
+      return novo;
+    });
+  }, []);
+
+  // documento sem NENHUMA linha de conteúdo = empty state com CTA
+  const docVazio =
+    doc.filter((b) => extrairTexto(b).trim() !== '' || (b.children?.length ?? 0) > 0).length === 0;
+
   // foco de documento: só vale se a linha ainda existe (senão cai pra raiz)
   const focoBloco = focoId ? acharBloco(doc, focoId) : null;
   const focoTexto = focoBloco ? extrairTexto(focoBloco) : null;
@@ -529,7 +562,11 @@ export default function RoadMapMind() {
     : undefined;
 
   return (
-    <div className={`rmm-root ${focoBloco ? 'rmm-foco' : ''}`} style={estiloCores}>
+    <div
+      className={`rmm-root rmm-tema-${tema} rmm-menu-${menuEstado} ${focoBloco ? 'rmm-foco' : ''} ${telaCheia ? 'rmm-tela-cheia' : ''}`}
+      data-modo={modo}
+      style={estiloCores}
+    >
       {/* foco de documento: isola a subárvore também no editor — os ancestrais
           somem e os níveis internos sobem de hierarquia (recuo zerado) */}
       {focoBloco && (
@@ -549,7 +586,7 @@ export default function RoadMapMind() {
           type="button"
           className="rmm-icone"
           title="Menu de documentos"
-          onClick={() => setMenuAberto((m) => !m)}
+          onClick={alternarMenu}
         >
           ☰
         </button>
@@ -604,6 +641,21 @@ export default function RoadMapMind() {
           <button type="button" onClick={() => void colarMarkdown()}>
             ↧ Colar
           </button>
+          <button
+            type="button"
+            title={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
+            onClick={alternarTema}
+          >
+            {tema === 'dark' ? '☀︎' : '☾'}
+          </button>
+          <button
+            type="button"
+            className={telaCheia ? 'ativo' : ''}
+            title={telaCheia ? 'Sair da tela cheia' : 'Tela cheia (cobre o menu do TinDo)'}
+            onClick={() => setTelaCheia((t) => !t)}
+          >
+            ⛶
+          </button>
         </div>
         <span className="rmm-status" data-status={status}>
           {ROTULOS[status]}
@@ -655,7 +707,7 @@ export default function RoadMapMind() {
       )}
 
       <div className="rmm-corpo">
-        {menuAberto && (
+        {menuEstado !== 'fechado' && (
           <MenuDocumentos
             doc={doc}
             focoId={focoBloco ? focoId : null}
@@ -679,7 +731,18 @@ export default function RoadMapMind() {
                 onClickCapture={aoClicarNoDoc}
               >
                 <h1 className="rmm-doc-titulo">{focoTexto ?? titulo}</h1>
-                <Editor editor={editor} onChange={onChange} onSelectionChange={atualizarCursor} />
+                {docVazio && status === 'ok' && (
+                  <div className="rmm-vazio">
+                    Documento vazio — comece a digitar abaixo, use <strong>↧ Colar</strong> para
+                    transformar um markdown em árvore, ou crie nós direto no mapa.
+                  </div>
+                )}
+                <Editor
+                  editor={editor}
+                  tema={tema}
+                  onChange={onChange}
+                  onSelectionChange={atualizarCursor}
+                />
               </main>
             </section>
           )}

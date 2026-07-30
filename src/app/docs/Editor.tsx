@@ -11,15 +11,16 @@ import { BlockNoteView } from '@blocknote/mantine';
 
 interface EditorProps {
   editor: BlockNoteEditor;
+  tema: 'dark' | 'light';
   onChange: () => void;
   onSelectionChange: () => void;
 }
 
-export default function Editor({ editor, onChange, onSelectionChange }: EditorProps) {
+export default function Editor({ editor, tema, onChange, onSelectionChange }: EditorProps) {
   return (
     <BlockNoteView
       editor={editor}
-      theme="dark"
+      theme={tema}
       onChange={onChange}
       onSelectionChange={onSelectionChange}
     />

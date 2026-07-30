@@ -774,3 +774,197 @@
   background: transparent;
   cursor: default;
 }
+
+/* =========================================================================
+   FATIA 8 — tela cheia, tema claro, mobile mínimo, empty state
+   ========================================================================= */
+/* tela cheia: cobre o menu/nav do TinDo */
+.rmm-root.rmm-tela-cheia {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  height: 100vh;
+}
+
+/* empty state (doc vazio) */
+.rmm-vazio {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border: 1px dashed #2a3340;
+  border-radius: 12px;
+  color: #7a8796;
+  font-size: 13px;
+}
+.rmm-vazio strong {
+  color: #2caf93;
+}
+
+/* ---------- tema claro ---------- */
+.rmm-root.rmm-tema-light {
+  background: #f4f6f8;
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-topbar {
+  background: #fff;
+  border-bottom-color: #e3e7ec;
+}
+.rmm-tema-light .rmm-actions button,
+.rmm-tema-light .rmm-cores button {
+  background: #fff;
+  color: #1b222c;
+  border-color: #d4dae1;
+}
+.rmm-tema-light .rmm-modos button.ativo {
+  background: #eef1f4;
+}
+.rmm-tema-light .rmm-cores {
+  background: #eef1f4;
+  border-bottom-color: #e3e7ec;
+}
+.rmm-tema-light .rmm-nav {
+  background: #eef1f4;
+  border-right-color: #e3e7ec;
+}
+.rmm-tema-light .rmm-nav-item {
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-nav-item:hover {
+  background: #e3e7ec;
+}
+.rmm-tema-light .rmm-nav-item.ativo {
+  background: rgba(25, 139, 116, 0.14);
+  color: #198b74;
+}
+.rmm-tema-light .rmm-nav-input {
+  background: #fff;
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-nav-menu,
+.rmm-tema-light .mm-menu {
+  background: #fff;
+  border-color: #d4dae1;
+  box-shadow: 0 16px 48px rgba(27, 34, 44, 0.18);
+}
+.rmm-tema-light .rmm-nav-menu button,
+.rmm-tema-light .mm-menu button {
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-divisor {
+  background: #e3e7ec;
+}
+.rmm-tema-light .rmm-painel-mapa {
+  background: #f8fafb;
+  border-left-color: #e3e7ec;
+}
+.rmm-tema-light .mm-no {
+  background: #fff;
+  color: #1b222c;
+  border-color: #d4dae1;
+}
+.rmm-tema-light .mm-no-raiz {
+  background: #198b74;
+  color: #fff;
+  border-color: #2caf93;
+}
+.rmm-tema-light .mm-toggle {
+  background: #fff;
+  border-color: #d4dae1;
+  color: #4a5563;
+}
+.rmm-tema-light .mm-toggle-fechado {
+  background: #198b74;
+  border-color: #2caf93;
+  color: #fff;
+}
+.rmm-tema-light .mm-input {
+  background: #fff;
+  color: #1b222c;
+}
+.rmm-tema-light .mm-dica {
+  background: rgba(244, 246, 248, 0.9);
+  color: #7a8796;
+}
+.rmm-tema-light .rmm-modal {
+  background: #fff;
+  border-color: #e3e7ec;
+}
+.rmm-tema-light .rmm-modal h3 {
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-vazio {
+  border-color: #d4dae1;
+}
+.rmm-tema-light .rmm-chip-foco {
+  background: #e3e7ec;
+  color: #4a5563;
+}
+.rmm-tema-light .rmm-painel-mapa .react-flow__controls-button {
+  background: #fff;
+  border-bottom-color: #e3e7ec;
+  color: #4a5563;
+  fill: #4a5563;
+}
+
+/* ---------- mobile (<640px): um painel por vez ---------- */
+@media (max-width: 639px) {
+  .rmm-topbar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: 8px 10px;
+  }
+  .rmm-status {
+    display: none; /* topbar apertada: o botão Salvar segue visível */
+  }
+  /* modo lado a lado vira só documento no celular */
+  .rmm-root[data-modo="split"] .rmm-divisor,
+  .rmm-root[data-modo="split"] .rmm-painel-mapa {
+    display: none;
+  }
+  .rmm-root[data-modo="split"] .rmm-painel-editor {
+    width: 100% !important;
+  }
+  /* menu de documentos vira gaveta sobreposta */
+  .rmm-nav {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+  }
+  .rmm-corpo {
+    position: relative;
+  }
+  .rmm-editor {
+    padding: 16px 12px 40vh;
+  }
+  /* TinDo tem bottom nav no celular — não cobrir na tela normal */
+  .rmm-root:not(.rmm-tela-cheia) {
+    height: calc(100dvh - 56px);
+  }
+}
+
+/* menu 'auto': no celular começa fechado (o estado explícito vence) */
+@media (max-width: 767px) {
+  .rmm-menu-auto .rmm-nav {
+    display: none;
+  }
+}
+
+/* tema claro dentro do BlockNote (vars + menus) */
+.rmm-tema-light .rmm-editor .bn-container {
+  --bn-colors-editor-background: transparent;
+  --bn-colors-editor-text: #1b222c;
+  --bn-colors-menu-background: #ffffff;
+  --bn-colors-menu-text: #1b222c;
+  --bn-colors-hovered-background: #e3e7ec;
+  --bn-colors-selected-background: rgba(25, 139, 116, 0.16);
+  --bn-colors-side-menu: #7a8796;
+  --bn-colors-border: #d4dae1;
+}
+.rmm-tema-light .bn-suggestion-menu,
+.rmm-tema-light .bn-container .mantine-Menu-dropdown {
+  background: #ffffff !important;
+  border-color: #d4dae1 !important;
+  box-shadow: 0 16px 48px rgba(27, 34, 44, 0.16) !important;
+}
