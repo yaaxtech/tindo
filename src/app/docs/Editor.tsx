@@ -1,8 +1,8 @@
 'use client';
 
-// RoadMapMind — Editor outline (BlockNote) com persistência (Fatia 1).
-// Carrega via GET /api/docs, salva automático (debounce) via PUT /api/docs.
-// Fatias seguintes: outline rico (2), tarefas (3), mindmap (4-5).
+// RoadMapMind — Editor outline (BlockNote) com persistência.
+// Fatia 1: carregar/salvar. Fatia 2: guias por nível (CSS), numeração 1.1.1,
+// dobrar linha, colar/copiar markdown. Fatia 3 (tarefas) e 4-5 (mapa) a seguir.
 
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
@@ -30,6 +30,9 @@ export default function Editor() {
   const [raizId, setRaizId] = useState<string | null>(null);
   const [titulo, setTitulo] = useState('RoadMapMind');
   const [status, setStatus] = useState<Status>('carregando');
+  const [modoNumeros, setModoNumeros] = useState(false);
+  const [dobradas, setDobradas] = useState<Set<string>>(new Set());
+  const [copiado, setCopiado] = useState(false);
   const carregado = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -82,10 +85,68 @@ export default function Editor() {
     timer.current = setTimeout(() => void salvar(), 800);
   }, [salvar]);
 
+  const copiarMarkdown = useCallback(async () => {
+    const md = await editor.blocksToMarkdownLossy(editor.document);
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1500);
+    } catch {
+      /* clipboard bloqueado — ignora */
+    }
+  }, [editor]);
+
+  const colarMarkdown = useCallback(async () => {
+    try {
+      const md = await navigator.clipboard.readText();
+      if (!md.trim()) return;
+      const blocos = await editor.tryParseMarkdownToBlocks(md);
+      editor.replaceBlocks(editor.document, blocos);
+      await salvar();
+    } catch {
+      setStatus('erro');
+    }
+  }, [editor, salvar]);
+
+  // clicar na faixa do marcador (~26px) de uma linha com filhos = dobra/expande
+  const aoClicarNoDoc = useCallback((e: React.MouseEvent) => {
+    const alvo = (e.target as HTMLElement).closest('.bn-block-content') as HTMLElement | null;
+    if (!alvo) return;
+    const outer = alvo.closest('.bn-block-outer') as HTMLElement | null;
+    const id = outer?.getAttribute('data-id');
+    if (!id) return;
+    if (e.clientX - alvo.getBoundingClientRect().left > 26) return;
+    const temFilhos = outer?.querySelector(':scope > .bn-block > .bn-block-group') !== null;
+    if (!temFilhos) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDobradas((s) => {
+      const novo = new Set(s);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+  }, []);
+
   return (
     <div className="rmm-root">
       <header className="rmm-topbar">
         <span className="rmm-brand">RoadMapMind</span>
+        <div className="rmm-actions">
+          <button
+            type="button"
+            className={modoNumeros ? 'ativo' : ''}
+            onClick={() => setModoNumeros((m) => !m)}
+          >
+            {modoNumeros ? '• Marcadores' : '1.1 Números'}
+          </button>
+          <button type="button" onClick={() => void copiarMarkdown()}>
+            {copiado ? '✓ Copiado' : '⧉ Markdown'}
+          </button>
+          <button type="button" onClick={() => void colarMarkdown()}>
+            ↧ Colar
+          </button>
+        </div>
         <span className="rmm-status" data-status={status}>
           {ROTULOS[status]}
         </span>
@@ -93,7 +154,27 @@ export default function Editor() {
           Salvar
         </button>
       </header>
-      <main className="rmm-editor">
+
+      {/* linhas dobradas: esconde os filhos e troca o marcador por › */}
+      {dobradas.size > 0 && (
+        <style>
+          {[...dobradas]
+            .map(
+              (id) => `
+              .bn-block-outer[data-id="${id}"] > .bn-block > .bn-block-group { display: none; }
+              .bn-block-outer[data-id="${id}"] > .bn-block > .bn-block-content::before {
+                content: '›' !important; color: #2caf93 !important; font-weight: 700;
+              }`,
+            )
+            .join('\n')}
+        </style>
+      )}
+
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: captura de clique no marcador (dobrar) */}
+      <main
+        className={`rmm-editor ${modoNumeros ? 'rmm-numeros' : ''}`}
+        onClickCapture={aoClicarNoDoc}
+      >
         <h1 className="rmm-doc-titulo">{titulo}</h1>
         <BlockNoteView editor={editor} theme="dark" onChange={onChange} />
       </main>

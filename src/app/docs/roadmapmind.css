@@ -1,4 +1,4 @@
-/* RoadMapMind — tema Obsidian + Jade sobre o BlockNote (Fatia 1, base). */
+/* RoadMapMind — tema Obsidian + Jade sobre o BlockNote (Fatias 1-2). */
 
 .rmm-root {
   min-height: 100dvh;
@@ -7,19 +7,48 @@
   background: #0a0e13;
   color: #e8edf2;
   font-family: ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* paleta das guias de indentação: uma cor por nível, dessaturada e translúcida */
+  --guia-n1: rgba(110, 155, 220, 0.45);
+  --guia-n2: rgba(210, 170, 115, 0.45);
+  --guia-n3: rgba(120, 190, 150, 0.45);
+  --guia-n4: rgba(180, 140, 210, 0.45);
+  --guia-n5: rgba(220, 140, 145, 0.45);
 }
 
+/* ---------- topbar ---------- */
 .rmm-topbar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 20px;
+  gap: 10px;
+  padding: 10px 16px;
   background: #121820;
   border-bottom: 1px solid #1b222c;
 }
 .rmm-brand {
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+.rmm-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: 12px;
+}
+.rmm-actions button {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #2a3340;
+  background: #1b222c;
+  color: #e8edf2;
+  cursor: pointer;
+}
+.rmm-actions button:hover {
+  border-color: #2caf93;
+}
+.rmm-actions button.ativo {
+  background: rgba(25, 139, 116, 0.18);
+  color: #2caf93;
+  border-color: rgba(44, 175, 147, 0.35);
 }
 .rmm-status {
   margin-left: auto;
@@ -45,6 +74,7 @@
   background: #2caf93;
 }
 
+/* ---------- palco do editor ---------- */
 .rmm-editor {
   flex: 1;
   width: 100%;
@@ -59,16 +89,108 @@
   letter-spacing: -0.02em;
 }
 
-/* BlockNote vestido de Obsidian + Jade (sobrescreve o tema Mantine escuro) */
+/* BlockNote vestido de Obsidian + Jade */
 .rmm-editor .bn-container {
   --bn-colors-editor-background: transparent;
   --bn-colors-editor-text: #e8edf2;
-  --bn-colors-menu-background: #1b222c;
+  --bn-colors-menu-background: #121820;
   --bn-colors-menu-text: #e8edf2;
-  --bn-colors-hovered-background: #232c38;
-  --bn-colors-hovered-text: #e8edf2;
-  --bn-colors-selected-background: #198b74;
-  --bn-colors-selected-text: #ffffff;
+  --bn-colors-hovered-background: #1b222c;
+  --bn-colors-selected-background: rgba(25, 139, 116, 0.25);
   --bn-colors-side-menu: #4a5563;
   --bn-colors-border: #232c38;
+  --bn-colors-highlights-green-background: rgba(44, 175, 147, 0.3);
+}
+
+/* ---------- guias de indentação (uma cor por nível — variante "Zen") ---------- */
+.rmm-editor .bn-block-group .bn-block-group {
+  position: relative;
+  margin-left: 6px;
+  padding-left: 18px;
+  border-left: none !important; /* mata a guia default do BlockNote (linha dupla) */
+  --guia-cor: var(--guia-n1);
+}
+.rmm-editor .bn-block-group .bn-block-group > .bn-block-outer::before {
+  display: none !important;
+}
+.rmm-editor .bn-block-group .bn-block-group::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--guia-cor);
+  transform: scaleX(0.5);
+  transform-origin: left;
+  pointer-events: none;
+}
+.rmm-editor .bn-block-group .bn-block-group .bn-block-group {
+  --guia-cor: var(--guia-n2);
+}
+.rmm-editor .bn-block-group .bn-block-group .bn-block-group .bn-block-group {
+  --guia-cor: var(--guia-n3);
+}
+.rmm-editor .bn-block-group .bn-block-group .bn-block-group .bn-block-group .bn-block-group {
+  --guia-cor: var(--guia-n4);
+}
+.rmm-editor
+  .bn-block-group
+  .bn-block-group
+  .bn-block-group
+  .bn-block-group
+  .bn-block-group
+  .bn-block-group {
+  --guia-cor: var(--guia-n5);
+}
+
+/* ---------- modo numerado 1. / 1.1. / 1.1.1. (CSS counters) ---------- */
+.rmm-numeros .bn-block-group {
+  counter-reset: nivel;
+}
+.rmm-numeros
+  .bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type='bulletListItem']) {
+  counter-increment: nivel;
+}
+.rmm-numeros .bn-block-content[data-content-type='bulletListItem']::before {
+  content: counters(nivel, '.') '. ' !important;
+  color: #2caf93;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+/* ---------- dobrar/expandir linha (clique no marcador) ---------- */
+.rmm-editor .bn-block-outer:has(.bn-block-group) > .bn-block > .bn-block-content:hover::before {
+  content: '⌄' !important;
+  color: #2caf93 !important;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---------- tarefas: concluída fica riscada ---------- */
+.rmm-editor [data-content-type='checkListItem'][data-checked='true'] .bn-inline-content {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.rmm-editor input[type='checkbox'] {
+  accent-color: #198b74;
+}
+
+/* ---------- menus do BlockNote (slash / formatação) no visual TinDo ---------- */
+.bn-suggestion-menu,
+.bn-container .mantine-Menu-dropdown {
+  background: #121820 !important;
+  border: 1px solid #2a3340 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55) !important;
+  padding: 6px !important;
+}
+.bn-suggestion-menu-item {
+  border-radius: 8px !important;
+}
+.bn-suggestion-menu-item[aria-selected='true'],
+.bn-suggestion-menu-item:hover {
+  background: rgba(25, 139, 116, 0.2) !important;
 }
