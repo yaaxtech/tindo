@@ -12,8 +12,10 @@ import type { DocLinha } from '@/types/doc';
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { pt } from '@blocknote/core/locales';
 import { useCreateBlockNote } from '@blocknote/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
+import MenuDocumentos from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, extrairTexto, RAIZ_ID } from './Mindmap';
 import { useDocStore } from './useDocStore';
 
@@ -116,6 +118,9 @@ export default function RoadMapMind() {
     dentro: number;
   } | null>(null);
   const [erroMapa, setErroMapa] = useState<string | null>(null);
+  const [menuAberto, setMenuAberto] = useState(true);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const carregado = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checksRef = useRef<Map<string, boolean>>(new Map());
@@ -131,6 +136,7 @@ export default function RoadMapMind() {
   const focoEdicao = useDocStore((s) => s.focoEdicao);
   const alternarFocoEdicao = useDocStore((s) => s.alternarFocoEdicao);
   const focoId = useDocStore((s) => s.focoId);
+  const setFocoId = useDocStore((s) => s.setFocoId);
   const cursorId = useDocStore((s) => s.cursorId);
   const setCursorId = useDocStore((s) => s.setCursorId);
   const coresCustom = useDocStore((s) => s.coresCustom);
@@ -317,6 +323,18 @@ export default function RoadMapMind() {
     [editor],
   );
 
+  // deep-link: /docs?doc=<uuid> abre focado; navegar pelo menu atualiza a URL
+  useEffect(() => {
+    setFocoId(searchParams.get('doc'));
+  }, [searchParams, setFocoId]);
+
+  const aoFocar = useCallback(
+    (id: string | null) => {
+      setFocoId(id); // resposta imediata; o <Link> atualiza a URL em paralelo
+    },
+    [setFocoId],
+  );
+
   // toast de erro do mapa some sozinho
   useEffect(() => {
     if (!erroMapa) return;
@@ -445,6 +463,40 @@ export default function RoadMapMind() {
     [editor],
   );
 
+  // duplicar documento (menu lateral): cópia SEM ids — o BlockNote gera novos
+  const aoDuplicar = useCallback(
+    (id: string) => {
+      const b = acharBloco(editor.document, id);
+      if (!b) return;
+      const semIds = (x: Block): PartialBlock => {
+        const { id: _descartado, ...resto } = clonarComIds(x);
+        return { ...resto, children: (x.children ?? []).map(semIds) };
+      };
+      editor.insertBlocks([semIds(b)], b, 'after');
+    },
+    [editor],
+  );
+
+  // mover documento no menu (arrastar sobre outro): vira irmã logo após o alvo,
+  // com ids preservados
+  const aoMoverDoc = useCallback(
+    (id: string, alvoId: string) => {
+      if (id === alvoId) return;
+      const b = acharBloco(editor.document, id);
+      const alvo = acharBloco(editor.document, alvoId);
+      if (!b || !alvo) return;
+      if (acharBloco([b], alvoId)) {
+        setErroMapa('Não dá para mover um item para dentro dele mesmo.');
+        return;
+      }
+      const copia = clonarComIds(b);
+      editor.removeBlocks([id]);
+      const alvoAtual = acharBloco(editor.document, alvoId);
+      if (alvoAtual) editor.insertBlocks([copia], alvoAtual, 'after');
+    },
+    [editor],
+  );
+
   // divisor arrastável (modo lado a lado)
   useEffect(() => {
     const mover = (e: MouseEvent) => {
@@ -464,6 +516,10 @@ export default function RoadMapMind() {
     };
   }, [setLarguraEditor]);
 
+  // foco de documento: só vale se a linha ainda existe (senão cai pra raiz)
+  const focoBloco = focoId ? acharBloco(doc, focoId) : null;
+  const focoTexto = focoBloco ? extrairTexto(focoBloco) : null;
+
   const cores = coresCustom ?? CORES_NIVEL;
   // cores custom viram variáveis CSS das guias do editor
   const estiloCores = coresCustom
@@ -473,9 +529,32 @@ export default function RoadMapMind() {
     : undefined;
 
   return (
-    <div className="rmm-root" style={estiloCores}>
+    <div className={`rmm-root ${focoBloco ? 'rmm-foco' : ''}`} style={estiloCores}>
+      {/* foco de documento: isola a subárvore também no editor — os ancestrais
+          somem e os níveis internos sobem de hierarquia (recuo zerado) */}
+      {focoBloco && (
+        <style>{`
+          .rmm-foco .bn-editor > .bn-block-group > .bn-block-outer:not([data-id="${focoBloco.id}"]):not(:has([data-id="${focoBloco.id}"])) { display: none; }
+          .rmm-foco .bn-block-outer:has([data-id="${focoBloco.id}"]) .bn-block-outer:not([data-id="${focoBloco.id}"]):not(:has([data-id="${focoBloco.id}"])):not([data-id="${focoBloco.id}"] .bn-block-outer) { display: none; }
+          .rmm-foco .bn-block-outer:not([data-id="${focoBloco.id}"]):has([data-id="${focoBloco.id}"]) > .bn-block > .bn-block-content { display: none; }
+          .rmm-foco .bn-block-group:has([data-id="${focoBloco.id}"]) { margin-left: 0 !important; padding-left: 0 !important; }
+          .rmm-foco .bn-block-group:has([data-id="${focoBloco.id}"])::before { display: none !important; }
+          .rmm-foco .bn-block-outer[data-id="${focoBloco.id}"] > .bn-block > .bn-block-content { display: none; }
+          .rmm-foco .bn-block-outer[data-id="${focoBloco.id}"] > .bn-block > .bn-block-group { margin-left: 0 !important; padding-left: 0 !important; }
+          .rmm-foco .bn-block-outer[data-id="${focoBloco.id}"] > .bn-block > .bn-block-group::before { display: none !important; }
+        `}</style>
+      )}
       <header className="rmm-topbar">
+        <button
+          type="button"
+          className="rmm-icone"
+          title="Menu de documentos"
+          onClick={() => setMenuAberto((m) => !m)}
+        >
+          ☰
+        </button>
         <span className="rmm-brand">RoadMapMind</span>
+        {focoTexto && <span className="rmm-chip-foco">📂 {focoTexto}</span>}
         {progresso.total > 0 && (
           <span className="rmm-chip" title="Tarefas concluídas / total">
             ✓ {progresso.feitas}/{progresso.total}
@@ -575,76 +654,103 @@ export default function RoadMapMind() {
         </style>
       )}
 
-      <div className="rmm-paineis">
-        {modo !== 'mapa' && (
-          <section
-            className="rmm-painel-editor"
-            style={modo === 'split' ? { width: `${larguraEditor}%` } : { width: '100%' }}
-          >
-            <main
-              className={`rmm-editor ${modoNumeros ? 'rmm-numeros' : ''}`}
-              onClickCapture={aoClicarNoDoc}
-            >
-              <h1 className="rmm-doc-titulo">{titulo}</h1>
-              <Editor editor={editor} onChange={onChange} onSelectionChange={atualizarCursor} />
-            </main>
-          </section>
-        )}
-
-        {modo === 'split' && (
-          <div
-            className="rmm-divisor"
-            role="separator"
-            aria-label="Redimensionar painéis"
-            tabIndex={0}
-            onMouseDown={() => {
-              arrastando.current = true;
-              document.body.style.cursor = 'col-resize';
-            }}
+      <div className="rmm-corpo">
+        {menuAberto && (
+          <MenuDocumentos
+            doc={doc}
+            focoId={focoBloco ? focoId : null}
+            rotuloRaiz={titulo}
+            aoFocar={aoFocar}
+            aoRenomear={aoRenomear}
+            aoDuplicar={aoDuplicar}
+            aoExcluir={aoExcluir}
+            aoMover={aoMoverDoc}
           />
         )}
 
-        {modo !== 'doc' && (
-          <section className="rmm-painel-mapa">
-            <div className="rmm-mapa-header">
-              <span>MINDMAP</span>
-              <button
-                type="button"
-                className="rmm-mapa-botao"
-                title="Direção do mapa: horizontal (esquerda→direita) ou vertical (cima→baixo)"
-                onClick={alternarOrientacao}
+        <div className="rmm-paineis">
+          {modo !== 'mapa' && (
+            <section
+              className="rmm-painel-editor"
+              style={modo === 'split' ? { width: `${larguraEditor}%` } : { width: '100%' }}
+            >
+              <main
+                className={`rmm-editor ${modoNumeros ? 'rmm-numeros' : ''}`}
+                onClickCapture={aoClicarNoDoc}
               >
-                {orientacao === 'horizontal' ? '⇄' : '⇅'}
-              </button>
-              <button
-                type="button"
-                className={`rmm-mapa-botao ${focoEdicao ? 'ativo' : ''}`}
-                title="Zoom acompanha o nó que você está editando"
-                onClick={alternarFocoEdicao}
-              >
-                🎯 foco de edição
-              </button>
-            </div>
-            <Mindmap
-              doc={doc}
-              focoId={focoId}
-              cursorId={cursorId}
-              cores={cores}
-              focoEdicao={focoEdicao}
-              orientacao={orientacao}
-              rotuloRaiz={titulo}
-              editarNoId={editarNoId}
-              aoFimEdicaoNo={() => setEditarNoId(null)}
-              aoClicarNo={aoClicarNo}
-              aoToggleTarefa={aoToggleTarefa}
-              aoAdicionarFilho={aoAdicionarFilho}
-              aoAdicionarIrma={aoAdicionarIrma}
-              aoExcluir={aoExcluir}
-              aoRenomear={aoRenomear}
-              aoReplugar={aoReplugar}
+                <h1 className="rmm-doc-titulo">{focoTexto ?? titulo}</h1>
+                <Editor editor={editor} onChange={onChange} onSelectionChange={atualizarCursor} />
+              </main>
+            </section>
+          )}
+
+          {modo === 'split' && (
+            <div
+              className="rmm-divisor"
+              role="separator"
+              aria-label="Redimensionar painéis"
+              tabIndex={0}
+              onMouseDown={() => {
+                arrastando.current = true;
+                document.body.style.cursor = 'col-resize';
+              }}
             />
-          </section>
-        )}
+          )}
+
+          {modo !== 'doc' && (
+            <section className="rmm-painel-mapa">
+              <div className="rmm-mapa-header">
+                <span>MINDMAP</span>
+                <button
+                  type="button"
+                  className="rmm-mapa-botao"
+                  title="Direção do mapa: horizontal (esquerda→direita) ou vertical (cima→baixo)"
+                  onClick={alternarOrientacao}
+                >
+                  {orientacao === 'horizontal' ? '⇄' : '⇅'}
+                </button>
+                <button
+                  type="button"
+                  className={`rmm-mapa-botao ${focoEdicao ? 'ativo' : ''}`}
+                  title="Zoom acompanha o nó que você está editando"
+                  onClick={alternarFocoEdicao}
+                >
+                  🎯 foco de edição
+                </button>
+                {focoBloco && (
+                  <button
+                    type="button"
+                    className="rmm-mapa-foco"
+                    onClick={() => {
+                      aoFocar(null);
+                      router.push('/docs');
+                    }}
+                  >
+                    ✕ sair do foco
+                  </button>
+                )}
+              </div>
+              <Mindmap
+                doc={doc}
+                focoId={focoId}
+                cursorId={cursorId}
+                cores={cores}
+                focoEdicao={focoEdicao}
+                orientacao={orientacao}
+                rotuloRaiz={titulo}
+                editarNoId={editarNoId}
+                aoFimEdicaoNo={() => setEditarNoId(null)}
+                aoClicarNo={aoClicarNo}
+                aoToggleTarefa={aoToggleTarefa}
+                aoAdicionarFilho={aoAdicionarFilho}
+                aoAdicionarIrma={aoAdicionarIrma}
+                aoExcluir={aoExcluir}
+                aoRenomear={aoRenomear}
+                aoReplugar={aoReplugar}
+              />
+            </section>
+          )}
+        </div>
       </div>
 
       {erroMapa && <div className="rmm-toast">{erroMapa}</div>}
