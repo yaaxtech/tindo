@@ -1,16 +1,16 @@
 name: Keep Supabase Alive
 
-# O plano Free do Supabase pausa projetos com pouca atividade de banco em 7 dias.
-# Este workflow faz uma query real na REST API todo dia — direto no Supabase,
-# sem passar pelo app, para não depender do deploy do Cloudflare estar saudável.
+# O plano Free do Supabase pausa projetos com POUCA atividade de banco em 7 dias.
+# A doc oficial diz que o típico necessário é "a few user requests to the database
+# each day" — 1 query/dia não bastou (aviso de pausa chegou em 2026-07-28 mesmo com
+# o keep-alive diário passando). Por isso: 4 execuções/dia × 6 queries cada.
+# Direto no Supabase, sem passar pelo app, para não depender do deploy do Cloudflare.
 # Repositório público: minutos de Actions são gratuitos e ilimitados.
-# Diário (e não a cada 2 dias) porque o custo é o mesmo e a margem sobe: o cron do
-# GitHub é best-effort, e assim toleramos 6 execuções perdidas seguidas antes da pausa.
 
 on:
   schedule:
-    # 11:23 UTC (08:23 BRT) — minuto quebrado evita a fila das horas cheias
-    - cron: '23 11 * * *'
+    # 4x/dia (minuto quebrado evita a fila das horas cheias)
+    - cron: '23 2,8,14,20 * * *'
   workflow_dispatch:
 
 permissions:
@@ -33,18 +33,24 @@ jobs:
             echo "::error::Secrets NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY não configurados no repositório."
             exit 1
           fi
-          STATUS=$(curl -sS -o /tmp/resposta.txt -w '%{http_code}' \
-            --max-time 30 --retry 3 --retry-delay 20 --retry-all-errors \
-            "${SUPABASE_URL}/rest/v1/tarefas?select=id&limit=1" \
-            -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
-          echo "HTTP ${STATUS}"
-          head -c 200 /tmp/resposta.txt || true
-          # 200 (query rodou, RLS pode devolver lista vazia) é o único resultado saudável.
-          if [ "${STATUS}" != "200" ]; then
-            echo "::error::Supabase respondeu ${STATUS} — projeto pode estar pausado ou a chave expirou."
-            exit 1
-          fi
+          # Várias queries por execução: o critério do Supabase é volume de atividade,
+          # não presença de 1 request. Tabelas diferentes para gerar queries distintas.
+          # (sem "lembretes": essa tabela não existe na API — retorna 404)
+          for TABELA in tarefas projetos tags historico_acoes tarefas projetos; do
+            STATUS=$(curl -sS -o /tmp/resposta.txt -w '%{http_code}' \
+              --max-time 30 --retry 3 --retry-delay 20 --retry-all-errors \
+              "${SUPABASE_URL}/rest/v1/${TABELA}?select=id&limit=1" \
+              -H "apikey: ${SUPABASE_ANON_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+            echo "${TABELA}: HTTP ${STATUS}"
+            # 200 (query rodou, RLS pode devolver lista vazia) é o único resultado saudável.
+            if [ "${STATUS}" != "200" ]; then
+              head -c 200 /tmp/resposta.txt || true
+              echo "::error::Supabase respondeu ${STATUS} em ${TABELA} — projeto pode estar pausado ou a chave expirou."
+              exit 1
+            fi
+            sleep 2
+          done
 
       - name: Evita auto-disable do cron pelo GitHub (60 dias sem commit)
         run: |
