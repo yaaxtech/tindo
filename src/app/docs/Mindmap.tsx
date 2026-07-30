@@ -1,9 +1,10 @@
 'use client';
 
 // RoadMapMind — mapa mental (React Flow) sincronizado com o editor outline.
-// Portado do protótipo aprovado (ticket 06). Fatia 4: visualização + sincronia
-// (layout tidy, colapso com badge, foco, zoom, clique nó → linha). A edição
-// pelo mapa (criar/mover/renomear) chega na Fatia 5.
+// Portado do protótipo aprovado (ticket 06). Fatia 4: visualização + sincronia.
+// Fatia 5: edição pelo mapa — inline no nó (duplo clique), menu de ações com
+// atalhos (Enter filha · Shift+Enter irmã · Delete excluir) e arrastar para
+// re-plugar em outra mãe (com validação de ciclo no shell).
 
 import type { Block } from '@blocknote/core';
 import {
@@ -12,10 +13,12 @@ import {
   Controls,
   Handle,
   type Node,
+  type NodeChange,
   type NodeProps,
   Position,
   ReactFlow,
   ReactFlowProvider,
+  applyNodeChanges,
   useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -50,6 +53,7 @@ export const CORES_NIVEL = [
 
 type NoData = {
   label: string;
+  editarInicial: boolean;
   nivel: number;
   raiz: boolean;
   tarefa: boolean;
@@ -61,6 +65,8 @@ type NoData = {
   orientacao: Orientacao;
   onToggle: (id: string) => void;
   onToggleTarefa: (id: string) => void;
+  onRenomear: (id: string, texto: string) => void;
+  onEdicao: (editando: boolean) => void;
 };
 
 type NoMapa = Node<NoData>;
@@ -73,6 +79,8 @@ const COL_V = 220; // largura por folha no modo vertical
 type Handlers = {
   onToggle: (id: string) => void;
   onToggleTarefa: (id: string) => void;
+  onRenomear: (id: string, texto: string) => void;
+  onEdicao: (editando: boolean) => void;
 };
 
 // Layout tidy simples: folhas empilhadas, pai centralizado nos filhos.
@@ -128,6 +136,7 @@ function montarNosEArestas(
       position: posicaoDe(profundidade, offset + altura / 2),
       data: {
         label: extrairTexto(b) || '…',
+        editarInicial: false,
         nivel: profundidade,
         raiz: profundidade === 0,
         tarefa: b.type === 'checkListItem',
@@ -170,6 +179,7 @@ function montarNosEArestas(
       position: posicaoDe(0, off / 2),
       data: {
         label: rotuloRaiz,
+        editarInicial: false,
         nivel: 0,
         raiz: true,
         tarefa: false,
@@ -210,10 +220,29 @@ function montarNosEArestas(
 // ---------------------------------------------------------------------------
 
 const NoLinha = memo(function NoLinha({ id, data }: NodeProps<NoMapa>) {
+  const [editando, setEditando] = useState(false);
+  const [texto, setTexto] = useState(data.label);
   const horizontal = data.orientacao === 'horizontal';
   const virtual = id === RAIZ_ID;
 
+  // avisa o mapa quando entra/sai da edição (bloqueia menu e mostra a dica)
+  const trocarEdicao = (v: boolean) => {
+    setEditando(v);
+    data.onEdicao(v);
+  };
+
+  // nó recém-criado pelo menu/atalho já nasce em modo de edição (pra nomear direto)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dispara só na criação
+  useEffect(() => {
+    if (data.editarInicial) {
+      setTexto(data.label);
+      setEditando(true);
+      data.onEdicao(true);
+    }
+  }, [data.editarInicial]);
+
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: interações de teclado vivem no mapa (atalhos)
     <div
       className={[
         'mm-no',
@@ -225,6 +254,22 @@ const NoLinha = memo(function NoLinha({ id, data }: NodeProps<NoMapa>) {
       style={
         data.cor ? { borderColor: data.cor, boxShadow: `inset 3px 0 0 ${data.cor}` } : undefined
       }
+      onDoubleClick={(e) => {
+        if (virtual) return;
+        e.stopPropagation();
+        setTexto(data.label);
+        trocarEdicao(true);
+      }}
+      onClick={(e) => {
+        // durante a edição, cliques não abrem o menu de ações
+        if (editando) e.stopPropagation();
+      }}
+      onContextMenu={(e) => {
+        if (editando) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
     >
       <Handle
         type="target"
@@ -240,7 +285,34 @@ const NoLinha = memo(function NoLinha({ id, data }: NodeProps<NoMapa>) {
           onClick={(e) => e.stopPropagation()}
         />
       )}
-      <span className="mm-label">{data.label}</span>
+      {editando ? (
+        <textarea
+          className="mm-input"
+          value={texto}
+          rows={Math.max(1, texto.split('\n').length)}
+          // biome-ignore lint/a11y/noAutofocus: campo só existe durante a edição
+          autoFocus
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => setTexto(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter' && !e.shiftKey) {
+              // Enter salva; Shift+Enter pula linha dentro do nó
+              e.preventDefault();
+              data.onRenomear(id, texto);
+              trocarEdicao(false);
+            }
+            if (e.key === 'Escape') trocarEdicao(false);
+          }}
+          onBlur={() => {
+            data.onRenomear(id, texto);
+            trocarEdicao(false);
+          }}
+        />
+      ) : (
+        <span className="mm-label">{data.label}</span>
+      )}
       {!virtual && data.descendentes > 0 && (
         <button
           type="button"
@@ -284,9 +356,18 @@ export type MindmapProps = {
   focoEdicao: boolean;
   orientacao: Orientacao;
   rotuloRaiz: string;
+  editarNoId: string | null;
+  aoFimEdicaoNo: () => void;
   aoClicarNo: (id: string) => void;
   aoToggleTarefa: (id: string) => void;
+  aoAdicionarFilho: (id: string) => void;
+  aoAdicionarIrma: (id: string) => void;
+  aoExcluir: (id: string) => void;
+  aoRenomear: (id: string, texto: string) => void;
+  aoReplugar: (id: string, novoPaiId: string) => void;
 };
+
+type MenuCtx = { id: string; x: number; y: number };
 
 function MindmapInterno({
   doc,
@@ -296,11 +377,50 @@ function MindmapInterno({
   focoEdicao,
   orientacao,
   rotuloRaiz,
+  editarNoId,
+  aoFimEdicaoNo,
   aoClicarNo,
   aoToggleTarefa,
+  aoAdicionarFilho,
+  aoAdicionarIrma,
+  aoExcluir,
+  aoRenomear,
+  aoReplugar,
 }: MindmapProps) {
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
+  const [manuais, setManuais] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [menu, setMenu] = useState<MenuCtx | null>(null);
+  const [selecionado, setSelecionado] = useState<string | null>(null);
+  const [emEdicao, setEmEdicao] = useState(false);
   const { fitView } = useReactFlow();
+
+  // atalhos com nó selecionado: Delete exclui · Enter cria filha · Shift+Enter cria irmã
+  useEffect(() => {
+    if (!selecionado) return;
+    const handler = (e: KeyboardEvent) => {
+      const alvo = e.target as HTMLElement;
+      if (alvo.closest('input, textarea, [contenteditable]')) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        if (selecionado !== RAIZ_ID) aoExcluir(selecionado);
+        setMenu(null);
+        setSelecionado(null);
+      } else if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        aoAdicionarIrma(selecionado);
+        setMenu(null);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        aoAdicionarFilho(selecionado);
+        setMenu(null);
+      } else if (e.key === 'Escape') {
+        setMenu(null);
+        setSelecionado(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selecionado, aoExcluir, aoAdicionarFilho, aoAdicionarIrma]);
 
   const alternar = useCallback((id: string) => {
     setColapsados((s) => {
@@ -324,8 +444,79 @@ function MindmapInterno({
       montarNosEArestas(base, colapsados, cursorId, cores, orientacao, focoId ? null : rotuloRaiz, {
         onToggle: alternar,
         onToggleTarefa: aoToggleTarefa,
+        onRenomear: (id, texto) => {
+          aoRenomear(id, texto);
+          aoFimEdicaoNo();
+        },
+        onEdicao: (v) => {
+          setEmEdicao(v);
+          if (v) setMenu(null); // edição aberta = menu some
+        },
       }),
-    [base, colapsados, cursorId, cores, orientacao, focoId, rotuloRaiz, alternar, aoToggleTarefa],
+    [
+      base,
+      colapsados,
+      cursorId,
+      cores,
+      orientacao,
+      focoId,
+      rotuloRaiz,
+      alternar,
+      aoToggleTarefa,
+      aoRenomear,
+      aoFimEdicaoNo,
+    ],
+  );
+
+  const [alvoDrop, setAlvoDrop] = useState<string | null>(null);
+
+  // posições manuais (nó arrastado fica onde o dono soltou) + flags visuais
+  const nodesFinais = useMemo(
+    () =>
+      nodes.map((n) => {
+        const manual = manuais.get(n.id);
+        const extra: Partial<NoMapa> = {};
+        if (manual) extra.position = manual;
+        const classes: string[] = [];
+        if (n.id === alvoDrop) classes.push('mm-alvo');
+        if (n.id === selecionado) classes.push('mm-sel');
+        if (classes.length) extra.className = classes.join(' ');
+        if (n.id === editarNoId) extra.data = { ...n.data, editarInicial: true };
+        return { ...n, ...extra };
+      }),
+    [nodes, manuais, alvoDrop, editarNoId, selecionado],
+  );
+
+  const [nosEstado, setNosEstado] = useState<NoMapa[]>(nodesFinais);
+  useEffect(() => setNosEstado(nodesFinais), [nodesFinais]);
+
+  const aoSoltarNo = useCallback(
+    (no: NoMapa) => {
+      if (no.id === RAIZ_ID) return;
+      // perto de outro nó (raio 100px) = re-plugar como filho dele
+      let alvo: NoMapa | null = null;
+      let menor = 100;
+      for (const outro of nosEstado) {
+        if (outro.id === no.id) continue;
+        const d = Math.hypot(outro.position.x - no.position.x, outro.position.y - no.position.y);
+        if (d < menor) {
+          menor = d;
+          alvo = outro;
+        }
+      }
+      if (alvo) {
+        setManuais((m) => {
+          const novo = new Map(m);
+          novo.delete(no.id);
+          return novo;
+        });
+        aoReplugar(no.id, alvo.id);
+      } else {
+        // longe de tudo: fica onde soltou (modo manual)
+        setManuais((m) => new Map(m).set(no.id, { ...no.position }));
+      }
+    },
+    [nosEstado, aoReplugar],
   );
 
   // fitView do React Flow devolve uma Promise — rejeição silenciosa (animação
@@ -337,9 +528,22 @@ function MindmapInterno({
     [fitView],
   );
 
+  // Nó recém-criado (filha/irmã): zoom NELE + na mãe, já selecionado em destaque.
+  useEffect(() => {
+    if (!editarNoId) return;
+    if (!nodes.some((n) => n.id === editarNoId)) return;
+    setSelecionado(editarNoId);
+    setMenu(null);
+    const alvo = [{ id: editarNoId }];
+    const pai = pais.get(editarNoId);
+    if (pai) alvo.push({ id: pai });
+    const t = setTimeout(() => enquadrar({ nodes: alvo, duration: 300, padding: 0.5 }), 80);
+    return () => clearTimeout(t);
+  }, [editarNoId, nodes, pais, enquadrar]);
+
   // Modo foco de edição: enquadra o nó atual + pai + filhas, seguindo o cursor.
   useEffect(() => {
-    if (!focoEdicao || !cursorId) return;
+    if (!focoEdicao || !cursorId || editarNoId) return;
     if (!nodes.some((n) => n.id === cursorId)) return; // nó ainda não existe no mapa — não pula
     const alvo = [{ id: cursorId }];
     const pai = pais.get(cursorId);
@@ -347,29 +551,73 @@ function MindmapInterno({
     for (const f of filhos.get(cursorId) ?? []) alvo.push({ id: f });
     const t = setTimeout(() => enquadrar({ nodes: alvo, duration: 300, padding: 0.5 }), 60);
     return () => clearTimeout(t);
-  }, [focoEdicao, cursorId, pais, filhos, nodes, enquadrar]);
+  }, [focoEdicao, cursorId, editarNoId, pais, filhos, nodes, enquadrar]);
 
-  // Sem foco de edição: reenquadra suave a cada mudança de estrutura.
+  // Sem foco de edição: reenquadra suave a cada mudança de estrutura —
+  // exceto quando um nó novo acabou de nascer (o zoom vai pra ele, não pro todo).
   // biome-ignore lint/correctness/useExhaustiveDependencies: reenquadrar depende da contagem, não dos objetos
   useEffect(() => {
-    if (focoEdicao) return;
+    if (focoEdicao || editarNoId) return;
     const t = setTimeout(() => enquadrar({ duration: 350, padding: 0.2 }), 60);
     return () => clearTimeout(t);
-  }, [nodes.length, focoId, orientacao, focoEdicao, enquadrar]);
+  }, [nodes.length, focoId, orientacao, focoEdicao, editarNoId, enquadrar]);
 
   return (
     <div className="mm-wrap">
       <ReactFlow
-        nodes={nodes}
+        nodes={nosEstado}
         edges={edges}
         nodeTypes={tiposDeNo}
         onNodeClick={(_, n) => {
+          if (emEdicao) return;
+          // clique esquerdo: SÓ seleciona (atalhos valem) e mostra a linha no editor
+          setMenu(null);
+          setSelecionado(n.id);
           if (n.id !== RAIZ_ID) aoClicarNo(n.id);
+        }}
+        onNodeContextMenu={(e, n) => {
+          e.preventDefault();
+          if (emEdicao) return; // editando: nada de menu
+          setSelecionado(n.id);
+          const rect = (e.currentTarget as HTMLElement)
+            .closest('.mm-wrap')
+            ?.getBoundingClientRect();
+          setMenu({
+            id: n.id,
+            x: e.clientX - (rect?.left ?? 0),
+            y: e.clientY - (rect?.top ?? 0),
+          });
+        }}
+        onPaneClick={() => {
+          setMenu(null);
+          setSelecionado(null);
+        }}
+        onNodeDoubleClick={() => setMenu(null)}
+        onNodesChange={(mudancas: NodeChange<NoMapa>[]) =>
+          setNosEstado((ns) => applyNodeChanges(mudancas, ns))
+        }
+        onNodeDrag={(_, n) => {
+          // realça a mãe que vai receber o nó se soltar agora
+          let alvo: string | null = null;
+          let menor = 100;
+          for (const outro of nosEstado) {
+            if (outro.id === n.id) continue;
+            const d = Math.hypot(outro.position.x - n.position.x, outro.position.y - n.position.y);
+            if (d < menor) {
+              menor = d;
+              alvo = outro.id;
+            }
+          }
+          setAlvoDrop(alvo);
+        }}
+        onNodeDragStop={(_, n) => {
+          setAlvoDrop(null);
+          aoSoltarNo(n as NoMapa);
         }}
         fitView
         proOptions={{ hideAttribution: true }}
         minZoom={0.1}
-        nodesDraggable={false}
+        nodesDraggable
         nodesConnectable={false}
         defaultEdgeOptions={{ type: 'bezier' }}
       >
@@ -381,6 +629,94 @@ function MindmapInterno({
         />
         <Controls showInteractive={false} position="bottom-right" />
       </ReactFlow>
+
+      {emEdicao ? (
+        <div className="mm-dica">Enter: salvar · Shift+Enter: pular linha · Esc: cancelar</div>
+      ) : selecionado && selecionado !== RAIZ_ID ? (
+        <div className="mm-dica">
+          arraste: mudar de mãe · Enter: filha · Shift+Enter: irmã · Delete: excluir
+        </div>
+      ) : null}
+
+      {menu && (
+        <div className="mm-menu" style={{ left: menu.x, top: menu.y }}>
+          <button
+            type="button"
+            onClick={() => {
+              aoAdicionarFilho(menu.id);
+              setMenu(null);
+            }}
+          >
+            ＋ Adicionar filha <kbd>Enter</kbd>
+          </button>
+          {menu.id !== RAIZ_ID && (
+            <button
+              type="button"
+              onClick={() => {
+                aoAdicionarIrma(menu.id);
+                setMenu(null);
+              }}
+            >
+              ⁙ Adicionar irmã <kbd>Shift+Enter</kbd>
+            </button>
+          )}
+          {menu.id !== RAIZ_ID && (
+            <button
+              type="button"
+              onClick={() => {
+                aoExcluir(menu.id);
+                setMenu(null);
+              }}
+            >
+              🗑 Excluir nó <kbd>Delete</kbd>
+            </button>
+          )}
+          {manuais.has(menu.id) && (
+            <button
+              type="button"
+              onClick={() => {
+                setManuais((m) => {
+                  const novo = new Map(m);
+                  novo.delete(menu.id);
+                  return novo;
+                });
+                setMenu(null);
+              }}
+            >
+              ↩ Este nó de volta ao lugar
+            </button>
+          )}
+          {(() => {
+            // reorganiza SÓ as filhas (descendentes) deste nó que foram movidas na mão
+            const descendentes: string[] = [];
+            const fila = [...(filhos.get(menu.id) ?? [])];
+            while (fila.length) {
+              const f = fila.pop();
+              if (!f) break;
+              descendentes.push(f);
+              fila.push(...(filhos.get(f) ?? []));
+            }
+            const movidas = descendentes.filter((d) => manuais.has(d));
+            if (movidas.length === 0) return null;
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setManuais((m) => {
+                    const novo = new Map(m);
+                    for (const d of movidas) novo.delete(d);
+                    return novo;
+                  });
+                  setMenu(null);
+                }}
+              >
+                ↺ Reorganizar as filhas deste nó ({movidas.length} movida
+                {movidas.length > 1 ? 's' : ''})
+              </button>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }

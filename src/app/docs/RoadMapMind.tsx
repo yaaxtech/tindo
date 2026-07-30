@@ -14,7 +14,7 @@ import { pt } from '@blocknote/core/locales';
 import { useCreateBlockNote } from '@blocknote/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
-import Mindmap, { CORES_NIVEL } from './Mindmap';
+import Mindmap, { CORES_NIVEL, extrairTexto, RAIZ_ID } from './Mindmap';
 import { useDocStore } from './useDocStore';
 
 type Status = 'carregando' | 'ok' | 'salvando' | 'erro';
@@ -75,6 +75,20 @@ function contarTarefas(blocks: Block[]): { total: number; feitas: number } {
   return { total, feitas };
 }
 
+// clona um bloco PRESERVANDO os ids (o id do bloco = id da linha no banco;
+// mover não pode trocar identidade — contrato da Fase 3)
+function clonarComIds(b: Block): PartialBlock {
+  return {
+    id: b.id,
+    // biome-ignore lint/suspicious/noExplicitAny: idem
+    type: b.type as any,
+    // biome-ignore lint/suspicious/noExplicitAny: idem
+    props: b.props as any,
+    content: b.content as PartialBlock['content'],
+    children: (b.children ?? []).map(clonarComIds),
+  };
+}
+
 // rgba(r, g, b, a) → #rrggbb (pro input type=color do painel 🎨)
 function rgbaParaHex(rgba: string): string {
   const m = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -95,6 +109,13 @@ export default function RoadMapMind() {
   const [aviso, setAviso] = useState<{ blockId: string; abertas: number } | null>(null);
   const [painelCores, setPainelCores] = useState(false);
   const [doc, setDoc] = useState<Block[]>([]);
+  const [editarNoId, setEditarNoId] = useState<string | null>(null); // nó novo abre pra nomear
+  const [confirmarExclusao, setConfirmarExclusao] = useState<{
+    id: string;
+    texto: string;
+    dentro: number;
+  } | null>(null);
+  const [erroMapa, setErroMapa] = useState<string | null>(null);
   const carregado = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checksRef = useRef<Map<string, boolean>>(new Map());
@@ -296,6 +317,134 @@ export default function RoadMapMind() {
     [editor],
   );
 
+  // toast de erro do mapa some sozinho
+  useEffect(() => {
+    if (!erroMapa) return;
+    const t = setTimeout(() => setErroMapa(null), 3000);
+    return () => clearTimeout(t);
+  }, [erroMapa]);
+
+  // ---- edição PELO MAPA (Fatia 5): tudo muta o editor (ids preservados) e
+  // ---- persiste pelo autosave do onChange — escrita única via /api/docs.
+
+  // construir a partir do mapa: cria uma filha e já abre pra nomear
+  const aoAdicionarFilho = useCallback(
+    (id: string) => {
+      if (id === RAIZ_ID) {
+        // filha da raiz = linha nova de primeiro nível no fim do documento
+        const ultimo = editor.document[editor.document.length - 1];
+        if (!ultimo) return;
+        const inseridos = editor.insertBlocks(
+          [{ type: 'bulletListItem', content: 'nova linha' }],
+          ultimo,
+          'after',
+        );
+        if (inseridos[0]) setEditarNoId(inseridos[0].id);
+        return;
+      }
+      const block = acharBloco(editor.document, id);
+      if (!block) return;
+      const filhosAtuais = (block.children ?? []) as PartialBlock[];
+      editor.updateBlock(block, {
+        children: [...filhosAtuais, { type: 'bulletListItem', content: 'nova linha' }],
+      });
+      const atualizado = acharBloco(editor.document, id);
+      const novo = atualizado?.children?.[atualizado.children.length - 1];
+      if (novo) {
+        editor.setTextCursorPosition(novo.id, 'end');
+        setCursorId(novo.id);
+        setEditarNoId(novo.id);
+        document
+          .querySelector(`[data-id="${novo.id}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+    [editor, setCursorId],
+  );
+
+  // irmã: linha nova no MESMO nível, logo depois do nó
+  const aoAdicionarIrma = useCallback(
+    (id: string) => {
+      if (id === RAIZ_ID) return;
+      const block = acharBloco(editor.document, id);
+      if (!block) return;
+      const inseridos = editor.insertBlocks(
+        [{ type: 'bulletListItem', content: 'nova linha' }],
+        block,
+        'after',
+      );
+      const novo = inseridos[0];
+      if (novo) {
+        editor.setTextCursorPosition(novo.id, 'end');
+        setCursorId(novo.id);
+        setEditarNoId(novo.id);
+      }
+    },
+    [editor, setCursorId],
+  );
+
+  // excluir a partir do mapa (com confirmação quando leva descendentes junto)
+  const executarExclusao = useCallback(
+    (id: string) => {
+      const block = acharBloco(editor.document, id);
+      if (!block) return;
+      editor.removeBlocks([id]);
+    },
+    [editor],
+  );
+
+  const aoExcluir = useCallback(
+    (id: string) => {
+      const block = acharBloco(editor.document, id);
+      if (!block) return;
+      const dentro = (block.children ?? []).length;
+      if (dentro > 0) {
+        setConfirmarExclusao({ id, texto: extrairTexto(block), dentro });
+        return;
+      }
+      executarExclusao(id);
+    },
+    [editor, executarExclusao],
+  );
+
+  const aoRenomear = useCallback(
+    (id: string, texto: string) => {
+      const block = acharBloco(editor.document, id);
+      if (!block || texto.trim() === '' || texto === extrairTexto(block)) return;
+      editor.updateBlock(block, { content: texto });
+    },
+    [editor],
+  );
+
+  // arrastar nó no mapa e soltar perto de outro = vira filho dele (id preservado)
+  const aoReplugar = useCallback(
+    (id: string, novoPaiId: string) => {
+      if (id === novoPaiId || id === RAIZ_ID) return;
+      const bloco = acharBloco(editor.document, id);
+      if (!bloco) return;
+      if (novoPaiId !== RAIZ_ID && acharBloco([bloco], novoPaiId)) {
+        setErroMapa('Não dá para mover um item para dentro dele mesmo.');
+        return;
+      }
+      const copia = clonarComIds(bloco);
+      if (novoPaiId === RAIZ_ID) {
+        // virar item de primeiro nível: vai pro fim do documento
+        editor.removeBlocks([id]);
+        const ultimo = editor.document[editor.document.length - 1];
+        if (!ultimo) return;
+        editor.insertBlocks([copia], ultimo, 'after');
+        return;
+      }
+      editor.removeBlocks([id]);
+      const novoPai = acharBloco(editor.document, novoPaiId);
+      if (!novoPai) return;
+      editor.updateBlock(novoPai, {
+        children: [...((novoPai.children ?? []) as PartialBlock[]), copia],
+      });
+    },
+    [editor],
+  );
+
   // divisor arrastável (modo lado a lado)
   useEffect(() => {
     const mover = (e: MouseEvent) => {
@@ -432,7 +581,6 @@ export default function RoadMapMind() {
             className="rmm-painel-editor"
             style={modo === 'split' ? { width: `${larguraEditor}%` } : { width: '100%' }}
           >
-            {/* biome-ignore lint/a11y/useKeyWithClickEvents: captura de clique no marcador (dobrar) */}
             <main
               className={`rmm-editor ${modoNumeros ? 'rmm-numeros' : ''}`}
               onClickCapture={aoClicarNoDoc}
@@ -485,12 +633,53 @@ export default function RoadMapMind() {
               focoEdicao={focoEdicao}
               orientacao={orientacao}
               rotuloRaiz={titulo}
+              editarNoId={editarNoId}
+              aoFimEdicaoNo={() => setEditarNoId(null)}
               aoClicarNo={aoClicarNo}
               aoToggleTarefa={aoToggleTarefa}
+              aoAdicionarFilho={aoAdicionarFilho}
+              aoAdicionarIrma={aoAdicionarIrma}
+              aoExcluir={aoExcluir}
+              aoRenomear={aoRenomear}
+              aoReplugar={aoReplugar}
             />
           </section>
         )}
       </div>
+
+      {erroMapa && <div className="rmm-toast">{erroMapa}</div>}
+
+      {confirmarExclusao && (
+        // biome-ignore lint/a11y/useSemanticElements: modal custom com backdrop próprio (sem <dialog> nativo)
+        <div className="rmm-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="rmm-modal">
+            <h3>Excluir “{confirmarExclusao.texto}”?</h3>
+            <p>
+              Este item leva junto {confirmarExclusao.dentro} item
+              {confirmarExclusao.dentro > 1 ? 's' : ''} de dentro dele.
+            </p>
+            <div className="rmm-modal-actions">
+              <button
+                type="button"
+                className="rmm-btn-secundario"
+                onClick={() => setConfirmarExclusao(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="rmm-btn-primario rmm-btn-perigo"
+                onClick={() => {
+                  executarExclusao(confirmarExclusao.id);
+                  setConfirmarExclusao(null);
+                }}
+              >
+                Excluir tudo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {aviso && (
         // biome-ignore lint/a11y/useSemanticElements: modal custom com backdrop próprio (sem <dialog> nativo)
