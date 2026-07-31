@@ -33,8 +33,9 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // Por enquanto, só rehidrata a sessão (não bloqueia rotas).
-  await supabase.auth.getUser();
+  // Por enquanto, só reidrata e valida a sessão (não bloqueia rotas).
+  // O enforcement entra por domínio nos próximos PRs do plano de auth.
+  await supabase.auth.getClaims();
 
   return response;
 }
