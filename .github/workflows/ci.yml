@@ -1,15 +1,14 @@
-name: Deploy to Cloudflare Pages
+name: CI
+
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  ci:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
@@ -18,16 +17,14 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test --run
-      - run: bun run pages:build
+      # Só valida que o build de produção (mesmo comando que a integração
+      # nativa do Cloudflare roda: bun run cf:build) passa — o deploy em
+      # si acontece sozinho, disparado pelo próprio Cloudflare a cada push
+      # no main (ver "Build" nas Configurações do Worker "tindo" no painel
+      # Cloudflare), sem depender deste workflow.
+      - run: bun run cf:build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           # O app lê NEXT_PUBLIC_SUPABASE_ANON_KEY (src/lib/supabase/client.ts);
           # o secret SUPABASE_ANON_KEY existe no repo, mas está vazio.
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      - uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: tindo-6qy
-          directory: .vercel/output/static
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

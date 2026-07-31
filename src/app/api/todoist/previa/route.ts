@@ -1,5 +1,3 @@
-export const runtime = 'edge';
-
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { TodoistClient, todoistColorHex } from '@/lib/todoist/client';
 import { NextResponse } from 'next/server';

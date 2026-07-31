@@ -4,8 +4,6 @@
  * Calcula novos pesos, aplica, dispara recálculo batch e registra em calibracoes.
  */
 
-export const runtime = 'edge';
-
 import { calcularNovosPesos } from '@/lib/recalibracao/correlacao';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { aplicarNovosPesos, registrarCalibracao } from '@/services/calibracao';

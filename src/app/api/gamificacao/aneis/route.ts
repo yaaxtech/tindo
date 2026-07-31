@@ -1,5 +1,3 @@
-export const runtime = 'edge';
-
 import { type DiaAtividade, calcularAneis } from '@/lib/gamificacao/aneis';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
