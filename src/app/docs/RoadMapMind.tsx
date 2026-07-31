@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
 import MenuDocumentos from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
+import { montarHtmlPdf } from './pdf-export';
 import { useDocStore } from './useDocStore';
 
 type Status = 'carregando' | 'ok' | 'salvando' | 'erro';
@@ -741,7 +742,7 @@ export default function RoadMapMind() {
   // tem uma pegadinha: com a opção 'noopener' o navegador SEMPRE retorna
   // null mesmo quando abre com sucesso, então dava falso positivo de
   // "bloqueado" mesmo com pop-ups já permitidos).
-  const imprimirViaIframe = useCallback((corpoHtml: string) => {
+  const imprimirViaIframe = useCallback(async (corpoHtml: string) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -766,32 +767,47 @@ export default function RoadMapMind() {
     const win = iframe.contentWindow;
     win?.addEventListener('afterprint', remover);
     setTimeout(remover, 60000); // rede de segurança se 'afterprint' não disparar
-    // dá um instante pro layout do iframe assentar antes de mandar imprimir
-    setTimeout(() => {
-      win?.focus();
-      win?.print();
-    }, 150);
+
+    // A prévia era aberta antes de o PNG do mapa terminar de decodificar,
+    // gerando uma folha branca. Espera imagens, fontes e duas pinturas do
+    // iframe antes de acionar a janela nativa de impressão.
+    const imagens = [...doc.images];
+    await Promise.race([
+      Promise.all(
+        imagens.map(async (imagem) => {
+          if (!imagem.complete) {
+            await new Promise<void>((resolver) => {
+              imagem.addEventListener('load', () => resolver(), { once: true });
+              imagem.addEventListener('error', () => resolver(), { once: true });
+            });
+          }
+          await imagem.decode?.().catch(() => {});
+        }),
+      ),
+      new Promise<void>((resolver) => setTimeout(resolver, 5000)),
+    ]);
+    await doc.fonts?.ready;
+    if (win) {
+      await new Promise<void>((resolver) =>
+        win.requestAnimationFrame(() => win.requestAnimationFrame(() => resolver())),
+      );
+    }
+    win?.focus();
+    win?.print();
   }, []);
 
   // exporta o DOCUMENTO (ou só a subárvore em foco) como PDF via impressão
   const exportarDocumentoPdf = useCallback(async () => {
-    const blocos = focoBloco ? [focoBloco] : editor.document;
-    const html = await editor.blocksToHTMLLossy(blocos as PartialBlock[]);
+    const blocos = focoBloco ? (focoBloco.children ?? []) : editor.document;
     const tituloDoc = focoTexto ?? titulo;
-    imprimirViaIframe(
-      `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloDoc}</title>
-<style>
-  body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1b222c; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.55; }
-  h1, h2, h3 { letter-spacing: -0.01em; }
-  ul, ol { padding-left: 1.4em; }
-  li { margin: 4px 0; }
-  input[type="checkbox"] { margin-right: 6px; }
-  a { color: #198b74; }
-  @page { margin: 18mm 16mm; }
-</style></head>
-<body><h1>${tituloDoc}</h1>${html}</body></html>`,
+    await imprimirViaIframe(
+      montarHtmlPdf({
+        titulo: tituloDoc,
+        blocos,
+        espelhoIds: new Set(espelhos.keys()),
+      }),
     );
-  }, [editor, focoBloco, focoTexto, titulo, imprimirViaIframe]);
+  }, [editor.document, espelhos, focoBloco, focoTexto, titulo, imprimirViaIframe]);
 
   // pede a imagem pro Mindmap (via ref) e imprime numa página paisagem
   const mindmapRef = useRef<MindmapHandle>(null);
@@ -799,20 +815,30 @@ export default function RoadMapMind() {
     if (!mindmapRef.current) return;
     try {
       const dataUrl = await mindmapRef.current.exportarComoPng();
-      const tituloMapa = `${focoTexto ?? titulo} — mapa mental`;
-      imprimirViaIframe(
-        `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloMapa}</title>
-<style>
-  body { margin: 0; padding: 16px; display: flex; justify-content: center; }
-  img { max-width: 100%; height: auto; }
-  @page { size: landscape; margin: 10mm; }
-</style></head>
-<body><img src="${dataUrl}" alt="${tituloMapa}" /></body></html>`,
-      );
+      await imprimirViaIframe(montarHtmlPdf({ titulo: focoTexto ?? titulo, mapaDataUrl: dataUrl }));
     } catch (e) {
       setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar o mapa.');
     }
   }, [focoTexto, titulo, imprimirViaIframe]);
+
+  const exportarTudoPdf = useCallback(async () => {
+    if (!mindmapRef.current) return;
+    try {
+      const dataUrl = await mindmapRef.current.exportarComoPng();
+      const tituloDoc = focoTexto ?? titulo;
+      const blocos = focoBloco ? (focoBloco.children ?? []) : editor.document;
+      await imprimirViaIframe(
+        montarHtmlPdf({
+          titulo: tituloDoc,
+          blocos,
+          espelhoIds: new Set(espelhos.keys()),
+          mapaDataUrl: dataUrl,
+        }),
+      );
+    } catch (e) {
+      setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar documento e mapa.');
+    }
+  }, [editor.document, espelhos, focoBloco, focoTexto, titulo, imprimirViaIframe]);
 
   // menu único "🖨 PDF" na topbar — escolher Documento ou Mapa mental
   const [menuPdfAberto, setMenuPdfAberto] = useState(false);
@@ -957,6 +983,15 @@ export default function RoadMapMind() {
                     }}
                   >
                     🗺️ Mapa mental
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuPdfAberto(false);
+                      void exportarTudoPdf();
+                    }}
+                  >
+                    ◫ Documento + mapa
                   </button>
                 </div>
               </>
@@ -1141,14 +1176,14 @@ export default function RoadMapMind() {
         </div>
       </div>
 
-      {/* espelhos: marcador ↻ nas linhas-reflexo do editor */}
+      {/* espelhos: ⎇ comunica ramificação/múltiplas mães sem parecer refresh */}
       {espelhos.size > 0 && (
         <style>
           {[...espelhos.keys()]
             .map(
               (id) => `
               .bn-block-outer[data-id="${id}"] > .bn-block > .bn-block-content::before {
-                content: '↻' !important; color: #2caf93 !important; font-weight: 700;
+                content: '⎇' !important; color: #2caf93 !important; font-weight: 700;
               }`,
             )
             .join('\n')}
