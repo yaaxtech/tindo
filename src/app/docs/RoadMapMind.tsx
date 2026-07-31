@@ -735,6 +735,62 @@ export default function RoadMapMind() {
   const focoBloco = focoId ? acharBloco(doc, focoId) : null;
   const focoTexto = focoBloco ? extrairTexto(focoBloco) : null;
 
+  // abre uma janela em branco, injeta o HTML e dispara "Salvar como PDF" do
+  // navegador assim que tudo carregar — sem depender de libs de geração de
+  // PDF (o print nativo lida com paginação/fontes/qualidade melhor)
+  const imprimirJanela = useCallback((tituloArquivo: string, corpoHtml: string) => {
+    const w = window.open('', '_blank', 'noopener,noreferrer');
+    if (!w) {
+      setErroMapa('O navegador bloqueou a janela de impressão. Permita pop-ups para exportar.');
+      return;
+    }
+    w.document.title = tituloArquivo;
+    w.document.write(corpoHtml);
+    w.document.close();
+    w.addEventListener('load', () => {
+      w.print();
+    });
+  }, []);
+
+  // exporta o DOCUMENTO (ou só a subárvore em foco) como PDF via impressão
+  const exportarDocumentoPdf = useCallback(async () => {
+    const blocos = focoBloco ? [focoBloco] : editor.document;
+    const html = await editor.blocksToHTMLLossy(blocos as PartialBlock[]);
+    const tituloDoc = focoTexto ?? titulo;
+    imprimirJanela(
+      tituloDoc,
+      `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloDoc}</title>
+<style>
+  body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1b222c; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.55; }
+  h1, h2, h3 { letter-spacing: -0.01em; }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 4px 0; }
+  input[type="checkbox"] { margin-right: 6px; }
+  a { color: #198b74; }
+  @page { margin: 18mm 16mm; }
+</style></head>
+<body><h1>${tituloDoc}</h1>${html}</body></html>`,
+    );
+  }, [editor, focoBloco, focoTexto, titulo, imprimirJanela]);
+
+  // recebe o PNG do Mindmap (Fatia PDF) e imprime numa janela própria, paisagem
+  const exportarMapaPdf = useCallback(
+    (dataUrl: string) => {
+      const tituloMapa = `${focoTexto ?? titulo} — mapa mental`;
+      imprimirJanela(
+        tituloMapa,
+        `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloMapa}</title>
+<style>
+  body { margin: 0; padding: 16px; display: flex; justify-content: center; }
+  img { max-width: 100%; height: auto; }
+  @page { size: landscape; margin: 10mm; }
+</style></head>
+<body><img src="${dataUrl}" alt="${tituloMapa}" /></body></html>`,
+      );
+    },
+    [focoTexto, titulo, imprimirJanela],
+  );
+
   const cores = coresCustom ?? CORES_NIVEL;
   // cores custom viram variáveis CSS das guias do editor
   const estiloCores = coresCustom
@@ -838,6 +894,13 @@ export default function RoadMapMind() {
           </button>
           <button type="button" onClick={() => void colarMarkdown()}>
             ↧ Colar
+          </button>
+          <button
+            type="button"
+            title="Exportar o documento como PDF (abre a impressão do navegador)"
+            onClick={() => void exportarDocumentoPdf()}
+          >
+            🖨 PDF
           </button>
           <button
             type="button"
@@ -1011,6 +1074,8 @@ export default function RoadMapMind() {
                 aoReplugar={aoReplugar}
                 aoEspelhar={aoEspelhar}
                 espelhos={espelhos}
+                aoExportarImagem={exportarMapaPdf}
+                aoErroExportar={setErroMapa}
               />
             </section>
           )}
