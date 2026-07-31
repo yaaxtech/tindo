@@ -19,9 +19,12 @@ import {
   ReactFlow,
   ReactFlowProvider,
   applyNodeChanges,
+  getNodesBounds,
+  getViewportForBounds,
   useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { toPng } from 'html-to-image';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Orientacao } from './useDocStore';
 
@@ -383,6 +386,10 @@ export type MindmapProps = {
   aoReplugar: (id: string, novoPaiId: string) => void;
   aoEspelhar: (id: string, novaMaeId: string) => void;
   espelhos: Map<string, string>; // espelhoBlockId -> linhaOriginalId
+  /** Chamado com um PNG (data URL) do mapa inteiro, pronto pra imprimir/exportar. */
+  aoExportarImagem?: (dataUrl: string) => void;
+  /** Chamado quando a exportação falha (ex.: tempo esgotado). */
+  aoErroExportar?: (mensagem: string) => void;
 };
 
 type MenuCtx = { id: string; x: number; y: number };
@@ -406,13 +413,61 @@ function MindmapInterno({
   aoReplugar,
   aoEspelhar,
   espelhos,
+  aoExportarImagem,
+  aoErroExportar,
 }: MindmapProps) {
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const [manuais, setManuais] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [menu, setMenu] = useState<MenuCtx | null>(null);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [emEdicao, setEmEdicao] = useState(false);
-  const { fitView } = useReactFlow();
+  const { fitView, getNodes } = useReactFlow();
+  const [exportando, setExportando] = useState(false);
+
+  // Captura o mapa INTEIRO (não só a área visível) como PNG — padrão oficial
+  // do React Flow: recalcula o enquadramento pelos bounds de todos os nós
+  // (getNodesBounds/getViewportForBounds) e rasteriza só o viewport nesse
+  // enquadramento, sem afetar o zoom/pan que o usuário está vendo na tela.
+  const exportarImagem = useCallback(() => {
+    if (!aoExportarImagem) return;
+    const nos = getNodes();
+    if (nos.length === 0) return;
+    setExportando(true);
+    const bounds = getNodesBounds(nos);
+    const PADDING = 48;
+    const largura = Math.max(600, Math.round(bounds.width + PADDING * 2));
+    const altura = Math.max(400, Math.round(bounds.height + PADDING * 2));
+    const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, PADDING / 2);
+    const el = document.querySelector('.mm-wrap .react-flow__viewport') as HTMLElement | null;
+    if (!el) {
+      setExportando(false);
+      return;
+    }
+    // timeout de segurança: captura de imagem nunca deve travar o botão pra
+    // sempre (a lib percorre todas as folhas de estilo da página, e alguma
+    // fonte/CSS remoto lento trava a promise sem nunca resolver nem rejeitar)
+    const comTimeout = Promise.race([
+      toPng(el, {
+        backgroundColor: '#ffffff',
+        width: largura,
+        height: altura,
+        style: {
+          width: `${largura}px`,
+          height: `${altura}px`,
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        },
+      }),
+      new Promise<never>((_, rejeitar) =>
+        setTimeout(() => rejeitar(new Error('Tempo esgotado ao gerar a imagem do mapa.')), 15000),
+      ),
+    ]);
+    comTimeout
+      .then((dataUrl) => aoExportarImagem(dataUrl))
+      .catch((erro: unknown) => {
+        aoErroExportar?.(erro instanceof Error ? erro.message : 'Falha ao exportar o mapa.');
+      })
+      .finally(() => setExportando(false));
+  }, [aoExportarImagem, aoErroExportar, getNodes]);
 
   // atalhos com nó selecionado: Delete exclui · Enter cria filha · Shift+Enter cria irmã
   useEffect(() => {
@@ -662,6 +717,19 @@ function MindmapInterno({
         />
         <Controls showInteractive={false} position="bottom-right" />
       </ReactFlow>
+
+      {aoExportarImagem && (
+        <button
+          type="button"
+          className="mm-exportar"
+          title="Exportar mapa como PDF"
+          aria-label="Exportar mapa como PDF"
+          disabled={exportando}
+          onClick={exportarImagem}
+        >
+          {exportando ? '…' : '🖨 PDF'}
+        </button>
+      )}
 
       {emEdicao ? (
         <div className="mm-dica">Enter: salvar · Shift+Enter: pular linha · Esc: cancelar</div>

@@ -1058,3 +1058,31 @@
   color: #2caf93;
   font-weight: 700;
 }
+
+/* botão de exportar o mapa como PDF (canto superior direito do mapa) */
+.mm-exportar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #2a3340;
+  background: rgba(18, 24, 32, 0.9);
+  color: #e8edf2;
+  cursor: pointer;
+}
+.mm-exportar:hover {
+  border-color: #2caf93;
+  color: #2caf93;
+}
+.mm-exportar:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.rmm-tema-light .mm-exportar {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #d4dae1;
+  color: #1b222c;
+}
