@@ -1058,10 +1058,16 @@
   color: #2caf93;
 }
 
-/* menu único "🖨 PDF" da topbar — escolher Documento ou Mapa mental */
+/* menu único de PDF da topbar — ícones seguem o restante do app (Lucide) */
 .rmm-pdf-wrap {
   position: relative;
   display: inline-flex;
+}
+.rmm-pdf-wrap > button,
+.rmm-pdf-menu button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 .rmm-actions .rmm-pdf-fundo {
   all: unset;

@@ -18,12 +18,13 @@ import type { DocLinha } from '@/types/doc';
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { pt } from '@blocknote/core/locales';
 import { useCreateBlockNote } from '@blocknote/react';
+import { FileText, Files, Network, Printer } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
 import MenuDocumentos from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
-import { montarHtmlPdf } from './pdf-export';
+import { capturarEstilosDaPagina, montarHtmlPdf, serializarDocumentoParaPdf } from './pdf-export';
 import { useDocStore } from './useDocStore';
 
 type Status = 'carregando' | 'ok' | 'salvando' | 'erro';
@@ -91,6 +92,13 @@ function snapshotTextos(blocks: Block[], acc: Map<string, string>): Map<string, 
     snapshotTextos(b.children ?? [], acc);
   }
   return acc;
+}
+
+async function aguardarInterface(atraso = 0): Promise<void> {
+  if (atraso > 0) await new Promise<void>((resolver) => setTimeout(resolver, atraso));
+  await new Promise<void>((resolver) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolver())),
+  );
 }
 
 // clona um bloco PRESERVANDO os ids (o id do bloco = id da linha no banco;
@@ -181,6 +189,7 @@ export default function RoadMapMind() {
   const checksRef = useRef<Map<string, boolean>>(new Map());
   const revertendo = useRef(false);
   const arrastando = useRef(false);
+  const editorPdfRef = useRef<HTMLElement>(null);
 
   const modo = useDocStore((s) => s.modo);
   const setModo = useDocStore((s) => s.setModo);
@@ -745,10 +754,10 @@ export default function RoadMapMind() {
   const imprimirViaIframe = useCallback(async (corpoHtml: string) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = '1123px';
+    iframe.style.height = '794px';
     iframe.style.border = '0';
     iframe.setAttribute('aria-hidden', 'true');
     document.body.appendChild(iframe);
@@ -771,10 +780,19 @@ export default function RoadMapMind() {
     // A prévia era aberta antes de o PNG do mapa terminar de decodificar,
     // gerando uma folha branca. Espera imagens, fontes e duas pinturas do
     // iframe antes de acionar a janela nativa de impressão.
+    const folhasEstilo = [...doc.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')];
     const imagens = [...doc.images];
     await Promise.race([
-      Promise.all(
-        imagens.map(async (imagem) => {
+      Promise.all([
+        ...folhasEstilo.map(
+          (folha) =>
+            new Promise<void>((resolver) => {
+              if (folha.sheet) return resolver();
+              folha.addEventListener('load', () => resolver(), { once: true });
+              folha.addEventListener('error', () => resolver(), { once: true });
+            }),
+        ),
+        ...imagens.map(async (imagem) => {
           if (!imagem.complete) {
             await new Promise<void>((resolver) => {
               imagem.addEventListener('load', () => resolver(), { once: true });
@@ -783,7 +801,7 @@ export default function RoadMapMind() {
           }
           await imagem.decode?.().catch(() => {});
         }),
-      ),
+      ]),
       new Promise<void>((resolver) => setTimeout(resolver, 5000)),
     ]);
     await doc.fonts?.ready;
@@ -796,51 +814,103 @@ export default function RoadMapMind() {
     win?.print();
   }, []);
 
-  // exporta o DOCUMENTO (ou só a subárvore em foco) como PDF via impressão
+  const capturarDocumentoAtual = useCallback(() => {
+    const elemento = editorPdfRef.current;
+    if (!elemento) throw new Error('Documento não encontrado.');
+    const raiz = elemento.closest('.rmm-root');
+    const classes = new Set((raiz?.className ?? 'rmm-root').split(/\s+/).filter(Boolean));
+    classes.delete('rmm-tema-dark');
+    classes.delete('rmm-tema-light');
+    classes.add('rmm-tema-light');
+    return {
+      documentoHtml: serializarDocumentoParaPdf(elemento),
+      estilosDocumento: capturarEstilosDaPagina(),
+      classesRaiz: [...classes].join(' '),
+    };
+  }, []);
+
+  // exporta o DOCUMENTO clonando o próprio editor já renderizado — assim
+  // marcadores, checkboxes, recuos, cores e tipografia são exatamente os da tela.
   const exportarDocumentoPdf = useCallback(async () => {
-    const blocos = focoBloco ? (focoBloco.children ?? []) : editor.document;
-    const tituloDoc = focoTexto ?? titulo;
-    await imprimirViaIframe(
-      montarHtmlPdf({
-        titulo: tituloDoc,
-        blocos,
-        espelhoIds: new Set(espelhos.keys()),
-      }),
-    );
-  }, [editor.document, espelhos, focoBloco, focoTexto, titulo, imprimirViaIframe]);
+    const modoAntes = modo;
+    try {
+      if (modoAntes === 'mapa') {
+        setModo('doc');
+        await aguardarInterface(120);
+      }
+      await imprimirViaIframe(
+        montarHtmlPdf({ titulo: focoTexto ?? titulo, ...capturarDocumentoAtual() }),
+      );
+    } catch (e) {
+      setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar o documento.');
+    } finally {
+      if (modoAntes === 'mapa') setModo(modoAntes);
+    }
+  }, [modo, setModo, focoTexto, titulo, capturarDocumentoAtual, imprimirViaIframe]);
 
   // pede a imagem pro Mindmap (via ref) e imprime numa página paisagem
   const mindmapRef = useRef<MindmapHandle>(null);
   const exportarMapaPdf = useCallback(async () => {
-    if (!mindmapRef.current) return;
+    const modoAntes = modo;
     try {
-      const dataUrl = await mindmapRef.current.exportarComoPng();
-      await imprimirViaIframe(montarHtmlPdf({ titulo: focoTexto ?? titulo, mapaDataUrl: dataUrl }));
-    } catch (e) {
-      setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar o mapa.');
-    }
-  }, [focoTexto, titulo, imprimirViaIframe]);
-
-  const exportarTudoPdf = useCallback(async () => {
-    if (!mindmapRef.current) return;
-    try {
-      const dataUrl = await mindmapRef.current.exportarComoPng();
-      const tituloDoc = focoTexto ?? titulo;
-      const blocos = focoBloco ? (focoBloco.children ?? []) : editor.document;
+      if (modoAntes === 'doc') {
+        setModo('mapa');
+        await aguardarInterface(450);
+      }
+      if (!mindmapRef.current) throw new Error('Mapa não encontrado.');
+      const mapa = await mindmapRef.current.exportarComoPng();
       await imprimirViaIframe(
         montarHtmlPdf({
-          titulo: tituloDoc,
-          blocos,
-          espelhoIds: new Set(espelhos.keys()),
-          mapaDataUrl: dataUrl,
+          titulo: focoTexto ?? titulo,
+          mapaDataUrl: mapa.dataUrl,
+          fundoMapa: mapa.fundo,
+        }),
+      );
+    } catch (e) {
+      setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar o mapa.');
+    } finally {
+      if (modoAntes === 'doc') setModo(modoAntes);
+    }
+  }, [modo, setModo, focoTexto, titulo, imprimirViaIframe]);
+
+  const exportarTudoPdf = useCallback(async () => {
+    const modoAntes = modo;
+    try {
+      let documento: ReturnType<typeof capturarDocumentoAtual>;
+      let mapa: Awaited<ReturnType<MindmapHandle['exportarComoPng']>>;
+
+      if (modoAntes === 'mapa') {
+        if (!mindmapRef.current) throw new Error('Mapa não encontrado.');
+        mapa = await mindmapRef.current.exportarComoPng();
+        setModo('doc');
+        await aguardarInterface(120);
+        documento = capturarDocumentoAtual();
+      } else {
+        documento = capturarDocumentoAtual();
+        if (modoAntes === 'doc') {
+          setModo('mapa');
+          await aguardarInterface(450);
+        }
+        if (!mindmapRef.current) throw new Error('Mapa não encontrado.');
+        mapa = await mindmapRef.current.exportarComoPng();
+      }
+
+      await imprimirViaIframe(
+        montarHtmlPdf({
+          titulo: focoTexto ?? titulo,
+          ...documento,
+          mapaDataUrl: mapa.dataUrl,
+          fundoMapa: mapa.fundo,
         }),
       );
     } catch (e) {
       setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar documento e mapa.');
+    } finally {
+      if (modoAntes !== 'split') setModo(modoAntes);
     }
-  }, [editor.document, espelhos, focoBloco, focoTexto, titulo, imprimirViaIframe]);
+  }, [modo, setModo, focoTexto, titulo, capturarDocumentoAtual, imprimirViaIframe]);
 
-  // menu único "🖨 PDF" na topbar — escolher Documento ou Mapa mental
+  // menu único de PDF na topbar — escolher Documento, mapa ou ambos
   const [menuPdfAberto, setMenuPdfAberto] = useState(false);
 
   const cores = coresCustom ?? CORES_NIVEL;
@@ -955,7 +1025,8 @@ export default function RoadMapMind() {
               aria-expanded={menuPdfAberto}
               onClick={() => setMenuPdfAberto((m) => !m)}
             >
-              🖨 PDF
+              <Printer aria-hidden="true" size={14} />
+              PDF
             </button>
             {menuPdfAberto && (
               <>
@@ -973,7 +1044,8 @@ export default function RoadMapMind() {
                       void exportarDocumentoPdf();
                     }}
                   >
-                    📄 Documento
+                    <FileText aria-hidden="true" size={15} />
+                    <span>Documento</span>
                   </button>
                   <button
                     type="button"
@@ -982,7 +1054,8 @@ export default function RoadMapMind() {
                       void exportarMapaPdf();
                     }}
                   >
-                    🗺️ Mapa mental
+                    <Network aria-hidden="true" size={15} />
+                    <span>Mapa mental</span>
                   </button>
                   <button
                     type="button"
@@ -991,7 +1064,8 @@ export default function RoadMapMind() {
                       void exportarTudoPdf();
                     }}
                   >
-                    ◫ Documento + mapa
+                    <Files aria-hidden="true" size={15} />
+                    <span>Documento + mapa</span>
                   </button>
                 </div>
               </>
@@ -1084,6 +1158,7 @@ export default function RoadMapMind() {
               style={modo === 'split' ? { width: `${larguraEditor}%` } : { width: '100%' }}
             >
               <main
+                ref={editorPdfRef}
                 className={`rmm-editor ${modoNumeros ? 'rmm-numeros' : ''}`}
                 onClickCapture={aoClicarNoDoc}
               >
