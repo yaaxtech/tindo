@@ -386,8 +386,15 @@ export type MindmapProps = {
   aoReplugar: (id: string, novoPaiId: string) => void;
   aoEspelhar: (id: string, novaMaeId: string) => void;
   espelhos: Map<string, string>; // espelhoBlockId -> linhaOriginalId
-  /** Chamado com um PNG (data URL) do mapa inteiro, pronto pra imprimir/exportar. */
-  aoExportarImagem?: (dataUrl: string) => void;
+  /**
+   * Abre a janela de impressão SÍNCRONO (chamado no exato instante do
+   * clique, antes de qualquer captura assíncrona) — senão o navegador
+   * bloqueia o popup por não reconhecer mais o gesto do usuário. Retorna
+   * null se o navegador bloqueou mesmo assim.
+   */
+  aoAbrirJanela?: () => Window | null;
+  /** Chamado com um PNG (data URL) do mapa inteiro + a janela já aberta. */
+  aoExportarImagem?: (dataUrl: string, janela: Window) => void;
   /** Chamado quando a exportação falha (ex.: tempo esgotado). */
   aoErroExportar?: (mensagem: string) => void;
 };
@@ -413,6 +420,7 @@ function MindmapInterno({
   aoReplugar,
   aoEspelhar,
   espelhos,
+  aoAbrirJanela,
   aoExportarImagem,
   aoErroExportar,
 }: MindmapProps) {
@@ -430,6 +438,11 @@ function MindmapInterno({
   // enquadramento, sem afetar o zoom/pan que o usuário está vendo na tela.
   const exportarImagem = useCallback(() => {
     if (!aoExportarImagem) return;
+    // abre a janela AGORA, síncrono, ainda dentro do gesto de clique —
+    // se esperar o toPng (assíncrono) terminar pra só então abrir, o
+    // navegador não reconhece mais como ação do usuário e bloqueia o popup
+    const janela = aoAbrirJanela?.() ?? null;
+    if (aoAbrirJanela && !janela) return; // aoAbrirJanela já reportou o erro
     const nos = getNodes();
     if (nos.length === 0) return;
     setExportando(true);
@@ -462,12 +475,20 @@ function MindmapInterno({
       ),
     ]);
     comTimeout
-      .then((dataUrl) => aoExportarImagem(dataUrl))
+      .then((dataUrl) => {
+        if (janela) aoExportarImagem(dataUrl, janela);
+      })
       .catch((erro: unknown) => {
-        aoErroExportar?.(erro instanceof Error ? erro.message : 'Falha ao exportar o mapa.');
+        const msg = erro instanceof Error ? erro.message : 'Falha ao exportar o mapa.';
+        aoErroExportar?.(msg);
+        // a janela já abriu com "Gerando PDF…" — sem isso ela fica presa nessa
+        // mensagem pra sempre se a captura falhar
+        if (janela && !janela.closed) {
+          janela.document.body.textContent = msg;
+        }
       })
       .finally(() => setExportando(false));
-  }, [aoExportarImagem, aoErroExportar, getNodes]);
+  }, [aoAbrirJanela, aoExportarImagem, aoErroExportar, getNodes]);
 
   // atalhos com nó selecionado: Delete exclui · Enter cria filha · Shift+Enter cria irmã
   useEffect(() => {
