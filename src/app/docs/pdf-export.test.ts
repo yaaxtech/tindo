@@ -1,51 +1,38 @@
-import type { Block } from '@blocknote/core';
 import { describe, expect, it } from 'vitest';
-import { montarHtmlPdf, renderizarBlocosParaPdf } from './pdf-export';
-
-const texto = (id: string, valor: string, children: Block[] = []): Block =>
-  ({
-    id,
-    type: 'bulletListItem',
-    props: {},
-    content: [{ type: 'text', text: valor, styles: {} }],
-    children,
-  }) as unknown as Block;
-
-const tarefa = (id: string, valor: string, checked: boolean): Block =>
-  ({
-    id,
-    type: 'checkListItem',
-    props: { checked },
-    content: [{ type: 'text', text: valor, styles: {} }],
-    children: [],
-  }) as unknown as Block;
+import { montarHtmlPdf, serializarDocumentoParaPdf } from './pdf-export';
 
 describe('PDF do RoadMapMind', () => {
-  it('mantém marcador, checkbox e texto na mesma linha e preserva a hierarquia', () => {
-    const html = renderizarBlocosParaPdf([
-      texto('campanha', 'Campanha de Julho', [
-        tarefa('post', 'Post no Instagram', false),
-        tarefa('legenda', 'Escrever legenda', true),
-      ]),
-    ]);
+  it('clona o documento real, preserva checks e desativa a edição', () => {
+    const elemento = document.createElement('main');
+    elemento.className = 'rmm-editor';
+    elemento.innerHTML =
+      '<div contenteditable="true"><input type="checkbox" /><span>Minha tarefa</span></div>';
+    const checkbox = elemento.querySelector('input');
+    if (checkbox) checkbox.checked = true;
 
-    expect(html).toContain('<span class="pdf-marcador">•</span>');
-    expect(html).toContain('<span class="pdf-marcador">☐</span>');
-    expect(html).toContain('<span class="pdf-marcador">☑</span>');
-    expect(html).toContain('<div class="pdf-filhos">');
-    expect(html).toContain('Post no Instagram');
+    const html = serializarDocumentoParaPdf(elemento);
+
+    expect(html).toContain('class="rmm-editor"');
+    expect(html).toContain('checked=""');
+    expect(html).toContain('contenteditable="false"');
+    expect(html).toContain('Minha tarefa');
   });
 
-  it('gera documento e mapa no mesmo arquivo e escapa o título', () => {
+  it('gera documento e mapa sem redesenhar o conteúdo e escapa o título', () => {
     const html = montarHtmlPdf({
       titulo: '<Meu documento>',
-      blocos: [texto('a', 'Linha')],
+      documentoHtml: '<main class="rmm-editor">Conteúdo real</main>',
+      classesRaiz: 'rmm-root rmm-tema-light',
       mapaDataUrl: 'data:image/png;base64,abc',
+      fundoMapa: '#ffffff',
     });
 
     expect(html).toContain('&lt;Meu documento&gt;');
-    expect(html).toContain('pdf-documento');
+    expect(html).toContain('Conteúdo real');
+    expect(html).toContain('rmm-tema-light pdf-pagina pdf-documento');
+    expect(html).toContain('background: #ffffff');
     expect(html).toContain('pdf-mapa');
+    expect(html).toContain('--pdf-fundo-mapa:#ffffff');
     expect(html).toContain('break-before: page');
   });
 });

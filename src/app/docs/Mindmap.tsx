@@ -413,7 +413,7 @@ export type MindmapProps = {
 /** Exposto via ref — o botão de exportar PDF fica na topbar (RoadMapMind.tsx),
  * fora do mapa; ele chama isto pra pegar o PNG do mapa inteiro. */
 export interface MindmapHandle {
-  exportarComoPng: () => Promise<string>;
+  exportarComoPng: () => Promise<{ dataUrl: string; fundo: string }>;
 }
 
 type MenuCtx = { id: string; x: number; y: number };
@@ -456,40 +456,63 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
   useImperativeHandle(
     ref,
     () => ({
-      exportarComoPng: () => {
+      exportarComoPng: async () => {
         const nos = getNodes();
         if (nos.length === 0) return Promise.reject(new Error('O mapa está vazio.'));
         const bounds = getNodesBounds(nos);
-        const PADDING = 48;
-        const largura = Math.max(600, Math.round(bounds.width + PADDING * 2));
-        const altura = Math.max(400, Math.round(bounds.height + PADDING * 2));
-        const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, 0.1);
-        const el = mapaRef.current?.querySelector('.react-flow__viewport') as HTMLElement | null;
-        if (!el) return Promise.reject(new Error('Mapa não encontrado.'));
+        const largura = 1200;
+        const altura = 800;
+        const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, 0.12);
+        const fluxo = mapaRef.current?.querySelector('.react-flow') as HTMLElement | null;
+        const camada = mapaRef.current?.querySelector(
+          '.react-flow__viewport',
+        ) as HTMLElement | null;
+        if (!fluxo || !camada) return Promise.reject(new Error('Mapa não encontrado.'));
+        const raiz = mapaRef.current?.closest('.rmm-root');
+        const temaEscuroAntes = raiz?.classList.contains('rmm-tema-dark') ?? false;
+        const temaClaroAntes = raiz?.classList.contains('rmm-tema-light') ?? false;
+        raiz?.classList.remove('rmm-tema-dark');
+        raiz?.classList.add('rmm-tema-light');
+        const fundo = '#ffffff';
+        const transformAnterior = camada.style.transform;
+        camada.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
         // timeout de segurança: a lib percorre todas as folhas de estilo da
         // página, e alguma fonte/CSS remoto lento trava a promise sem nunca
         // resolver nem rejeitar — nunca deixar o botão preso pra sempre
-        return Promise.race([
-          toPng(el, {
-            backgroundColor: '#ffffff',
-            cacheBust: true,
-            width: largura,
-            height: altura,
-            pixelRatio: 1.5,
-            skipFonts: true,
-            style: {
-              width: `${largura}px`,
-              height: `${altura}px`,
-              transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-            },
-          }),
-          new Promise<never>((_, rejeitar) =>
-            setTimeout(
-              () => rejeitar(new Error('Tempo esgotado ao gerar a imagem do mapa.')),
-              15000,
+        try {
+          await new Promise<void>((resolver) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolver())),
+          );
+          const dataUrl = await Promise.race([
+            toPng(fluxo, {
+              backgroundColor: fundo,
+              cacheBust: true,
+              width: largura,
+              height: altura,
+              pixelRatio: 1.5,
+              skipFonts: true,
+              filter: (no) => {
+                const classes = (no as Element).classList;
+                return !classes?.contains('react-flow__controls') && !classes?.contains('mm-dica');
+              },
+              style: {
+                width: `${largura}px`,
+                height: `${altura}px`,
+              },
+            }),
+            new Promise<never>((_, rejeitar) =>
+              setTimeout(
+                () => rejeitar(new Error('Tempo esgotado ao gerar a imagem do mapa.')),
+                15000,
+              ),
             ),
-          ),
-        ]);
+          ]);
+          return { dataUrl, fundo };
+        } finally {
+          camada.style.transform = transformAnterior;
+          if (!temaClaroAntes) raiz?.classList.remove('rmm-tema-light');
+          if (temaEscuroAntes) raiz?.classList.add('rmm-tema-dark');
+        }
       },
     }),
     [getNodes],
@@ -591,7 +614,7 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         const classes: string[] = [];
         if (n.id === alvoDrop) classes.push('mm-alvo');
         if (n.id === selecionado) classes.push('mm-sel');
-        // nó original que TEM espelhos ganha o ↻
+        // nó original que TEM espelhos ganha borda tracejada + indicador de junção
         if ([...espelhos.values()].includes(n.id)) classes.push('mm-espelho');
         if (classes.length) extra.className = classes.join(' ');
         if (n.id === editarNoId) extra.data = { ...n.data, editarInicial: true };
