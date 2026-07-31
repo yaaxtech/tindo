@@ -25,7 +25,15 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toPng } from 'html-to-image';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from 'react';
 import type { Orientacao } from './useDocStore';
 
 export const RAIZ_ID = '__raiz__';
@@ -386,109 +394,88 @@ export type MindmapProps = {
   aoReplugar: (id: string, novoPaiId: string) => void;
   aoEspelhar: (id: string, novaMaeId: string) => void;
   espelhos: Map<string, string>; // espelhoBlockId -> linhaOriginalId
-  /**
-   * Abre a janela de impressão SÍNCRONO (chamado no exato instante do
-   * clique, antes de qualquer captura assíncrona) — senão o navegador
-   * bloqueia o popup por não reconhecer mais o gesto do usuário. Retorna
-   * null se o navegador bloqueou mesmo assim.
-   */
-  aoAbrirJanela?: () => Window | null;
-  /** Chamado com um PNG (data URL) do mapa inteiro + a janela já aberta. */
-  aoExportarImagem?: (dataUrl: string, janela: Window) => void;
-  /** Chamado quando a exportação falha (ex.: tempo esgotado). */
-  aoErroExportar?: (mensagem: string) => void;
 };
+
+/** Exposto via ref — o botão de exportar PDF fica na topbar (RoadMapMind.tsx),
+ * fora do mapa; ele chama isto pra pegar o PNG do mapa inteiro. */
+export interface MindmapHandle {
+  exportarComoPng: () => Promise<string>;
+}
 
 type MenuCtx = { id: string; x: number; y: number };
 
-function MindmapInterno({
-  doc,
-  focoId,
-  cursorId,
-  cores,
-  focoEdicao,
-  orientacao,
-  rotuloRaiz,
-  editarNoId,
-  aoFimEdicaoNo,
-  aoClicarNo,
-  aoToggleTarefa,
-  aoAdicionarFilho,
-  aoAdicionarIrma,
-  aoExcluir,
-  aoRenomear,
-  aoReplugar,
-  aoEspelhar,
-  espelhos,
-  aoAbrirJanela,
-  aoExportarImagem,
-  aoErroExportar,
-}: MindmapProps) {
+const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapInterno(
+  {
+    doc,
+    focoId,
+    cursorId,
+    cores,
+    focoEdicao,
+    orientacao,
+    rotuloRaiz,
+    editarNoId,
+    aoFimEdicaoNo,
+    aoClicarNo,
+    aoToggleTarefa,
+    aoAdicionarFilho,
+    aoAdicionarIrma,
+    aoExcluir,
+    aoRenomear,
+    aoReplugar,
+    aoEspelhar,
+    espelhos,
+  },
+  ref,
+) {
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const [manuais, setManuais] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [menu, setMenu] = useState<MenuCtx | null>(null);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [emEdicao, setEmEdicao] = useState(false);
   const { fitView, getNodes } = useReactFlow();
-  const [exportando, setExportando] = useState(false);
 
   // Captura o mapa INTEIRO (não só a área visível) como PNG — padrão oficial
   // do React Flow: recalcula o enquadramento pelos bounds de todos os nós
   // (getNodesBounds/getViewportForBounds) e rasteriza só o viewport nesse
   // enquadramento, sem afetar o zoom/pan que o usuário está vendo na tela.
-  const exportarImagem = useCallback(() => {
-    if (!aoExportarImagem) return;
-    // abre a janela AGORA, síncrono, ainda dentro do gesto de clique —
-    // se esperar o toPng (assíncrono) terminar pra só então abrir, o
-    // navegador não reconhece mais como ação do usuário e bloqueia o popup
-    const janela = aoAbrirJanela?.() ?? null;
-    if (aoAbrirJanela && !janela) return; // aoAbrirJanela já reportou o erro
-    const nos = getNodes();
-    if (nos.length === 0) return;
-    setExportando(true);
-    const bounds = getNodesBounds(nos);
-    const PADDING = 48;
-    const largura = Math.max(600, Math.round(bounds.width + PADDING * 2));
-    const altura = Math.max(400, Math.round(bounds.height + PADDING * 2));
-    const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, PADDING / 2);
-    const el = document.querySelector('.mm-wrap .react-flow__viewport') as HTMLElement | null;
-    if (!el) {
-      setExportando(false);
-      return;
-    }
-    // timeout de segurança: captura de imagem nunca deve travar o botão pra
-    // sempre (a lib percorre todas as folhas de estilo da página, e alguma
-    // fonte/CSS remoto lento trava a promise sem nunca resolver nem rejeitar)
-    const comTimeout = Promise.race([
-      toPng(el, {
-        backgroundColor: '#ffffff',
-        width: largura,
-        height: altura,
-        style: {
-          width: `${largura}px`,
-          height: `${altura}px`,
-          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-        },
-      }),
-      new Promise<never>((_, rejeitar) =>
-        setTimeout(() => rejeitar(new Error('Tempo esgotado ao gerar a imagem do mapa.')), 15000),
-      ),
-    ]);
-    comTimeout
-      .then((dataUrl) => {
-        if (janela) aoExportarImagem(dataUrl, janela);
-      })
-      .catch((erro: unknown) => {
-        const msg = erro instanceof Error ? erro.message : 'Falha ao exportar o mapa.';
-        aoErroExportar?.(msg);
-        // a janela já abriu com "Gerando PDF…" — sem isso ela fica presa nessa
-        // mensagem pra sempre se a captura falhar
-        if (janela && !janela.closed) {
-          janela.document.body.textContent = msg;
-        }
-      })
-      .finally(() => setExportando(false));
-  }, [aoAbrirJanela, aoExportarImagem, aoErroExportar, getNodes]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      exportarComoPng: () => {
+        const nos = getNodes();
+        if (nos.length === 0) return Promise.reject(new Error('O mapa está vazio.'));
+        const bounds = getNodesBounds(nos);
+        const PADDING = 48;
+        const largura = Math.max(600, Math.round(bounds.width + PADDING * 2));
+        const altura = Math.max(400, Math.round(bounds.height + PADDING * 2));
+        const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, PADDING / 2);
+        const el = document.querySelector('.mm-wrap .react-flow__viewport') as HTMLElement | null;
+        if (!el) return Promise.reject(new Error('Mapa não encontrado.'));
+        // timeout de segurança: a lib percorre todas as folhas de estilo da
+        // página, e alguma fonte/CSS remoto lento trava a promise sem nunca
+        // resolver nem rejeitar — nunca deixar o botão preso pra sempre
+        return Promise.race([
+          toPng(el, {
+            backgroundColor: '#ffffff',
+            width: largura,
+            height: altura,
+            style: {
+              width: `${largura}px`,
+              height: `${altura}px`,
+              transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+            },
+          }),
+          new Promise<never>((_, rejeitar) =>
+            setTimeout(
+              () => rejeitar(new Error('Tempo esgotado ao gerar a imagem do mapa.')),
+              15000,
+            ),
+          ),
+        ]);
+      },
+    }),
+    [getNodes],
+  );
 
   // atalhos com nó selecionado: Delete exclui · Enter cria filha · Shift+Enter cria irmã
   useEffect(() => {
@@ -739,19 +726,6 @@ function MindmapInterno({
         <Controls showInteractive={false} position="bottom-right" />
       </ReactFlow>
 
-      {aoExportarImagem && (
-        <button
-          type="button"
-          className="mm-exportar"
-          title="Exportar mapa como PDF"
-          aria-label="Exportar mapa como PDF"
-          disabled={exportando}
-          onClick={exportarImagem}
-        >
-          {exportando ? '…' : '🖨 PDF'}
-        </button>
-      )}
-
       {emEdicao ? (
         <div className="mm-dica">Enter: salvar · Shift+Enter: pular linha · Esc: cancelar</div>
       ) : selecionado && selecionado !== RAIZ_ID ? (
@@ -842,12 +816,14 @@ function MindmapInterno({
       )}
     </div>
   );
-}
+});
 
-export default function Mindmap(props: MindmapProps) {
+const Mindmap = forwardRef<MindmapHandle, MindmapProps>(function Mindmap(props, ref) {
   return (
     <ReactFlowProvider>
-      <MindmapInterno {...props} />
+      <MindmapInterno {...props} ref={ref} />
     </ReactFlowProvider>
   );
-}
+});
+
+export default Mindmap;
