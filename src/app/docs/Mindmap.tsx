@@ -25,6 +25,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toPng } from 'html-to-image';
+import { GitMerge } from 'lucide-react';
 import {
   forwardRef,
   memo,
@@ -32,6 +33,7 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import type { Orientacao } from './useDocStore';
@@ -72,6 +74,7 @@ type NoData = {
   colapsado: boolean;
   descendentes: number;
   ativo: boolean;
+  multiplosPais: boolean;
   cor: string | undefined;
   orientacao: Orientacao;
   onToggle: (id: string) => void;
@@ -117,6 +120,7 @@ function montarNosEArestas(
   const pais = new Map<string, string>();
   const filhos = new Map<string, string[]>();
   const base = rotuloRaiz ? 1 : 0; // com raiz virtual, conteúdo começa no nível 1
+  const originaisEspelhados = new Set(espelhos.values());
 
   // linha vazia de LISTA continua no mapa (como "…") — senão o zoom pula ao criar
   // linha nova; só parágrafo vazio (a linha-fantasma do fim do doc) fica de fora
@@ -159,6 +163,7 @@ function montarNosEArestas(
         colapsado: colapsados.has(b.id),
         descendentes: contarDescendentes(b),
         ativo: ativo === b.id,
+        multiplosPais: originaisEspelhados.has(b.id),
         cor,
         orientacao,
         ...handlers,
@@ -214,6 +219,7 @@ function montarNosEArestas(
         colapsado: false,
         descendentes: topo.length,
         ativo: false,
+        multiplosPais: false,
         cor: undefined,
         orientacao,
         ...handlers,
@@ -310,6 +316,14 @@ const NoLinha = memo(function NoLinha({ id, data }: NodeProps<NoMapa>) {
           checked={data.concluida}
           onChange={() => data.onToggleTarefa(id)}
           onClick={(e) => e.stopPropagation()}
+        />
+      )}
+      {data.multiplosPais && (
+        <GitMerge
+          aria-label="Este item aparece em mais de um ramo"
+          className="mm-relacao-multipla"
+          size={13}
+          strokeWidth={2.2}
         />
       )}
       {editando ? (
@@ -432,6 +446,7 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
   const [menu, setMenu] = useState<MenuCtx | null>(null);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [emEdicao, setEmEdicao] = useState(false);
+  const mapaRef = useRef<HTMLDivElement>(null);
   const { fitView, getNodes } = useReactFlow();
 
   // Captura o mapa INTEIRO (não só a área visível) como PNG — padrão oficial
@@ -448,8 +463,8 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         const PADDING = 48;
         const largura = Math.max(600, Math.round(bounds.width + PADDING * 2));
         const altura = Math.max(400, Math.round(bounds.height + PADDING * 2));
-        const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, PADDING / 2);
-        const el = document.querySelector('.mm-wrap .react-flow__viewport') as HTMLElement | null;
+        const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, 0.1);
+        const el = mapaRef.current?.querySelector('.react-flow__viewport') as HTMLElement | null;
         if (!el) return Promise.reject(new Error('Mapa não encontrado.'));
         // timeout de segurança: a lib percorre todas as folhas de estilo da
         // página, e alguma fonte/CSS remoto lento trava a promise sem nunca
@@ -457,8 +472,11 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         return Promise.race([
           toPng(el, {
             backgroundColor: '#ffffff',
+            cacheBust: true,
             width: largura,
             height: altura,
+            pixelRatio: 1.5,
+            skipFonts: true,
             style: {
               width: `${largura}px`,
               height: `${altura}px`,
@@ -659,7 +677,7 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
   }, [nodes.length, focoId, orientacao, focoEdicao, editarNoId, enquadrar]);
 
   return (
-    <div className="mm-wrap">
+    <div ref={mapaRef} className="mm-wrap">
       <ReactFlow
         nodes={nosEstado}
         edges={edges}
