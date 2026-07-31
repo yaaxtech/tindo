@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
 import MenuDocumentos from './MenuDocumentos';
-import Mindmap, { CORES_NIVEL, extrairTexto, RAIZ_ID } from './Mindmap';
+import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
 import { useDocStore } from './useDocStore';
 
 type Status = 'carregando' | 'ok' | 'salvando' | 'erro';
@@ -735,54 +735,51 @@ export default function RoadMapMind() {
   const focoBloco = focoId ? acharBloco(doc, focoId) : null;
   const focoTexto = focoBloco ? extrairTexto(focoBloco) : null;
 
-  // Abre a janela de impressão SÍNCRONO, no exato instante do clique — se
-  // isso acontecer depois de um `await` (gerar HTML/imagem primeiro), o
-  // navegador não reconhece mais o gesto do usuário e bloqueia o
-  // window.open() como se fosse um popup indesejado. Por isso: abre em
-  // branco AGORA (com um "Gerando PDF…"), preenche o conteúdo depois.
-  const abrirJanelaImpressao = useCallback((): Window | null => {
-    const w = window.open('', '_blank', 'noopener,noreferrer');
-    if (!w) {
-      setErroMapa('O navegador bloqueou a janela de impressão. Permita pop-ups para este site.');
-      return null;
-    }
-    w.document.write(
-      '<!doctype html><title>Gerando…</title><body style="font-family:system-ui;padding:40px;color:#7a8796">Gerando PDF…</body>',
-    );
-    return w;
-  }, []);
-
-  // preenche a janela JÁ ABERTA com o conteúdo final e dispara a impressão
-  const preencherEImprimir = useCallback((w: Window, tituloArquivo: string, corpoHtml: string) => {
-    w.document.open();
-    w.document.write(corpoHtml);
-    w.document.close();
-    w.document.title = tituloArquivo;
-    const imprimir = () => {
-      try {
-        w.print();
-      } catch {
-        /* janela pode ter sido fechada pelo usuário antes de carregar */
-      }
+  // Imprime HTML customizado via IFRAME OCULTO na própria página — nunca
+  // abre janela nenhuma, então nunca esbarra em bloqueio de pop-up (ao
+  // contrário de window.open(), que além de depender de permissão também
+  // tem uma pegadinha: com a opção 'noopener' o navegador SEMPRE retorna
+  // null mesmo quando abre com sucesso, então dava falso positivo de
+  // "bloqueado" mesmo com pop-ups já permitidos).
+  const imprimirViaIframe = useCallback((corpoHtml: string) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+    const remover = () => {
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
     };
-    // 'load' cobre o caso normal; alguns navegadores não disparam load de
-    // novo após document.write num popup já aberto — rAF cobre esse caso
-    w.addEventListener('load', imprimir);
-    requestAnimationFrame(imprimir);
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      remover();
+      setErroMapa('Não foi possível preparar a impressão.');
+      return;
+    }
+    doc.open();
+    doc.write(corpoHtml);
+    doc.close();
+    const win = iframe.contentWindow;
+    win?.addEventListener('afterprint', remover);
+    setTimeout(remover, 60000); // rede de segurança se 'afterprint' não disparar
+    // dá um instante pro layout do iframe assentar antes de mandar imprimir
+    setTimeout(() => {
+      win?.focus();
+      win?.print();
+    }, 150);
   }, []);
 
   // exporta o DOCUMENTO (ou só a subárvore em foco) como PDF via impressão
-  const exportarDocumentoPdf = useCallback(() => {
-    const w = abrirJanelaImpressao();
-    if (!w) return;
-    void (async () => {
-      const blocos = focoBloco ? [focoBloco] : editor.document;
-      const html = await editor.blocksToHTMLLossy(blocos as PartialBlock[]);
-      const tituloDoc = focoTexto ?? titulo;
-      preencherEImprimir(
-        w,
-        tituloDoc,
-        `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloDoc}</title>
+  const exportarDocumentoPdf = useCallback(async () => {
+    const blocos = focoBloco ? [focoBloco] : editor.document;
+    const html = await editor.blocksToHTMLLossy(blocos as PartialBlock[]);
+    const tituloDoc = focoTexto ?? titulo;
+    imprimirViaIframe(
+      `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloDoc}</title>
 <style>
   body { font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1b222c; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.55; }
   h1, h2, h3 { letter-spacing: -0.01em; }
@@ -793,18 +790,17 @@ export default function RoadMapMind() {
   @page { margin: 18mm 16mm; }
 </style></head>
 <body><h1>${tituloDoc}</h1>${html}</body></html>`,
-      );
-    })();
-  }, [editor, focoBloco, focoTexto, titulo, abrirJanelaImpressao, preencherEImprimir]);
+    );
+  }, [editor, focoBloco, focoTexto, titulo, imprimirViaIframe]);
 
-  // recebe o PNG do Mindmap + a janela (já aberta no clique, pelo próprio
-  // Mindmap) e imprime numa janela própria, paisagem
-  const exportarMapaPdf = useCallback(
-    (dataUrl: string, w: Window) => {
+  // pede a imagem pro Mindmap (via ref) e imprime numa página paisagem
+  const mindmapRef = useRef<MindmapHandle>(null);
+  const exportarMapaPdf = useCallback(async () => {
+    if (!mindmapRef.current) return;
+    try {
+      const dataUrl = await mindmapRef.current.exportarComoPng();
       const tituloMapa = `${focoTexto ?? titulo} — mapa mental`;
-      preencherEImprimir(
-        w,
-        tituloMapa,
+      imprimirViaIframe(
         `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloMapa}</title>
 <style>
   body { margin: 0; padding: 16px; display: flex; justify-content: center; }
@@ -813,9 +809,13 @@ export default function RoadMapMind() {
 </style></head>
 <body><img src="${dataUrl}" alt="${tituloMapa}" /></body></html>`,
       );
-    },
-    [focoTexto, titulo, preencherEImprimir],
-  );
+    } catch (e) {
+      setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar o mapa.');
+    }
+  }, [focoTexto, titulo, imprimirViaIframe]);
+
+  // menu único "🖨 PDF" na topbar — escolher Documento ou Mapa mental
+  const [menuPdfAberto, setMenuPdfAberto] = useState(false);
 
   const cores = coresCustom ?? CORES_NIVEL;
   // cores custom viram variáveis CSS das guias do editor
@@ -921,13 +921,47 @@ export default function RoadMapMind() {
           <button type="button" onClick={() => void colarMarkdown()}>
             ↧ Colar
           </button>
-          <button
-            type="button"
-            title="Exportar o documento como PDF (abre a impressão do navegador)"
-            onClick={exportarDocumentoPdf}
-          >
-            🖨 PDF
-          </button>
+          <div className="rmm-pdf-wrap">
+            <button
+              type="button"
+              className={menuPdfAberto ? 'ativo' : ''}
+              title="Exportar como PDF"
+              aria-expanded={menuPdfAberto}
+              onClick={() => setMenuPdfAberto((m) => !m)}
+            >
+              🖨 PDF
+            </button>
+            {menuPdfAberto && (
+              <>
+                <button
+                  type="button"
+                  className="rmm-pdf-fundo"
+                  aria-label="Fechar menu"
+                  onClick={() => setMenuPdfAberto(false)}
+                />
+                <div className="rmm-pdf-menu">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuPdfAberto(false);
+                      void exportarDocumentoPdf();
+                    }}
+                  >
+                    📄 Documento
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuPdfAberto(false);
+                      void exportarMapaPdf();
+                    }}
+                  >
+                    🗺️ Mapa mental
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <button
             type="button"
             title={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
@@ -1082,6 +1116,7 @@ export default function RoadMapMind() {
                 )}
               </div>
               <Mindmap
+                ref={mindmapRef}
                 doc={doc}
                 focoId={focoId}
                 cursorId={cursorId}
@@ -1100,9 +1135,6 @@ export default function RoadMapMind() {
                 aoReplugar={aoReplugar}
                 aoEspelhar={aoEspelhar}
                 espelhos={espelhos}
-                aoAbrirJanela={abrirJanelaImpressao}
-                aoExportarImagem={exportarMapaPdf}
-                aoErroExportar={setErroMapa}
               />
             </section>
           )}
