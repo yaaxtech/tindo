@@ -13,7 +13,7 @@ interface Env {
   CRON_SECRET: string;
 }
 
-const BASE_URL = 'https://tindo.falecomyaax.workers.dev';
+const BASE_URL = 'https://tindoapp.pages.dev';
 
 async function dispararDiario(env: Env): Promise<void> {
   const res = await fetch(`${BASE_URL}/api/cron/diario`, {
