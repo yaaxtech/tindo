@@ -1,3 +1,4 @@
+import { ehRotaRoadMapMind } from '@/lib/auth/routes';
 import { type CookieOptions, createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -33,9 +34,26 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // Por enquanto, só reidrata e valida a sessão (não bloqueia rotas).
-  // O enforcement entra por domínio nos próximos PRs do plano de auth.
-  await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+
+  if (ehRotaRoadMapMind(request.nextUrl.pathname)) {
+    const claims = data?.claims;
+    const autenticado =
+      !error &&
+      Boolean(claims?.sub) &&
+      claims?.role === 'authenticated' &&
+      claims?.is_anonymous !== true;
+
+    if (!autenticado) {
+      if (request.nextUrl.pathname.startsWith('/api/')) {
+        return NextResponse.json({ erro: 'Entre na sua conta para continuar.' }, { status: 401 });
+      }
+
+      const login = new URL('/login', request.url);
+      login.searchParams.set('next', `${request.nextUrl.pathname}${request.nextUrl.search}`);
+      return NextResponse.redirect(login);
+    }
+  }
 
   return response;
 }
