@@ -8,6 +8,7 @@ export const ROTAS_PUBLICAS = [
   '/auth/callback',
   '/recuperar-senha',
   '/nova-senha',
+  '/manifest.webmanifest',
 ] as const;
 
 /** Rotas sem sessão de usuário, protegidas por segredo próprio. */
@@ -20,6 +21,25 @@ export function ehRotaRoadMapMind(pathname: string): boolean {
     pathname.startsWith('/docs/') ||
     pathname === '/api/docs' ||
     pathname.startsWith('/api/docs/')
+  );
+}
+
+/** Áreas que já isolam dados pela sessão/RLS e podem receber qualquer conta. */
+export function ehRotaMultiusuario(pathname: string): boolean {
+  return (
+    ehRotaRoadMapMind(pathname) || pathname === '/api/perfil' || pathname.startsWith('/api/perfil/')
+  );
+}
+
+export function podeAcessarRotaAutenticada(
+  pathname: string,
+  identidade: { usuarioId: string; email?: string | null },
+  donoId?: string,
+): boolean {
+  if (ehRotaMultiusuario(pathname)) return true;
+  return (
+    (Boolean(donoId) && identidade.usuarioId === donoId) ||
+    identidade.email?.toLowerCase() === 'falecomseucamarao@gmail.com'
   );
 }
 
