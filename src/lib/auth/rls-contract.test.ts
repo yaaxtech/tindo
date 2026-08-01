@@ -20,6 +20,7 @@ const TABELAS_DO_USUARIO = [
   'push_envios',
   'doc_linhas',
   'doc_espelhos',
+  'perfis_usuario',
 ] as const;
 
 function sqlDasMigrations(): string {

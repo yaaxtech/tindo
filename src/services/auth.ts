@@ -94,3 +94,8 @@ export async function atualizarSenha(senha: string, authClient?: AuthClient): Pr
   const { error } = await cliente(authClient).auth.updateUser({ password: senha });
   falhar(error);
 }
+
+export async function sair(authClient?: AuthClient): Promise<void> {
+  const { error } = await cliente(authClient).auth.signOut();
+  falhar(error);
+}

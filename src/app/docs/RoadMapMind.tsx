@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
 import MenuDocumentos from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
+import PerfilMenu from './PerfilMenu';
 import {
   capturarEstilosDaPagina,
   montarHtmlPdf,
@@ -1115,6 +1116,7 @@ export default function RoadMapMind() {
         <button type="button" className="rmm-btn" onClick={() => void salvar()}>
           Salvar
         </button>
+        <PerfilMenu />
       </header>
 
       {painelCores && (
