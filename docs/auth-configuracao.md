@@ -27,5 +27,5 @@ localmente enquanto o CAPTCHA do projeto Supabase estiver desabilitado.
 - entrar com a senha de uma conta existente e chegar a `/docs`;
 - pedir link mágico para uma conta existente e abrir o callback no mesmo navegador;
 - pedir link para e-mail desconhecido e confirmar que nenhuma conta foi criada;
-- recuperar a senha, definir uma senha com ao menos 10 caracteres e chegar a `/docs`;
+- recuperar a senha, definir uma senha com ao menos 8 caracteres e chegar a `/docs`;
 - confirmar que um `next` externo é descartado e redireciona para `/docs`.

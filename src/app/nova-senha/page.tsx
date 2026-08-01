@@ -14,7 +14,7 @@ export default function NovaSenhaPage() {
   async function salvar(event: React.FormEvent) {
     event.preventDefault();
     setErro(null);
-    if (senha.length < 10) return setErro('A senha precisa ter pelo menos 10 caracteres.');
+    if (senha.length < 8) return setErro('A senha precisa ter pelo menos 8 caracteres.');
     if (senha !== confirmacao) return setErro('As senhas não coincidem.');
     setCarregando(true);
     try {
@@ -32,7 +32,7 @@ export default function NovaSenhaPage() {
     <main className="flex min-h-dvh items-center justify-center px-6 py-10">
       <div className="w-full max-w-md">
         <h1 className="text-2xl font-semibold">Crie uma nova senha</h1>
-        <p className="mt-2 text-sm text-text-secondary">Use pelo menos 10 caracteres.</p>
+        <p className="mt-2 text-sm text-text-secondary">Use pelo menos 8 caracteres.</p>
         <form onSubmit={salvar} className="mt-6 space-y-4">
           <div>
             <label
@@ -46,7 +46,7 @@ export default function NovaSenhaPage() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={10}
+              minLength={8}
               value={senha}
               onChange={(event) => setSenha(event.target.value)}
               className="h-11 w-full rounded-md border border-border-strong bg-bg-elevated px-4 outline-none focus:border-jade-accent"
@@ -64,7 +64,7 @@ export default function NovaSenhaPage() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={10}
+              minLength={8}
               value={confirmacao}
               onChange={(event) => setConfirmacao(event.target.value)}
               className="h-11 w-full rounded-md border border-border-strong bg-bg-elevated px-4 outline-none focus:border-jade-accent"

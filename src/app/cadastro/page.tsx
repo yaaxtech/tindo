@@ -20,17 +20,26 @@ export default function CadastroPage() {
   const [erro, setErro] = useState<string | null>(null);
   const receberToken = useCallback((token: string | null) => setCaptchaToken(token), []);
 
+  function whatsappComDdiBrasil(valor: string): string | undefined {
+    const texto = valor.trim();
+    const numeros = texto.replace(/\D/g, '');
+    const numeroNacional = texto.startsWith('+55') || texto.startsWith('0055')
+      ? numeros.replace(/^(?:00)?55/, '')
+      : numeros;
+    return numeroNacional ? `+55${numeroNacional}` : undefined;
+  }
+
   async function cadastrar(event: React.FormEvent) {
     event.preventDefault();
     setErro(null);
     if (nome.trim().length < 2) return setErro('Informe seu nome.');
-    if (senha.length < 10) return setErro('A senha precisa ter pelo menos 10 caracteres.');
+    if (senha.length < 8) return setErro('A senha precisa ter pelo menos 8 caracteres.');
     if (senha !== confirmacao) return setErro('As senhas não coincidem.');
 
     setCarregando(true);
     try {
       const resultado = await cadastrarComSenha(
-        { nome, email, senha, whatsapp },
+        { nome, email, senha, whatsapp: whatsappComDdiBrasil(whatsapp) },
         captchaToken ?? undefined,
       );
       if (resultado.sessaoCriada) {
@@ -111,16 +120,21 @@ export default function CadastroPage() {
               >
                 WhatsApp <span className="normal-case text-text-muted">(opcional)</span>
               </label>
-              <input
-                id="whatsapp"
-                type="tel"
-                autoComplete="tel"
-                maxLength={30}
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="(00) 00000-0000"
-                className="h-11 w-full rounded-md border border-border-strong bg-bg-elevated px-4 outline-none focus:border-jade-accent"
-              />
+              <div className="flex h-11 overflow-hidden rounded-md border border-border-strong bg-bg-elevated focus-within:border-jade-accent">
+                <span className="flex items-center gap-1.5 border-r border-border-strong px-4 text-sm text-text-secondary">
+                  <span aria-hidden="true">🇧🇷</span> +55
+                </span>
+                <input
+                  id="whatsapp"
+                  type="tel"
+                  autoComplete="tel-national"
+                  maxLength={15}
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                  className="min-w-0 flex-1 bg-transparent px-4 outline-none"
+                />
+              </div>
             </div>
             <div>
               <label
@@ -134,7 +148,7 @@ export default function CadastroPage() {
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={10}
+                minLength={8}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="h-11 w-full rounded-md border border-border-strong bg-bg-elevated px-4 outline-none focus:border-jade-accent"
@@ -152,7 +166,7 @@ export default function CadastroPage() {
                 type="password"
                 autoComplete="new-password"
                 required
-                minLength={10}
+                minLength={8}
                 value={confirmacao}
                 onChange={(e) => setConfirmacao(e.target.value)}
                 className="h-11 w-full rounded-md border border-border-strong bg-bg-elevated px-4 outline-none focus:border-jade-accent"
