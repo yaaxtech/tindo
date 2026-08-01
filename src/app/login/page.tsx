@@ -156,7 +156,13 @@ function LoginForm() {
           </form>
         )}
 
-        <p className="mt-8 text-center text-xs text-text-muted">
+        <p className="mt-7 text-center text-sm text-text-muted">
+          Não tem uma conta?{' '}
+          <Link href="/cadastro" className="text-jade-accent hover:underline">
+            Criar conta
+          </Link>
+        </p>
+        <p className="mt-4 text-center text-xs text-text-muted">
           <Link href="/" className="hover:text-text-primary">
             ← Voltar
           </Link>
