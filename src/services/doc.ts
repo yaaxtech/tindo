@@ -1,19 +1,17 @@
 // RoadMapMind — ÚNICA ponte de dados da árvore de nós (outline + mindmap).
 // Componentes chamam esta camada, nunca o cliente Supabase direto.
-// MVP: acesso via service role (getAdminClient) + guard manual de usuario_id
-// (mesmo padrão das API routes do TinDo). RLS no schema fica pronta pro login real.
+// Acesso pelo cliente da sessão: a RLS do banco é a fronteira de segurança.
 // Ver spec: docs/superpowers/plans/2026-07-30-roadmapmind-fase-1-mvp.md
 
-import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import type { ContextoAuth } from '@/lib/auth/server';
 import type { DocLinha } from '@/types/doc';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { type DocEspelho, derivarTextoMd } from './doc-markdown';
 
-// `doc_linhas` ainda não está em database.ts (não dá pra rodar `gen types` na
-// conta do TinDo). Usamos um client destipado nesta camada; a tipagem forte
-// vive na fronteira (DocLinha + doc-markdown).
-function db(): SupabaseClient {
-  return getAdminClient() as unknown as SupabaseClient;
+// `doc_linhas` ainda não está em database.ts. Usamos um client destipado nesta
+// camada; a tipagem forte vive na fronteira (DocLinha + doc-markdown).
+function db(contexto: ContextoAuth): SupabaseClient {
+  return contexto.supabase as unknown as SupabaseClient;
 }
 
 interface LinhaRow {
@@ -40,8 +38,8 @@ function rowParaLinha(r: LinhaRow): DocLinha {
   };
 }
 
-async function nomeDoUsuario(usuarioId: string): Promise<string> {
-  const { data } = await getAdminClient().auth.admin.getUserById(usuarioId);
+async function nomeDoUsuario(contexto: ContextoAuth): Promise<string> {
+  const { data } = await contexto.supabase.auth.getUser();
   const u = data?.user;
   const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
   if (typeof meta.name === 'string' && meta.name.trim()) return meta.name.trim();
@@ -50,12 +48,12 @@ async function nomeDoUsuario(usuarioId: string): Promise<string> {
   return 'Meu documento';
 }
 
-async function checarPosse(usuarioId: string, linhaId: string): Promise<void> {
-  const { data, error } = await db()
+async function checarPosse(contexto: ContextoAuth, linhaId: string): Promise<void> {
+  const { data, error } = await db(contexto)
     .from('doc_linhas')
     .select('id')
     .eq('id', linhaId)
-    .eq('usuario_id', usuarioId)
+    .eq('usuario_id', contexto.usuarioId)
     .is('deleted_at', null)
     .maybeSingle();
   if (error) throw error;
@@ -63,23 +61,22 @@ async function checarPosse(usuarioId: string, linhaId: string): Promise<void> {
 }
 
 /** Cria a raiz do usuário (pai_id NULL, texto = nome do usuário) se não existir. */
-export async function garantirRaiz(): Promise<DocLinha> {
-  const usuarioId = await getUsuarioIdMVP();
-  const { data: existente, error: e1 } = await db()
+export async function garantirRaiz(contexto: ContextoAuth): Promise<DocLinha> {
+  const { data: existente, error: e1 } = await db(contexto)
     .from('doc_linhas')
     .select('*')
-    .eq('usuario_id', usuarioId)
+    .eq('usuario_id', contexto.usuarioId)
     .is('pai_id', null)
     .is('deleted_at', null)
     .maybeSingle();
   if (e1) throw e1;
   if (existente) return rowParaLinha(existente as LinhaRow);
 
-  const nome = await nomeDoUsuario(usuarioId);
+  const nome = await nomeDoUsuario(contexto);
   const conteudo = [{ type: 'text', text: nome, styles: {} }];
   const nova = {
     id: crypto.randomUUID(),
-    usuario_id: usuarioId,
+    usuario_id: contexto.usuarioId,
     pai_id: null,
     ordem: 'a0',
     conteudo,
@@ -88,18 +85,17 @@ export async function garantirRaiz(): Promise<DocLinha> {
     tarefa_estado: null,
     modo_lista: 'herdado' as const,
   };
-  const { data, error } = await db().from('doc_linhas').insert(nova).select('*').single();
+  const { data, error } = await db(contexto).from('doc_linhas').insert(nova).select('*').single();
   if (error) throw error;
   return rowParaLinha(data as LinhaRow);
 }
 
 /** Carrega todas as linhas vivas do usuário (a árvore inteira). */
-export async function carregarDocumento(): Promise<DocLinha[]> {
-  const usuarioId = await getUsuarioIdMVP();
-  const { data, error } = await db()
+export async function carregarDocumento(contexto: ContextoAuth): Promise<DocLinha[]> {
+  const { data, error } = await db(contexto)
     .from('doc_linhas')
     .select('*')
-    .eq('usuario_id', usuarioId)
+    .eq('usuario_id', contexto.usuarioId)
     .is('deleted_at', null);
   if (error) throw error;
   return ((data ?? []) as LinhaRow[]).map(rowParaLinha);
@@ -110,14 +106,17 @@ export async function carregarDocumento(): Promise<DocLinha[]> {
  * texto_md no write, RN-03) e soft-delete das que sumiram. A raiz (`raizId`)
  * é sempre preservada. Idempotente: salvar o mesmo estado 2× não muda nada.
  */
-export async function salvarDocumento(linhas: DocLinha[], raizId: string): Promise<void> {
-  const usuarioId = await getUsuarioIdMVP();
+export async function salvarDocumento(
+  contexto: ContextoAuth,
+  linhas: DocLinha[],
+  raizId: string,
+): Promise<void> {
   const agora = new Date().toISOString();
 
   if (linhas.length > 0) {
     const rows = linhas.map((l) => ({
       id: l.id,
-      usuario_id: usuarioId,
+      usuario_id: contexto.usuarioId,
       pai_id: l.paiId,
       ordem: l.ordem,
       conteudo: l.conteudo,
@@ -128,39 +127,37 @@ export async function salvarDocumento(linhas: DocLinha[], raizId: string): Promi
       deleted_at: null,
       updated_at: agora,
     }));
-    const { error } = await db().from('doc_linhas').upsert(rows, { onConflict: 'id' });
+    const { error } = await db(contexto).from('doc_linhas').upsert(rows, { onConflict: 'id' });
     if (error) throw error;
   }
 
   const preservar = [raizId, ...linhas.map((l) => l.id)];
-  const { error: eDel } = await db()
+  const { error: eDel } = await db(contexto)
     .from('doc_linhas')
     .update({ deleted_at: agora })
-    .eq('usuario_id', usuarioId)
+    .eq('usuario_id', contexto.usuarioId)
     .is('deleted_at', null)
     .not('id', 'in', `(${preservar.join(',')})`);
   if (eDel) throw eDel;
 }
 
 /** Soft-delete de linhas específicas (não desce na subárvore — use salvarDocumento pro sync). */
-export async function removerLinhas(ids: string[]): Promise<void> {
+export async function removerLinhas(contexto: ContextoAuth, ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const usuarioId = await getUsuarioIdMVP();
-  const { error } = await db()
+  const { error } = await db(contexto)
     .from('doc_linhas')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('usuario_id', usuarioId)
+    .eq('usuario_id', contexto.usuarioId)
     .in('id', ids);
   if (error) throw error;
 }
 
 /** Espelhos vivos do usuário (a UI os materializa como blocos sob a mãe). */
-export async function carregarEspelhos(): Promise<DocEspelho[]> {
-  const usuarioId = await getUsuarioIdMVP();
-  const { data, error } = await db()
+export async function carregarEspelhos(contexto: ContextoAuth): Promise<DocEspelho[]> {
+  const { data, error } = await db(contexto)
     .from('doc_espelhos')
     .select('id, linha_id, mae_id, ordem')
-    .eq('usuario_id', usuarioId)
+    .eq('usuario_id', contexto.usuarioId)
     .is('deleted_at', null);
   if (error) throw error;
   return ((data ?? []) as { id: string; linha_id: string; mae_id: string; ordem: string }[]).map(
@@ -170,19 +167,19 @@ export async function carregarEspelhos(): Promise<DocEspelho[]> {
 
 /** Cria um espelho (a linha passa a aparecer também sob `maeId`). Bloqueia ciclo. */
 export async function criarEspelho(
+  contexto: ContextoAuth,
   linhaId: string,
   maeId: string,
   ordem: string,
 ): Promise<DocEspelho> {
-  const usuarioId = await getUsuarioIdMVP();
-  await checarPosse(usuarioId, linhaId);
-  await checarPosse(usuarioId, maeId);
+  await checarPosse(contexto, linhaId);
+  await checarPosse(contexto, maeId);
   if (linhaId === maeId) throw new Error('Não dá para espelhar um item dentro dele mesmo.');
   // ciclo: a mãe do espelho não pode estar DENTRO da subárvore da linha
-  const { data: sub, error: eSub } = await db()
+  const { data: sub, error: eSub } = await db(contexto)
     .from('doc_linhas')
     .select('id, pai_id')
-    .eq('usuario_id', usuarioId)
+    .eq('usuario_id', contexto.usuarioId)
     .is('deleted_at', null);
   if (eSub) throw eSub;
   const filhosDe = new Map<string, string[]>();
@@ -198,9 +195,9 @@ export async function criarEspelho(
     if (atual === maeId) throw new Error('Não dá para espelhar um item dentro dele mesmo.');
     fila.push(...(filhosDe.get(atual) ?? []));
   }
-  const { data, error } = await db()
+  const { data, error } = await db(contexto)
     .from('doc_espelhos')
-    .insert({ usuario_id: usuarioId, linha_id: linhaId, mae_id: maeId, ordem })
+    .insert({ usuario_id: contexto.usuarioId, linha_id: linhaId, mae_id: maeId, ordem })
     .select('id, linha_id, mae_id, ordem')
     .single();
   if (error) throw error;
@@ -209,30 +206,39 @@ export async function criarEspelho(
 }
 
 /** Remove um espelho (soft delete SÓ em doc_espelhos — a linha original fica). */
-export async function removerEspelho(espelhoId: string): Promise<void> {
-  const usuarioId = await getUsuarioIdMVP();
-  const { error } = await db()
+export async function removerEspelho(contexto: ContextoAuth, espelhoId: string): Promise<void> {
+  const { error } = await db(contexto)
     .from('doc_espelhos')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', espelhoId)
-    .eq('usuario_id', usuarioId);
+    .eq('usuario_id', contexto.usuarioId);
   if (error) throw error;
 }
 
 /** RPC concluir_tarefa (com guard de posse). Sem forçar: erro se houver filha-tarefa aberta. */
-export async function concluirTarefa(linhaId: string, forcar = false): Promise<void> {
-  const usuarioId = await getUsuarioIdMVP();
-  await checarPosse(usuarioId, linhaId);
-  const { error } = await db().rpc('concluir_tarefa', { p_linha: linhaId, p_forcar: forcar });
+export async function concluirTarefa(
+  contexto: ContextoAuth,
+  linhaId: string,
+  forcar = false,
+): Promise<void> {
+  await checarPosse(contexto, linhaId);
+  const { error } = await db(contexto).rpc('concluir_tarefa', {
+    p_linha: linhaId,
+    p_forcar: forcar,
+  });
   if (error) throw error;
 }
 
 /** RPC mover_linha (com guard de posse). Valida ciclo no banco. */
-export async function moverLinha(linhaId: string, novoPaiId: string, ordem: string): Promise<void> {
-  const usuarioId = await getUsuarioIdMVP();
-  await checarPosse(usuarioId, linhaId);
-  await checarPosse(usuarioId, novoPaiId);
-  const { error } = await db().rpc('mover_linha', {
+export async function moverLinha(
+  contexto: ContextoAuth,
+  linhaId: string,
+  novoPaiId: string,
+  ordem: string,
+): Promise<void> {
+  await checarPosse(contexto, linhaId);
+  await checarPosse(contexto, novoPaiId);
+  const { error } = await db(contexto).rpc('mover_linha', {
     p_linha: linhaId,
     p_novo_pai: novoPaiId,
     p_ordem: ordem,
@@ -241,10 +247,11 @@ export async function moverLinha(linhaId: string, novoPaiId: string, ordem: stri
 }
 
 /** RPC documento_como_markdown (com guard de posse). */
-export async function exportarMarkdown(linhaId: string): Promise<string> {
-  const usuarioId = await getUsuarioIdMVP();
-  await checarPosse(usuarioId, linhaId);
-  const { data, error } = await db().rpc('documento_como_markdown', { p_linha: linhaId });
+export async function exportarMarkdown(contexto: ContextoAuth, linhaId: string): Promise<string> {
+  await checarPosse(contexto, linhaId);
+  const { data, error } = await db(contexto).rpc('documento_como_markdown', {
+    p_linha: linhaId,
+  });
   if (error) throw error;
   return (data as string) ?? '';
 }
