@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ROTAS_PUBLICAS, ROTAS_TECNICAS, classificarAcessoRota, ehRotaRoadMapMind } from './routes';
+import {
+  ROTAS_PUBLICAS,
+  ROTAS_TECNICAS,
+  classificarAcessoRota,
+  ehRotaMultiusuario,
+  ehRotaRoadMapMind,
+  podeAcessarRotaAutenticada,
+} from './routes';
 
 describe('classificarAcessoRota', () => {
   it.each(ROTAS_PUBLICAS)('mantém %s pública', (rota) => {
@@ -33,4 +40,43 @@ describe('ehRotaRoadMapMind', () => {
     'não inclui %s',
     (rota) => expect(ehRotaRoadMapMind(rota)).toBe(false),
   );
+});
+
+describe('ehRotaMultiusuario', () => {
+  it.each(['/docs', '/api/docs', '/api/perfil'])('libera a área isolada %s', (rota) => {
+    expect(ehRotaMultiusuario(rota)).toBe(true);
+  });
+
+  it.each(['/cards', '/tarefas', '/api/tarefas', '/configuracoes'])(
+    'mantém %s como legado do dono',
+    (rota) => expect(ehRotaMultiusuario(rota)).toBe(false),
+  );
+});
+
+describe('podeAcessarRotaAutenticada', () => {
+  it('permite RoadMapMind e perfil para uma conta nova', () => {
+    const nova = { usuarioId: 'novo', email: 'novo@example.com' };
+    expect(podeAcessarRotaAutenticada('/docs', nova, 'dono')).toBe(true);
+    expect(podeAcessarRotaAutenticada('/api/perfil', nova, 'dono')).toBe(true);
+  });
+
+  it('impede uma conta nova de acessar dados dos módulos legados', () => {
+    expect(
+      podeAcessarRotaAutenticada(
+        '/api/tarefas',
+        { usuarioId: 'novo', email: 'novo@example.com' },
+        'dono',
+      ),
+    ).toBe(false);
+  });
+
+  it('preserva os módulos legados para a conta original', () => {
+    expect(
+      podeAcessarRotaAutenticada(
+        '/cards',
+        { usuarioId: 'dono', email: 'falecomseucamarao@gmail.com' },
+        'dono',
+      ),
+    ).toBe(true);
+  });
 });
