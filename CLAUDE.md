@@ -99,6 +99,40 @@ final e precisa poder chamar a qualquer momento.
 
 ## POLÍTICA DE VELOCIDADE
 
+- **Princípio DORA:** velocidade e estabilidade se reforçam. Entregar mudanças
+  pequenas, verificadas e reversíveis; não acumular uma feature grande até o
+  fim.
+- **Código sempre via PR:** abra PR para qualquer alteração de código. Push
+  direto em `main` pula a validação do PR e não é permitido. Exceção: somente
+  documentação e configuração de agentes podem ir direto para `main`.
+- **Merge automático é o padrão:** trabalho concluído + checks obrigatórios do
+  CI verdes = faça merge e push em `main`, sem pedir confirmação nem esperar
+  teste manual do dono. Antes do merge, valide a conclusão explícita do CI;
+  não basta uma saída parcial de `gh pr checks --watch`.
+- **Produção ao merge:** no estado atual, a integração nativa da Cloudflare
+  publica automaticamente o Worker OpenNext `tindo` a cada push em `main`.
+  Isso inclui a interface e as API routes empacotadas no app. Não há etapa
+  manual versionada entre `main` e o usuário final. O worker `tindo-cron` é
+  separado: seu código só muda em deploy manual com `wrangler deploy`, mas os
+  seus crons continuam chamando as rotas já publicadas do app.
+- **Validação pós-merge:** após cada merge que altere algo testável na
+  interface, enviar ao dono o bloco `🧪 PRECISO DO SEU TESTE`, com link direto
+  para a rota publicada e passos numerados em linguagem leiga. O retorno do
+  dono é validação de produto, não bloqueio de merge. Se ele não gostar,
+  corrigir em um novo PR.
+- **Exceções — pedir OK explícito antes de executar:**
+  - migration/SQL contra o Supabase de produção, incluindo
+    `scripts/apply-migrations.ts`, seed e mudanças de schema;
+  - qualquer escrita em dados de cliente/usuário, em Supabase ou Todoist,
+    incluindo import/sync/write-back, completar, editar ou excluir tarefas;
+  - qualquer ação financeira ou que mova dinheiro (não há integração de
+    dinheiro no repositório hoje);
+  - ações destrutivas ou difíceis de reverter, especialmente
+    `scripts/reset-and-apply.ts`, `DROP`, `TRUNCATE`, deleção em massa,
+    `push --force` e remoção de recursos de produção;
+  - deploy manual de produção, inclusive `wrangler deploy` do cron worker.
+  Estas exceções exigem explicação curta do impacto, alvo exato e o OK do
+  dono; CI verde não as autoriza.
 - **Teste flaky → quarentena imediata**: falhou sem bug real → `.skip` +
   item em `PERGUNTAS_ABERTAS.md` (ou `docs/09_ROADMAP.md`) no mesmo PR;
   nunca re-rodar o CI torcendo.
@@ -107,11 +141,10 @@ final e precisa poder chamar a qualquer momento.
 - **Feature grande → fatiar em PRs incrementais mergeáveis.** Cada fatia
   sobe, roda CI e mergeia antes da próxima — bug aparece horas antes, não no
   fim. Fixes pequenos da mesma família continuam agrupados num PR só.
-- **Nota sobre CI do TinDo:** diferente de outros projetos do dono, o
-  `.github/workflows/deploy.yml` roda `typecheck`+`test`+`build` em TODO push
-  pra `main` (sem filtro de path) — não existe hoje uma "via rápida" pra
-  mudanças só de `docs/`/`.claude/`. Commitar doc direto na main ainda é
-  seguro (baixo risco), só não é "de graça" em tempo de CI.
+- **Checks atuais:** `.github/workflows/ci.yml` roda `typecheck`, testes e
+  `cf:build` em PRs e em pushes para `main`. O workflow não executa o deploy:
+  a Cloudflare o faz pela integração nativa após o push. Mudanças só de docs
+  ou configuração de agente ainda acionam o CI ao entrar em `main`.
 
 ---
 
