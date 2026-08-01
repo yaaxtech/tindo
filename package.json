@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "cf:build": "next build && bunx opennextjs-cloudflare build",
-    "cf:pages:build": "bun run cf:build && cp .open-next/worker.js .open-next/assets/_worker.js",
+    "cf:pages:build": "bun run cf:build && bun scripts/prepare-pages-worker.ts",
     "cf:preview": "wrangler dev .open-next/worker.js --local",
     "cf:deploy": "bunx wrangler deploy",
     "lint": "biome check --write .",
