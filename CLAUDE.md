@@ -129,6 +129,10 @@ aceita opções sem ler.
 - **Teste dele:** bloco destacado `🧪 PRECISO DO SEU TESTE` + link clicável
   já na rota certa + passo a passo numerado em termos leigos — nunca "confira
   se está tudo ok".
+- **Link é obrigatório:** toda entrega que possa ser testada na interface deve
+  incluir o link direto do ambiente publicado, mesmo quando nenhum teste manual
+  adicional for necessário. Nunca encerrar apenas com número do PR ou caminho
+  textual da rota.
 - **Nunca peça trabalho de peão:** se dá pra rodar o comando, editar o
   arquivo, criar a branch ou aplicar o SQL, faça. Só vai pra ele o que exige
   acesso ou juízo DELE: testar na tela, aprovar 🔴, senha/2FA, deploy manual.
