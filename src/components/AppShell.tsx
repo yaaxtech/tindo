@@ -7,6 +7,7 @@ import { Sidebar } from './Sidebar';
 
 /** Rotas que devem renderizar sem nenhuma navegação (fluxo fullscreen). */
 const FULLSCREEN_ROUTES = [
+  '/',
   '/login',
   '/cadastro',
   '/recuperar-senha',

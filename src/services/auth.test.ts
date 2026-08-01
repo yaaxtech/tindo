@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   ErroDeAutenticacao,
+  cadastrarComSenha,
   entrarComSenha,
   enviarLinkMagico,
   solicitarRecuperacaoDeSenha,
@@ -11,6 +12,7 @@ function clienteAuth() {
   return {
     auth: {
       signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
+      signUp: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
       signInWithOtp: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
       updateUser: vi.fn().mockResolvedValue({ error: null }),
@@ -34,6 +36,23 @@ describe('serviço de autenticação', () => {
     expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
       email: 'pessoa@example.com',
       options: expect.objectContaining({ shouldCreateUser: false, captchaToken: 'captcha' }),
+    });
+  });
+
+  it('cria conta com dados de perfil e callback para o RoadMapMind', async () => {
+    const supabase = clienteAuth();
+    await cadastrarComSenha(
+      { nome: ' Pessoa ', email: ' pessoa@example.com ', senha: 'senha-segura', whatsapp: '' },
+      'captcha',
+      supabase as never,
+    );
+    expect(supabase.auth.signUp).toHaveBeenCalledWith({
+      email: 'pessoa@example.com',
+      password: 'senha-segura',
+      options: expect.objectContaining({
+        captchaToken: 'captcha',
+        data: { name: 'Pessoa', whatsapp: null },
+      }),
     });
   });
 

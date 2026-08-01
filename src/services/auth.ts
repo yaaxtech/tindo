@@ -57,6 +57,27 @@ export async function entrarComSenha(
   falhar(error);
 }
 
+export async function cadastrarComSenha(
+  entrada: { nome: string; email: string; senha: string; whatsapp?: string },
+  captchaToken?: string,
+  authClient?: AuthClient,
+): Promise<{ sessaoCriada: boolean }> {
+  const { data, error } = await cliente(authClient).auth.signUp({
+    email: entrada.email.trim(),
+    password: entrada.senha,
+    options: {
+      emailRedirectTo: urlDeCallback('/docs'),
+      captchaToken,
+      data: {
+        name: entrada.nome.trim(),
+        whatsapp: entrada.whatsapp?.trim() || null,
+      },
+    },
+  });
+  falhar(error);
+  return { sessaoCriada: Boolean(data.session) };
+}
+
 export async function enviarLinkMagico(
   email: string,
   destino: string,

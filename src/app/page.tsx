@@ -17,10 +17,10 @@ export default function HomePage() {
 
         <div className="flex flex-col gap-3">
           <Link
-            href="/cards"
+            href="/cadastro"
             className="inline-flex h-12 items-center justify-center rounded-md grad-jade font-medium text-text-inverse transition-transform duration-fast ease-standard hover:scale-[1.02]"
           >
-            Começar agora
+            Criar conta
           </Link>
           <Link
             href="/login"

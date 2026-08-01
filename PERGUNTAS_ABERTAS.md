@@ -74,6 +74,8 @@ Só tarefas ativas vêm.
 
 - **Cloudflare**: guiar setup passo-a-passo + domínio
 - **GitHub**: push via PAT ou `gh auth login`
+- **RoadMapMind — compartilhamento público (fase posterior):** definir link público de documento.
+  Até essa fase, nenhuma área ou documento do produto pode ser visto sem login.
 
 ---
 
