@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { montarHtmlPdf, serializarDocumentoParaPdf } from './pdf-export';
+import { montarHtmlPdf, nomeArquivoPdf, serializarDocumentoParaPdf } from './pdf-export';
 
 describe('PDF do RoadMapMind', () => {
   it('clona o documento real, preserva checks e desativa a edição', () => {
@@ -34,5 +34,20 @@ describe('PDF do RoadMapMind', () => {
     expect(html).toContain('pdf-mapa');
     expect(html).toContain('--pdf-fundo-mapa:#ffffff');
     expect(html).toContain('break-before: page');
+  });
+
+  it('usa data e nome limpo no arquivo e respeita a orientação do mapa', () => {
+    expect(nomeArquivoPdf('Meu Documento!', new Date(2026, 7, 1))).toBe('20260801_MeuDocumento');
+
+    const html = montarHtmlPdf({
+      titulo: 'Meu Documento',
+      nomeArquivo: '20260801_MeuDocumento',
+      mapaDataUrl: 'data:image/png;base64,abc',
+      orientacaoMapa: 'portrait',
+    });
+
+    expect(html).toContain('<title>20260801_MeuDocumento</title>');
+    expect(html).toContain('@page mapa { size: A4 portrait; margin: 0; }');
+    expect(html).toContain('@page { size: A4 portrait; margin: 0; }');
   });
 });
