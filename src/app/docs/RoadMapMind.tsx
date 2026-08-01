@@ -24,7 +24,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
 import MenuDocumentos from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
-import { capturarEstilosDaPagina, montarHtmlPdf, serializarDocumentoParaPdf } from './pdf-export';
+import {
+  capturarEstilosDaPagina,
+  montarHtmlPdf,
+  nomeArquivoPdf,
+  serializarDocumentoParaPdf,
+} from './pdf-export';
 import { useDocStore } from './useDocStore';
 
 type Status = 'carregando' | 'ok' | 'salvando' | 'erro';
@@ -751,7 +756,7 @@ export default function RoadMapMind() {
   // tem uma pegadinha: com a opção 'noopener' o navegador SEMPRE retorna
   // null mesmo quando abre com sucesso, então dava falso positivo de
   // "bloqueado" mesmo com pop-ups já permitidos).
-  const imprimirViaIframe = useCallback(async (corpoHtml: string) => {
+  const imprimirViaIframe = useCallback(async (corpoHtml: string, nomeArquivo: string) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.left = '-10000px';
@@ -773,6 +778,7 @@ export default function RoadMapMind() {
     doc.open();
     doc.write(corpoHtml);
     doc.close();
+    doc.title = nomeArquivo;
     const win = iframe.contentWindow;
     win?.addEventListener('afterprint', remover);
     setTimeout(remover, 60000); // rede de segurança se 'afterprint' não disparar
@@ -840,6 +846,7 @@ export default function RoadMapMind() {
       }
       await imprimirViaIframe(
         montarHtmlPdf({ titulo: focoTexto ?? titulo, ...capturarDocumentoAtual() }),
+        nomeArquivoPdf(focoTexto ?? titulo),
       );
     } catch (e) {
       setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar o documento.');
@@ -864,14 +871,16 @@ export default function RoadMapMind() {
           titulo: focoTexto ?? titulo,
           mapaDataUrl: mapa.dataUrl,
           fundoMapa: mapa.fundo,
+          orientacaoMapa: orientacao === 'vertical' ? 'portrait' : 'landscape',
         }),
+        nomeArquivoPdf(focoTexto ?? titulo),
       );
     } catch (e) {
       setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar o mapa.');
     } finally {
       if (modoAntes === 'doc') setModo(modoAntes);
     }
-  }, [modo, setModo, focoTexto, titulo, imprimirViaIframe]);
+  }, [modo, setModo, focoTexto, titulo, orientacao, imprimirViaIframe]);
 
   const exportarTudoPdf = useCallback(async () => {
     const modoAntes = modo;
@@ -901,14 +910,16 @@ export default function RoadMapMind() {
           ...documento,
           mapaDataUrl: mapa.dataUrl,
           fundoMapa: mapa.fundo,
+          orientacaoMapa: orientacao === 'vertical' ? 'portrait' : 'landscape',
         }),
+        nomeArquivoPdf(focoTexto ?? titulo),
       );
     } catch (e) {
       setErroMapa(e instanceof Error ? e.message : 'Falha ao exportar documento e mapa.');
     } finally {
       if (modoAntes !== 'split') setModo(modoAntes);
     }
-  }, [modo, setModo, focoTexto, titulo, capturarDocumentoAtual, imprimirViaIframe]);
+  }, [modo, setModo, focoTexto, titulo, orientacao, capturarDocumentoAtual, imprimirViaIframe]);
 
   // menu único de PDF na topbar — escolher Documento, mapa ou ambos
   const [menuPdfAberto, setMenuPdfAberto] = useState(false);

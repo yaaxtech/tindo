@@ -460,8 +460,9 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         const nos = getNodes();
         if (nos.length === 0) return Promise.reject(new Error('O mapa está vazio.'));
         const bounds = getNodesBounds(nos);
-        const largura = 1200;
-        const altura = 800;
+        const vertical = orientacao === 'vertical';
+        const largura = vertical ? 800 : 1200;
+        const altura = vertical ? 1200 : 800;
         const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, 0.12);
         const fluxo = mapaRef.current?.querySelector('.react-flow') as HTMLElement | null;
         const camada = mapaRef.current?.querySelector(
@@ -515,7 +516,7 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         }
       },
     }),
-    [getNodes],
+    [getNodes, orientacao],
   );
 
   // atalhos com nó selecionado: Delete exclui · Enter cria filha · Shift+Enter cria irmã

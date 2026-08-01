@@ -1,10 +1,12 @@
 export type ConteudoPdf = {
   titulo: string;
+  nomeArquivo?: string;
   documentoHtml?: string;
   estilosDocumento?: string;
   classesRaiz?: string;
   mapaDataUrl?: string;
   fundoMapa?: string;
+  orientacaoMapa?: 'portrait' | 'landscape';
 };
 
 export function escaparHtml(valor: string): string {
@@ -14,6 +16,19 @@ export function escaparHtml(valor: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+export function nomeArquivoPdf(titulo: string, data = new Date()): string {
+  const dataFormatada = [data.getFullYear(), data.getMonth() + 1, data.getDate()]
+    .map((parte) => String(parte).padStart(2, '0'))
+    .join('');
+  const nomeLimpo = titulo
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '')
+    .slice(0, 80);
+
+  return `${dataFormatada}_${nomeLimpo || 'RoadMapMind'}`;
 }
 
 export function serializarDocumentoParaPdf(elemento: HTMLElement): string {
@@ -55,13 +70,16 @@ export function capturarEstilosDaPagina(): string {
 
 export function montarHtmlPdf({
   titulo,
+  nomeArquivo = nomeArquivoPdf(titulo),
   documentoHtml,
   estilosDocumento = '',
   classesRaiz = 'rmm-root rmm-tema-light',
   mapaDataUrl,
   fundoMapa = '#ffffff',
+  orientacaoMapa = 'landscape',
 }: ConteudoPdf): string {
   const tituloSeguro = escaparHtml(titulo);
+  const nomeArquivoSeguro = escaparHtml(nomeArquivo);
   const temDocumento = typeof documentoHtml === 'string';
   const temMapa = typeof mapaDataUrl === 'string' && mapaDataUrl.startsWith('data:image/png');
   const combinado = temDocumento && temMapa;
@@ -72,7 +90,7 @@ export function montarHtmlPdf({
     ? `<section class="pdf-pagina pdf-mapa" style="--pdf-fundo-mapa:${escaparHtml(fundoMapa)}"><img src="${mapaDataUrl}" alt="${tituloSeguro} - mapa mental" /></section>`
     : '';
 
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${tituloSeguro}</title>
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${nomeArquivoSeguro}</title>
 ${estilosDocumento}
 <style>
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -109,7 +127,7 @@ ${estilosDocumento}
   .pdf-mapa img { display: block; width: 100%; height: 100%; object-fit: contain; }
   ${combinado ? '.pdf-mapa { break-before: page; }' : ''}
   @page documento { size: A4 portrait; margin: 0; }
-  @page mapa { size: A4 landscape; margin: 0; }
-  @page { size: ${temMapa && !temDocumento ? 'A4 landscape' : 'A4 portrait'}; margin: 0; }
+  @page mapa { size: A4 ${orientacaoMapa}; margin: 0; }
+  @page { size: ${temMapa && !temDocumento ? `A4 ${orientacaoMapa}` : 'A4 portrait'}; margin: 0; }
 </style></head><body>${documento}${mapa}</body></html>`;
 }
