@@ -6,7 +6,14 @@ import { MobileHeader } from './MobileHeader';
 import { Sidebar } from './Sidebar';
 
 /** Rotas que devem renderizar sem nenhuma navegação (fluxo fullscreen). */
-const FULLSCREEN_ROUTES = ['/login', '/cadastro', '/calibracao', '/recalibrar'];
+const FULLSCREEN_ROUTES = [
+  '/login',
+  '/cadastro',
+  '/recuperar-senha',
+  '/nova-senha',
+  '/calibracao',
+  '/recalibrar',
+];
 
 /**
  * Rotas imersivas: o app ocupa a tela inteira e o menu do TinDo "existe mas não

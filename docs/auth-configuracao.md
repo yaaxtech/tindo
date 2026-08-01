@@ -1,0 +1,31 @@
+# Configuração da autenticação
+
+Este documento acompanha a implementação incremental do login real. O código aceita senha, link
+mágico e recuperação de senha para contas existentes. Cadastro aberto e proteção global de rotas
+entram em PRs posteriores.
+
+## Antes de ativar em produção
+
+1. No Supabase Auth, configure a **Site URL** com a URL pública do TinDo.
+2. Adicione `https://SEU_DOMINIO/auth/callback` às URLs de redirecionamento permitidas.
+3. Configure SMTP próprio. O remetente padrão do Supabase tem limite baixo e não deve sustentar o
+   login de produção.
+4. No Cloudflare Turnstile, crie um widget para o domínio do TinDo e publique a chave pública como
+   `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+5. Só depois de a variável chegar à aplicação, habilite a proteção CAPTCHA do Supabase Auth e
+   cadastre a chave secreta do Turnstile no painel. Essa ordem evita bloquear o login no intervalo.
+6. Mantenha confirmação de e-mail habilitada e teste os modelos de link mágico e recuperação.
+
+## Desenvolvimento local
+
+O callback permitido é `http://localhost:3000/auth/callback`. Sem
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY`, o widget não aparece e o token não é enviado; isso permite testar
+localmente enquanto o CAPTCHA do projeto Supabase estiver desabilitado.
+
+## Teste de fumaça
+
+- entrar com a senha de uma conta existente e chegar a `/docs`;
+- pedir link mágico para uma conta existente e abrir o callback no mesmo navegador;
+- pedir link para e-mail desconhecido e confirmar que nenhuma conta foi criada;
+- recuperar a senha, definir uma senha com ao menos 10 caracteres e chegar a `/docs`;
+- confirmar que um `next` externo é descartado e redireciona para `/docs`.
