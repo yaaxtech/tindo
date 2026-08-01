@@ -766,7 +766,17 @@ export default function RoadMapMind() {
     iframe.style.border = '0';
     iframe.setAttribute('aria-hidden', 'true');
     document.body.appendChild(iframe);
+    // O diálogo nativo do Chromium usa o título da janela principal para
+    // sugerir o nome do PDF (e não apenas o <title> do iframe).
+    const tituloOriginal = document.title;
+    let tituloRestaurado = false;
+    const restaurarTitulo = () => {
+      if (tituloRestaurado) return;
+      document.title = tituloOriginal;
+      tituloRestaurado = true;
+    };
     const remover = () => {
+      restaurarTitulo();
       if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
     };
     const doc = iframe.contentWindow?.document;
@@ -775,6 +785,7 @@ export default function RoadMapMind() {
       setErroMapa('Não foi possível preparar a impressão.');
       return;
     }
+    document.title = nomeArquivo;
     doc.open();
     doc.write(corpoHtml);
     doc.close();
