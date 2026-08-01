@@ -6,11 +6,22 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
+const PAISES_DDI = [
+  { ddi: '55', nome: 'Brasil', bandeira: '🇧🇷' },
+  { ddi: '1', nome: 'Estados Unidos e Canadá', bandeira: '🇺🇸' },
+  { ddi: '351', nome: 'Portugal', bandeira: '🇵🇹' },
+  { ddi: '54', nome: 'Argentina', bandeira: '🇦🇷' },
+  { ddi: '57', nome: 'Colômbia', bandeira: '🇨🇴' },
+  { ddi: '52', nome: 'México', bandeira: '🇲🇽' },
+  { ddi: '34', nome: 'Espanha', bandeira: '🇪🇸' },
+] as const;
+
 export default function CadastroPage() {
   const router = useRouter();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [ddi, setDdi] = useState('55');
   const [senha, setSenha] = useState('');
   const [confirmacao, setConfirmacao] = useState('');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -20,13 +31,13 @@ export default function CadastroPage() {
   const [erro, setErro] = useState<string | null>(null);
   const receberToken = useCallback((token: string | null) => setCaptchaToken(token), []);
 
-  function whatsappComDdiBrasil(valor: string): string | undefined {
+  function whatsappComDdi(valor: string, codigoDdi: string): string | undefined {
     const texto = valor.trim();
     const numeros = texto.replace(/\D/g, '');
-    const numeroNacional = texto.startsWith('+55') || texto.startsWith('0055')
-      ? numeros.replace(/^(?:00)?55/, '')
+    const numeroNacional = texto.startsWith(`+${codigoDdi}`) || texto.startsWith(`00${codigoDdi}`)
+      ? numeros.replace(new RegExp(`^(?:00)?${codigoDdi}`), '')
       : numeros;
-    return numeroNacional ? `+55${numeroNacional}` : undefined;
+    return numeroNacional ? `+${codigoDdi}${numeroNacional}` : undefined;
   }
 
   async function cadastrar(event: React.FormEvent) {
@@ -39,7 +50,7 @@ export default function CadastroPage() {
     setCarregando(true);
     try {
       const resultado = await cadastrarComSenha(
-        { nome, email, senha, whatsapp: whatsappComDdiBrasil(whatsapp) },
+        { nome, email, senha, whatsapp: whatsappComDdi(whatsapp, ddi) },
         captchaToken ?? undefined,
       );
       if (resultado.sessaoCriada) {
@@ -121,14 +132,23 @@ export default function CadastroPage() {
                 WhatsApp <span className="normal-case text-text-muted">(opcional)</span>
               </label>
               <div className="flex h-11 overflow-hidden rounded-md border border-border-strong bg-bg-elevated focus-within:border-jade-accent">
-                <span className="flex items-center gap-1.5 border-r border-border-strong px-4 text-sm text-text-secondary">
-                  <span aria-hidden="true">🇧🇷</span> +55
-                </span>
+                <select
+                  aria-label="País e código telefônico"
+                  value={ddi}
+                  onChange={(event) => setDdi(event.target.value)}
+                  className="max-w-32 border-r border-border-strong bg-bg-elevated px-3 text-sm text-text-secondary outline-none"
+                >
+                  {PAISES_DDI.map((pais) => (
+                    <option key={pais.ddi} value={pais.ddi}>
+                      {pais.bandeira} +{pais.ddi} · {pais.nome}
+                    </option>
+                  ))}
+                </select>
                 <input
                   id="whatsapp"
                   type="tel"
                   autoComplete="tel-national"
-                  maxLength={15}
+                  maxLength={20}
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   placeholder="(00) 00000-0000"
