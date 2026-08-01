@@ -494,7 +494,12 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
               skipFonts: true,
               filter: (no) => {
                 const classes = (no as Element).classList;
-                return !classes?.contains('react-flow__controls') && !classes?.contains('mm-dica');
+                // A grade pertence ao editor; o PDF mostra só o mapa em fundo branco.
+                return (
+                  !classes?.contains('react-flow__controls') &&
+                  !classes?.contains('react-flow__background') &&
+                  !classes?.contains('mm-dica')
+                );
               },
               style: {
                 width: `${largura}px`,
