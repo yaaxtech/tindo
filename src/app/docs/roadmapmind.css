@@ -1266,3 +1266,97 @@
 .rmm-tema-light .rmm-pdf-menu button {
   color: #1b222c;
 }
+
+/* ── Fase 2: compartilhamento (Fatia 1b) ─────────────────────────────────── */
+
+/* Cabeçalho de seção do menu (Meus documentos / Compartilhados comigo) */
+.rmm-nav-secao {
+  padding: 12px 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4a5563;
+}
+
+/* Item de doc compartilhado no menu: ícone de papel + título */
+.rmm-nav-compartilhado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rmm-nav-papel {
+  display: inline-flex;
+  align-items: center;
+  color: #7a8796;
+}
+
+/* Faixa de papel no topo do doc do convidado */
+.rmm-faixa-papel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.rmm-faixa-papel-mensagem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.rmm-faixa-papel-dono {
+  color: #7a8796;
+}
+/* só-leitura = âmbar; editor (futuro) = jade */
+.rmm-faixa-papel.leitor {
+  background: rgba(242, 185, 75, 0.12);
+  color: #f2b94b;
+}
+.rmm-faixa-papel.editor {
+  background: rgba(44, 175, 147, 0.12);
+  color: #2caf93;
+}
+
+/* Página read-only do doc compartilhado */
+.rmm-compartilhado {
+  min-height: 100dvh;
+  background: #0a0e13;
+  color: #e8edf2;
+}
+.rmm-compartilhado-topo {
+  padding: 12px 16px;
+}
+.rmm-voltar {
+  color: #7a8796;
+  text-decoration: none;
+  font-size: 13px;
+}
+.rmm-voltar:hover {
+  color: #e8edf2;
+}
+.rmm-compartilhado-corpo {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 8px 16px 64px;
+}
+.rmm-compartilhado-aviso {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 24px;
+  text-align: center;
+  color: #7a8796;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+/* Tema claro: faixa e fundo da página read-only */
+.rmm-tema-light.rmm-compartilhado {
+  background: #f5f7fa;
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-faixa-papel {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}

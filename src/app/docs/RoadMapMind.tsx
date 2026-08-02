@@ -22,7 +22,7 @@ import { FileText, Files, Network, Printer } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
-import MenuDocumentos from './MenuDocumentos';
+import MenuDocumentos, { type ItemCompartilhado } from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
 import PerfilMenu from './PerfilMenu';
 import {
@@ -141,6 +141,7 @@ export default function RoadMapMind() {
   const [aviso, setAviso] = useState<{ blockId: string; abertas: number } | null>(null);
   const [painelCores, setPainelCores] = useState(false);
   const [doc, setDoc] = useState<Block[]>([]);
+  const [compartilhados, setCompartilhados] = useState<ItemCompartilhado[]>([]);
   const [editarNoId, setEditarNoId] = useState<string | null>(null); // nó novo abre pra nomear
   const [confirmarExclusao, setConfirmarExclusao] = useState<{
     id: string;
@@ -261,6 +262,24 @@ export default function RoadMapMind() {
       vivo = false;
     };
   }, [editor]);
+
+  // "Compartilhados comigo": docs de outras pessoas onde tenho acesso (Fase 2).
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/docs/compartilhados');
+        if (!res.ok) return; // silencioso: seção só aparece se houver itens
+        const data = await res.json();
+        if (vivo) setCompartilhados((data.itens ?? []) as ItemCompartilhado[]);
+      } catch {
+        // sem acesso à rede / sem compartilhados: menu segue só com os meus
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const salvar = useCallback(async () => {
     if (!raizId) return;
@@ -1172,6 +1191,7 @@ export default function RoadMapMind() {
             aoExcluir={aoExcluir}
             aoMover={aoMoverDoc}
             aoRecolher={() => setMenuEstado('fechado')}
+            compartilhados={compartilhados}
           />
         )}
 
