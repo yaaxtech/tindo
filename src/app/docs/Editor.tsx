@@ -12,15 +12,24 @@ import { BlockNoteView } from '@blocknote/mantine';
 interface EditorProps {
   editor: BlockNoteEditor;
   tema: 'dark' | 'light';
-  onChange: () => void;
-  onSelectionChange: () => void;
+  onChange?: () => void;
+  onSelectionChange?: () => void;
+  /** false = só-leitura (visão do convidado leitor). Default true (dono). */
+  editavel?: boolean;
 }
 
-export default function Editor({ editor, tema, onChange, onSelectionChange }: EditorProps) {
+export default function Editor({
+  editor,
+  tema,
+  onChange,
+  onSelectionChange,
+  editavel = true,
+}: EditorProps) {
   return (
     <BlockNoteView
       editor={editor}
       theme={tema}
+      editable={editavel}
       onChange={onChange}
       onSelectionChange={onSelectionChange}
     />

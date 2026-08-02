@@ -6,9 +6,17 @@
 // (/docs?doc=<uuid>) via <Link> real — abre em nova aba com o botão do meio.
 
 import type { Block } from '@blocknote/core';
+import { Eye, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { extrairTexto } from './Mindmap';
+
+/** Documento de outra pessoa compartilhado comigo (Fase 2). */
+export type ItemCompartilhado = {
+  documentoId: string;
+  tituloMd: string;
+  papel: 'leitor' | 'editor';
+};
 
 type ItemMenu = {
   id: string;
@@ -51,6 +59,8 @@ export interface MenuDocumentosProps {
   aoExcluir: (id: string) => void;
   aoMover: (id: string, alvoId: string) => void;
   aoRecolher: () => void;
+  /** Documentos de outras pessoas compartilhados comigo (Fase 2). */
+  compartilhados?: ItemCompartilhado[];
 }
 
 export default function MenuDocumentos({
@@ -63,6 +73,7 @@ export default function MenuDocumentos({
   aoExcluir,
   aoMover,
   aoRecolher,
+  compartilhados = [],
 }: MenuDocumentosProps) {
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<MenuCtx | null>(null);
@@ -91,6 +102,7 @@ export default function MenuDocumentos({
           ‹
         </button>
       </div>
+      {compartilhados.length > 0 && <div className="rmm-nav-secao">Meus documentos</div>}
       <Link
         className={`rmm-nav-item ${focoId === null ? 'ativo' : ''}`}
         href="/docs"
@@ -172,6 +184,27 @@ export default function MenuDocumentos({
             )}
           </div>
         ))}
+
+      {compartilhados.length > 0 && (
+        <>
+          <div className="rmm-nav-secao">Compartilhados comigo</div>
+          {compartilhados.map((c) => (
+            <div key={c.documentoId} className="rmm-nav-linha" style={{ paddingLeft: 16 }}>
+              <span className="rmm-nav-seta rmm-nav-seta-vazia" />
+              <Link
+                className="rmm-nav-item rmm-nav-compartilhado"
+                href={`/docs/compartilhados/${c.documentoId}`}
+                title={c.papel === 'editor' ? 'Você pode editar' : 'Você pode ver'}
+              >
+                <span className="rmm-nav-papel" aria-hidden>
+                  {c.papel === 'editor' ? <Pencil size={13} /> : <Eye size={13} />}
+                </span>
+                {c.tituloMd || 'Documento sem título'}
+              </Link>
+            </div>
+          ))}
+        </>
+      )}
 
       {menu && (
         <>
