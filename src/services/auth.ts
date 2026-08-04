@@ -39,8 +39,13 @@ function falhar(error: { code?: string } | null): void {
   if (error) throw new ErroDeAutenticacao(mensagemDoErro(error.code));
 }
 
-function erroIndicaContaAusente(error: { code?: string } | null): boolean {
-  return error?.code === 'user_not_found' || error?.code === 'invalid_credentials';
+function erroDeEmailDeveSerNeutro(error: { code?: string } | null): boolean {
+  return (
+    error?.code === 'user_not_found' ||
+    error?.code === 'invalid_credentials' ||
+    error?.code === 'email_address_not_authorized' ||
+    error?.code === 'otp_disabled'
+  );
 }
 
 export async function entrarComSenha(
@@ -74,6 +79,9 @@ export async function cadastrarComSenha(
       },
     },
   });
+  // O Supabase devolve sucesso neutro para conta existente. Falhas do remetente
+  // também ficam neutras para não permitir descobrir quais e-mails têm conta.
+  if (erroDeEmailDeveSerNeutro(error)) return { sessaoCriada: false };
   falhar(error);
   return { sessaoCriada: Boolean(data.session) };
 }
@@ -93,7 +101,7 @@ export async function enviarLinkMagico(
     },
   });
   // Mantém a resposta indistinguível para não revelar quais e-mails têm conta.
-  if (erroIndicaContaAusente(error)) return;
+  if (erroDeEmailDeveSerNeutro(error)) return;
   falhar(error);
 }
 
@@ -107,7 +115,7 @@ export async function solicitarRecuperacaoDeSenha(
     captchaToken,
   });
   // Mantém a resposta indistinguível para não revelar quais e-mails têm conta.
-  if (erroIndicaContaAusente(error)) return;
+  if (erroDeEmailDeveSerNeutro(error)) return;
   falhar(error);
 }
 
