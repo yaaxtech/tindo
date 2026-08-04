@@ -109,10 +109,10 @@ final e precisa poder chamar a qualquer momento.
   CI verdes = faça merge e push em `main`, sem pedir confirmação nem esperar
   teste manual do dono. Antes do merge, valide a conclusão explícita do CI;
   não basta uma saída parcial de `gh pr checks --watch`.
-- **Produção ao merge:** no estado atual, a integração nativa da Cloudflare
-  publica automaticamente o Worker OpenNext `tindo` a cada push em `main`.
-  Isso inclui a interface e as API routes empacotadas no app. Não há etapa
-  manual versionada entre `main` e o usuário final. O worker `tindo-cron` é
+- **Produção ao merge:** no estado atual, `.github/workflows/ci.yml` valida o
+  bundle OpenNext e publica `tindoapp.pages.dev` após cada push em `main`.
+  O Worker técnico `tindo` recebe o mesmo código pela integração nativa e
+  redireciona navegação para o Pages. O worker `tindo-cron` é
   separado: seu código só muda em deploy manual com `wrangler deploy`, mas os
   seus crons continuam chamando as rotas já publicadas do app.
 - **Validação pós-merge:** após cada merge que altere algo testável na
@@ -142,9 +142,9 @@ final e precisa poder chamar a qualquer momento.
   sobe, roda CI e mergeia antes da próxima — bug aparece horas antes, não no
   fim. Fixes pequenos da mesma família continuam agrupados num PR só.
 - **Checks atuais:** `.github/workflows/ci.yml` roda `typecheck`, testes e
-  `cf:build` em PRs e em pushes para `main`. O workflow não executa o deploy:
-  a Cloudflare o faz pela integração nativa após o push. Mudanças só de docs
-  ou configuração de agente ainda acionam o CI ao entrar em `main`.
+  `cf:build` em PRs e em pushes para `main`. Depois desses checks, pushes em
+  `main` publicam o mesmo bundle em `tindoapp.pages.dev`; PRs nunca publicam.
+  Mudanças só de docs ou configuração de agente ainda acionam o CI.
 
 ---
 

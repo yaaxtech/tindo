@@ -1,6 +1,6 @@
 # DEPLOY — TinDo em Cloudflare Pages
 
-Domínio: **https://tindo-6qy.pages.dev**
+Domínio oficial: **https://tindoapp.pages.dev**
 
 ---
 
@@ -10,24 +10,24 @@ Domínio: **https://tindo-6qy.pages.dev**
 # 1. Instalar dependências
 bun install
 
-# 2. Build local (gera .vercel/output/static)
-bun run pages:build
+# 2. Build local (gera o bundle em .open-next/assets)
+bun run cf:pages:build
 
 # 3. Deploy manual (requer CLOUDFLARE_API_TOKEN exportado)
-export CLOUDFLARE_API_TOKEN=<seu_token>
-bun run pages:deploy
+export CLOUDFLARE_API_TOKEN=<seu-token>
+bunx wrangler pages deploy .open-next/assets --project-name=tindoapp --branch=main
 ```
 
 ---
 
 ## Secrets — CF Pages Dashboard
 
-Acesse: https://dash.cloudflare.com → Pages → tindo-6qy → Settings → Environment Variables
+Acesse: https://dash.cloudflare.com → Pages → tindoapp → Settings → Environment Variables
 
 | Secret | Descrição |
 |--------|-----------|
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-| `SUPABASE_ANON_KEY` | Chave anon pública do Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave anon pública do Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave service role (server-only) |
 | `TODOIST_API_TOKEN` | Token da API do Todoist |
 | `ANTHROPIC_API_KEY` | Chave da API da Anthropic |
@@ -43,7 +43,8 @@ openssl rand -hex 32
 
 ## GitHub Actions (CI/CD automático)
 
-O push em `main` dispara `.github/workflows/deploy.yml` automaticamente.
+O push em `main` dispara `.github/workflows/ci.yml`. Depois dos testes e do build,
+o mesmo job prepara o bundle e publica o projeto `tindoapp` no Cloudflare Pages.
 
 ### Secrets necessários no GitHub
 
@@ -54,7 +55,7 @@ Acesse: Settings → Secrets → Actions
 | `CLOUDFLARE_API_TOKEN` | Token da Cloudflare (permissão Pages:Edit) |
 | `CLOUDFLARE_ACCOUNT_ID` | Account ID da Cloudflare |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do Supabase (usado no build) |
-| `SUPABASE_ANON_KEY` | Chave anon (usada no build) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave anon (usada no build) |
 
 ---
 
@@ -73,11 +74,11 @@ wrangler secret put CRON_SECRET
 wrangler deploy
 ```
 
-O Worker `tindo-cron` irá chamar `POST https://tindo-6qy.pages.dev/api/cron/diario`
+O Worker `tindo-cron` irá chamar `POST https://tindoapp.pages.dev/api/cron/diario`
 com o header `Authorization: Bearer <CRON_SECRET>` diariamente.
 
 **Alternativa sem Worker**: use https://cron-job.org ou UptimeRobot apontando para
-`https://tindo-6qy.pages.dev/api/cron/diario` (POST, com header Authorization).
+`https://tindoapp.pages.dev/api/cron/diario` (POST, com header Authorization).
 
 ---
 
@@ -115,7 +116,6 @@ export const dynamic = 'force-dynamic';
 
 | Script | Descrição |
 |--------|-----------|
-| `bun run pages:build` | Build para CF Pages (`.vercel/output/static`) |
-| `bun run pages:deploy` | Build + deploy via wrangler |
-| `bun run pages:preview` | Preview local via wrangler dev |
+| `bun run cf:pages:build` | Build OpenNext e prepara o bundle do Pages |
+| `bunx wrangler pages deploy .open-next/assets --project-name=tindoapp --branch=main` | Deploy do bundle já preparado |
 | `bun run build` | Build Next.js padrão (Node.js) |
