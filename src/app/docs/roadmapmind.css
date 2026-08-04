@@ -1360,3 +1360,444 @@
 .rmm-tema-light .rmm-faixa-papel {
   border-bottom-color: rgba(0, 0, 0, 0.08);
 }
+
+/* ── Fase 2: modal Compartilhar (variante A aprovada) ───────────────────── */
+.rmm-btn-compartilhar {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.rmm-share-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #e8edf2;
+}
+.rmm-share-modal {
+  position: relative;
+  inset: auto;
+  width: min(560px, 100%);
+  max-height: min(760px, calc(100dvh - 32px));
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #2a3340;
+  border-radius: 14px;
+  background: #121820;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+}
+.rmm-share-header,
+.rmm-share-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-color: #2a3340;
+}
+.rmm-share-header {
+  justify-content: space-between;
+  border-bottom: 1px solid #2a3340;
+}
+.rmm-share-header > div,
+.rmm-share-header h2,
+.rmm-share-secao-titulo,
+.rmm-share-copiar,
+.rmm-share-regenerar {
+  display: flex;
+  align-items: center;
+}
+.rmm-share-header > div {
+  min-width: 0;
+  gap: 9px;
+}
+.rmm-share-header > div > svg {
+  flex: 0 0 auto;
+  color: #2caf93;
+}
+.rmm-share-header h2 {
+  min-width: 0;
+  margin: 0;
+  gap: 5px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.rmm-share-header h2 span {
+  overflow: hidden;
+  color: #aab4c0;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rmm-share-header > button,
+.rmm-share-remover {
+  flex: 0 0 auto;
+  padding: 5px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #7a8796;
+  cursor: pointer;
+}
+.rmm-share-header > button:hover {
+  background: #1b222c;
+  color: #e8edf2;
+}
+.rmm-share-corpo {
+  overflow-y: auto;
+  display: grid;
+  gap: 17px;
+  padding: 20px;
+}
+.rmm-share-convidar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: 8px;
+}
+.rmm-share-campo-email {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: #aeb8c4;
+  font-size: 11px;
+  font-weight: 650;
+}
+.rmm-share-campo-email b {
+  color: #ef6b73;
+}
+.rmm-share-campo-email small {
+  color: #ef6b73;
+  font-size: 11px;
+  font-weight: 500;
+}
+.rmm-share-convidar input,
+.rmm-share-papel {
+  min-width: 0;
+  height: 38px;
+  border: 1px solid #2a3340;
+  border-radius: 8px;
+  background: #0d1219;
+  color: #e8edf2;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.rmm-share-convidar input {
+  width: 100%;
+  padding: 0 11px;
+}
+.rmm-share-papel {
+  padding: 0 28px 0 10px;
+  cursor: pointer;
+}
+.rmm-share-convidar input:focus,
+.rmm-share-papel:focus {
+  border-color: #2caf93;
+  box-shadow: 0 0 0 2px rgba(44, 175, 147, 0.12);
+}
+.rmm-share-convidar input[aria-invalid="true"] {
+  border-color: #ef6b73;
+  box-shadow: 0 0 0 2px rgba(239, 107, 115, 0.14);
+}
+.rmm-share-primario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #198b74;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rmm-share-primario:hover:not(:disabled) {
+  background: #2caf93;
+}
+.rmm-share-primario:disabled,
+.rmm-share-toggle:disabled,
+.rmm-share-copiar:disabled,
+.rmm-share-regenerar:disabled,
+.rmm-share-papel:disabled,
+.rmm-share-remover:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+.rmm-share-mensagem {
+  margin: -7px 0 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.rmm-share-mensagem.erro {
+  background: rgba(227, 84, 108, 0.1);
+  color: #ef8b9c;
+}
+.rmm-share-mensagem.aviso {
+  background: rgba(242, 185, 75, 0.1);
+  color: #f2b94b;
+}
+.rmm-share-secao-titulo {
+  gap: 7px;
+  color: #7a8796;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rmm-share-lista {
+  display: grid;
+  gap: 3px;
+  margin-top: -10px;
+}
+.rmm-share-vazio {
+  margin: 0;
+  padding: 10px 4px;
+  color: #7a8796;
+  font-size: 13px;
+}
+.rmm-share-pessoa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 5px;
+  border-radius: 8px;
+}
+.rmm-share-pessoa:hover {
+  background: #1b222c;
+}
+.rmm-share-avatar {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.rmm-share-identidade {
+  min-width: 0;
+  flex: 1;
+}
+.rmm-share-identidade strong,
+.rmm-share-identidade small,
+.rmm-share-geral-texto strong,
+.rmm-share-geral-texto small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rmm-share-identidade strong,
+.rmm-share-geral-texto strong {
+  color: #e8edf2;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rmm-share-identidade small,
+.rmm-share-geral-texto small {
+  margin-top: 2px;
+  color: #7a8796;
+  font-size: 11px;
+}
+.rmm-share-pessoa .rmm-share-papel {
+  height: 31px;
+  font-size: 12px;
+}
+.rmm-share-remover {
+  opacity: 0;
+}
+.rmm-share-pessoa:hover .rmm-share-remover,
+.rmm-share-remover:focus-visible {
+  opacity: 1;
+}
+.rmm-share-remover:hover {
+  background: rgba(227, 84, 108, 0.12);
+  color: #e3546c;
+}
+.rmm-share-geral {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid #2a3340;
+}
+.rmm-share-geral-linha {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.rmm-share-geral-icone {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #1b222c;
+  color: #aab4c0;
+}
+.rmm-share-geral-icone.publico {
+  background: rgba(44, 175, 147, 0.14);
+  color: #2caf93;
+}
+.rmm-share-geral-texto {
+  min-width: 0;
+  flex: 1;
+}
+.rmm-share-toggle {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #343d49;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.rmm-share-toggle span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  transition: transform 150ms ease;
+}
+.rmm-share-toggle.ativo {
+  background: #198b74;
+}
+.rmm-share-toggle.ativo span {
+  transform: translateX(20px);
+}
+.rmm-share-regenerar {
+  justify-self: start;
+  gap: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: #7a8796;
+  font-size: 11px;
+  cursor: pointer;
+}
+.rmm-share-regenerar:hover:not(:disabled) {
+  color: #2caf93;
+}
+.rmm-share-footer {
+  border-top: 1px solid #2a3340;
+}
+.rmm-share-copiar {
+  flex: 0 0 auto;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(44, 175, 147, 0.42);
+  border-radius: 8px;
+  background: transparent;
+  color: #2caf93;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rmm-share-copiar:hover:not(:disabled) {
+  background: rgba(44, 175, 147, 0.1);
+}
+.rmm-share-url {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: #4a5563;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* O portal sai da raiz do RMM; a classe de tema vai no próprio overlay. */
+.rmm-share-portal.rmm-tema-light {
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-share-modal {
+  border-color: #d4dae1;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(27, 34, 44, 0.25);
+}
+.rmm-tema-light .rmm-share-header,
+.rmm-tema-light .rmm-share-footer,
+.rmm-tema-light .rmm-share-geral {
+  border-color: #e3e7ec;
+}
+.rmm-tema-light .rmm-share-header h2,
+.rmm-tema-light .rmm-share-identidade strong,
+.rmm-tema-light .rmm-share-geral-texto strong {
+  color: #1b222c;
+}
+.rmm-tema-light .rmm-share-header h2 span,
+.rmm-tema-light .rmm-share-identidade small,
+.rmm-tema-light .rmm-share-geral-texto small,
+.rmm-tema-light .rmm-share-secao-titulo,
+.rmm-tema-light .rmm-share-vazio,
+.rmm-tema-light .rmm-share-regenerar {
+  color: #687586;
+}
+.rmm-tema-light .rmm-share-header > button:hover,
+.rmm-tema-light .rmm-share-pessoa:hover,
+.rmm-tema-light .rmm-share-geral-icone {
+  background: #f1f4f7;
+}
+.rmm-tema-light .rmm-share-convidar input,
+.rmm-tema-light .rmm-share-papel {
+  border-color: #d4dae1;
+  background: #fff;
+  color: #1b222c;
+}
+
+@media (max-width: 639px) {
+  .rmm-share-portal {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .rmm-share-modal {
+    width: 100%;
+    max-height: 92dvh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 16px 16px 0 0;
+  }
+  .rmm-share-convidar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .rmm-share-convidar .rmm-share-primario {
+    grid-column: 1 / -1;
+  }
+  .rmm-share-footer {
+    flex-wrap: wrap;
+  }
+  .rmm-share-url {
+    display: none;
+  }
+  .rmm-share-footer .rmm-share-primario {
+    margin-left: auto;
+  }
+}

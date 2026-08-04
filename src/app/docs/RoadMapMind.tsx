@@ -18,12 +18,13 @@ import type { DocLinha } from '@/types/doc';
 import type { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { pt } from '@blocknote/core/locales';
 import { useCreateBlockNote } from '@blocknote/react';
-import { FileText, Files, Network, Printer } from 'lucide-react';
+import { FileText, Files, Network, Printer, Share2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
 import MenuDocumentos, { type ItemCompartilhado } from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
+import ModalCompartilhar from './ModalCompartilhar';
 import PerfilMenu from './PerfilMenu';
 import {
   capturarEstilosDaPagina,
@@ -142,6 +143,7 @@ export default function RoadMapMind() {
   const [painelCores, setPainelCores] = useState(false);
   const [doc, setDoc] = useState<Block[]>([]);
   const [compartilhados, setCompartilhados] = useState<ItemCompartilhado[]>([]);
+  const [modalCompartilharAberto, setModalCompartilharAberto] = useState(false);
   const [editarNoId, setEditarNoId] = useState<string | null>(null); // nó novo abre pra nomear
   const [confirmarExclusao, setConfirmarExclusao] = useState<{
     id: string;
@@ -769,6 +771,8 @@ export default function RoadMapMind() {
   // foco de documento: só vale se a linha ainda existe (senão cai pra raiz)
   const focoBloco = focoId ? acharBloco(doc, focoId) : null;
   const focoTexto = focoBloco ? extrairTexto(focoBloco) : null;
+  const documentoCompartilhavel = focoBloco?.id ?? raizId;
+  const tituloCompartilhavel = focoTexto || titulo;
 
   // Imprime HTML customizado via IFRAME OCULTO na própria página — nunca
   // abre janela nenhuma, então nunca esbarra em bloqueio de pop-up (ao
@@ -1132,11 +1136,29 @@ export default function RoadMapMind() {
         <span className="rmm-status" data-status={status}>
           {ROTULOS[status]}
         </span>
+        {documentoCompartilhavel && (
+          <button
+            type="button"
+            className="rmm-btn rmm-btn-compartilhar"
+            onClick={() => setModalCompartilharAberto(true)}
+          >
+            <Share2 aria-hidden="true" size={15} /> Compartilhar
+          </button>
+        )}
         <button type="button" className="rmm-btn" onClick={() => void salvar()}>
           Salvar
         </button>
         <PerfilMenu />
       </header>
+
+      {modalCompartilharAberto && documentoCompartilhavel && (
+        <ModalCompartilhar
+          documentoId={documentoCompartilhavel}
+          titulo={tituloCompartilhavel}
+          tema={tema}
+          onFechar={() => setModalCompartilharAberto(false)}
+        />
+      )}
 
       {painelCores && (
         <div className="rmm-cores">

@@ -47,3 +47,24 @@ export interface CompartilhadoComigo {
   papel: Papel;
   dono: string; // usuario_id do dono do documento
 }
+
+/** Pessoa que recebeu acesso direto ao documento. */
+export interface AcessoItem {
+  usuarioId?: string;
+  email: string;
+  nome?: string;
+  cor?: string;
+  papel: Papel;
+  pendente: boolean;
+}
+
+/** Resultado do convite desta fatia (email sem conta ainda não é persistido). */
+export interface ResultadoConvite {
+  status: 'concedido' | 'pendente' | 'ja_tem' | 'auto';
+}
+
+/** Estado atual do link compartilhável. */
+export interface LinkDocumento {
+  token: string;
+  modo: ModoLink;
+}
