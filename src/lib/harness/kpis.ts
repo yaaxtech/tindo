@@ -115,7 +115,7 @@ export function kpisGerais(linhas: LedgerLinha[]): KpisGerais {
     offload: n ? off / n : null,
     quotaHit: n ? (n - julg.length) / n : null,
     reciclo: julg.length ? rec / julg.length : null,
-    durMed: durs.length ? durs[Math.floor(durs.length / 2)] : null,
+    durMed: durs.length ? (durs[Math.floor(durs.length / 2)] ?? null) : null,
     durN: durs.length,
     porFrente,
     quotaPorFrente,
@@ -140,7 +140,8 @@ export function kpisTerreno(
   });
   for (const t of Object.keys(cadeias)) por[t] = vazio();
   for (const r of linhas) {
-    const t = por[r.terreno] || (por[r.terreno] = vazio());
+    if (!por[r.terreno]) por[r.terreno] = vazio();
+    const t = por[r.terreno] as TerrenoKpi;
     t.n++;
     if (r.resultado === 'quota') t.quota++;
     else {
@@ -153,7 +154,8 @@ export function kpisTerreno(
     t.ok1Pct = t.julgaveis ? t.ok1 / t.julgaveis : null;
     t.recicloPct = t.julgaveis ? t.reciclo / t.julgaveis : null;
     const cad = cadeias[nome];
-    if (t.julgaveis < MIN_N) t.sinal = { tipo: 'dados', texto: `coletando dados (n=${t.julgaveis})` };
+    if (t.julgaveis < MIN_N)
+      t.sinal = { tipo: 'dados', texto: `coletando dados (n=${t.julgaveis})` };
     else if (t.ok1Pct != null && t.ok1Pct < OK1_PISO)
       t.sinal = {
         tipo: 'subir',
