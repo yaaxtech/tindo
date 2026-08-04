@@ -8,6 +8,7 @@ export const ROTAS_PUBLICAS = [
   '/auth/callback',
   '/recuperar-senha',
   '/nova-senha',
+  '/harness',
   '/manifest.webmanifest',
 ] as const;
 
@@ -27,13 +28,7 @@ export function ehRotaRoadMapMind(pathname: string): boolean {
 /** Áreas que já isolam dados pela sessão/RLS e podem receber qualquer conta. */
 export function ehRotaMultiusuario(pathname: string): boolean {
   return (
-    ehRotaRoadMapMind(pathname) ||
-    pathname === '/api/perfil' ||
-    pathname.startsWith('/api/perfil/') ||
-    // Painel do Harness: dado operacional único (singleton), não por-usuário.
-    // A RLS de harness_snapshot já libera leitura a qualquer authenticated —
-    // esta rota só espelha essa mesma abertura no gate do middleware.
-    pathname === '/harness'
+    ehRotaRoadMapMind(pathname) || pathname === '/api/perfil' || pathname.startsWith('/api/perfil/')
   );
 }
 
