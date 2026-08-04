@@ -24,7 +24,7 @@ Spec fechada do RoadMapMind (editor outline + mindmap + documentos aninhados + c
 - **Destino em fases** — Fase 1 = MVP solo (editor+mindmap+docs aninhados+menu+checkboxes); Fase 2 = compartilhamento por linha + convites + atribuir tarefas; Fase 3 = edição simultânea. Cada fase usável sozinha.
 - **Modelo A: árvore no banco, markdown como língua** — cada linha é um nó; "documento" = linha com filhos; markdown é entrada/saída (colar, exportar, alimentar IA); função no banco serializa qualquer subárvore em markdown pronto.
 - **Tarefas hierárquicas** — pai travado até todas as filhas fecharem (mostra progresso); forçar fechamento do pai fecha as filhas COM aviso de confirmação.
-- **Nome e rota** — produto se chama RoadMapMind na UI; rota `tindo.app/docs`; entra no menu do TinDo.
+- **Nome e rota** — produto se chama RoadMapMind na UI; rota `tindoapp.pages.dev/docs`; entra no menu do TinDo.
 - **Desktop primeiro** — MVP pensado para tela grande; no celular abre modo simples (documento OU mapa, um por vez).
 - **Uma filha pode ter várias mães (espelhos)** — a mesma linha pode aparecer sob mães diferentes e é uma só: editou num lugar, refletiu em todos (pedido do dono em 2026-07-30; detalhes no ticket 09, que emenda o schema do 04).
 - **Convidado precisa de conta TinDo para editar** (Fase 2) — link público só-leitura é possibilidade a decidir na Fase 2.

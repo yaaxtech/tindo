@@ -1,3 +1,4 @@
+import { urlNoEnderecoOficial } from '@/lib/app-url';
 import { classificarAcessoRota, podeAcessarRotaAutenticada } from '@/lib/auth/routes';
 import { type CookieOptions, createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
@@ -11,6 +12,10 @@ interface CookieToSet {
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
+  const enderecoOficial = urlNoEnderecoOficial(request.nextUrl);
+
+  if (enderecoOficial) return NextResponse.redirect(enderecoOficial, 308);
+
   const acesso = classificarAcessoRota(pathname);
 
   if (acesso === 'publica' || acesso === 'tecnica') return response;

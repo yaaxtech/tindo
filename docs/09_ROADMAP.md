@@ -150,8 +150,8 @@
 
 ## Fase 11 — Polimento + Deploy Produção (meta: 2-3 dias) — ✅ DONE
 
-- [x] Deploy Cloudflare Workers via OpenNext em https://tindo.falecomyaax.workers.dev
-- [x] GitHub Actions `.github/workflows/deploy.yml` + 5 secrets setados via `gh CLI`
+- [x] Deploy Cloudflare Pages via OpenNext em https://tindoapp.pages.dev
+- [x] GitHub Actions `.github/workflows/ci.yml` valida e publica o Pages após sucesso
 - [x] PWA ícones SVG (icon, apple-touch, favicon, maskable)
 - [x] Manifest dinâmico `src/app/manifest.ts` com shortcuts
 - [x] OpenGraph + Twitter meta tags
