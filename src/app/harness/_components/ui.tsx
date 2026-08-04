@@ -50,11 +50,13 @@ export function Secao({
   titulo,
   info,
   subtitulo,
+  escopo,
   children,
 }: {
   titulo: string;
   info?: string;
   subtitulo?: string;
+  escopo?: { tipo: 'filtro'; dias: number } | { tipo: 'fixo'; rotulo: string };
   children: React.ReactNode;
 }) {
   return (
@@ -63,6 +65,18 @@ export function Secao({
         {titulo}
         {info && <PopoverInfo texto={info} />}
         {subtitulo && <span className="ml-2 normal-case tracking-normal">{subtitulo}</span>}
+        {escopo && (
+          <span
+            className={cn(
+              'ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal',
+              escopo.tipo === 'filtro'
+                ? 'bg-jade/15 text-jade-accent'
+                : 'bg-bg-surface text-text-muted',
+            )}
+          >
+            {escopo.tipo === 'filtro' ? `filtro · ${escopo.dias}d` : escopo.rotulo}
+          </span>
+        )}
       </h2>
       {children}
     </section>

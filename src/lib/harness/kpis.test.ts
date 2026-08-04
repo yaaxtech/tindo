@@ -3,11 +3,15 @@ import { describe, expect, it } from 'vitest';
 import {
   custoAssinaturas,
   custoMedioTarefa,
+  diasComDados,
   kpisGerais,
   kpisTerreno,
   normModelo,
+  placarPorFrente,
   porModelo,
   recorte,
+  valorGeral,
+  valorScore,
 } from './kpis';
 
 // Amostra SINTÉTICA fixa — bate com as fórmulas de ledger.mjs/painel.mjs.
@@ -117,6 +121,32 @@ const CADEIAS: Record<string, CadeiaTerreno> = {
 };
 
 const ATUAL = recorte(LEDGER, 7, 0, AGORA);
+
+const ASSINATURAS_VALOR: Assinatura[] = [
+  { nome: 'Codex', frente: 'codex', valor: 30, renova: '2026-08-27', papel: 'construtor' },
+  { nome: 'Kimi', frente: 'kimi', valor: 10, renova: '2026-08-27', papel: 'ui' },
+  { nome: 'Claude', frente: 'claude', valor: 20, renova: '2026-08-22', papel: 'cérebro' },
+  { nome: 'Gemini', frente: 'gemini', valor: 10, renova: '2026-09-01', papel: 'teste' },
+];
+
+const LINHAS_VALOR: LedgerLinha[] = [
+  linha({ ts: tsDiasAtras(1), frente: 'codex', resultado: 'ok1' }),
+  linha({ ts: tsDiasAtras(1), frente: 'kimi', resultado: 'retrabalho' }),
+];
+
+describe('diasComDados', () => {
+  it('retorna 0 para ledger vazio', () => {
+    expect(diasComDados([], AGORA)).toBe(0);
+  });
+
+  it('retorna no mínimo 1 para uma linha de hoje', () => {
+    expect(diasComDados([linha({ ts: tsDiasAtras(0) })], AGORA)).toBe(1);
+  });
+
+  it('retorna 9 para uma linha de 9 dias atrás', () => {
+    expect(diasComDados([linha({ ts: tsDiasAtras(9) })], AGORA)).toBe(9);
+  });
+});
 
 describe('recorte', () => {
   it('separa janela atual da anterior', () => {
@@ -256,5 +286,25 @@ describe('custoAssinaturas', () => {
     expect(gemini?.uso).toBe(0);
     expect(gemini?.custoSub).toBeNull();
     expect(gemini?.veredito).toBe('cancelar');
+  });
+});
+
+describe('placar de valor', () => {
+  it('aplica os pesos e o gate anti barato-ruim', () => {
+    expect(valorScore(1, 1, 1)).toBe(100);
+    expect(valorScore(0, 1, 1)).toBe(10);
+    expect(valorScore(0.8, 0.5, 1)).toBe(76);
+  });
+
+  it('ordena frentes por valor e deixa sem dados por último', () => {
+    const placar = placarPorFrente(LINHAS_VALOR, ASSINATURAS_VALOR, 30);
+    expect(placar.map((item) => item.frente)).toEqual(['codex', 'kimi', 'claude']);
+    expect(placar[0]).toMatchObject({ n: 1, q: 1, custoTarefa: 30, valor: 100 });
+    expect(placar[1]).toMatchObject({ n: 1, q: 0, custoTarefa: 10, valor: 10 });
+    expect(placar[2]).toMatchObject({ n: 0, q: null, custoTarefa: null, valor: null });
+  });
+
+  it('retorna null no placar geral sem julgáveis', () => {
+    expect(valorGeral([], ASSINATURAS_VALOR, 7)).toBeNull();
   });
 });

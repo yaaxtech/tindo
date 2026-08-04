@@ -7,6 +7,16 @@ import type { Assinatura, CadeiaTerreno, LedgerLinha } from '@/types/harness';
 
 const DIA_MS = 864e5;
 
+/** Dias cobertos pelo ledger: do despacho mais antigo até agora (mín. 1). */
+export function diasComDados(ledger: LedgerLinha[], agora = Date.now()): number {
+  if (ledger.length === 0) return 0;
+  const tsMaisAntigo = ledger.reduce(
+    (maisAntigo, linha) => Math.min(maisAntigo, Date.parse(linha.ts)),
+    Number.POSITIVE_INFINITY,
+  );
+  return Math.max(1, Math.ceil((agora - tsMaisAntigo) / DIA_MS));
+}
+
 // Limiares (espelho da governança do harness)
 const MIN_N = 5; // amostra mínima p/ sinal
 const OK1_PISO = 0.7; // abaixo → degrau subdimensionado
@@ -228,4 +238,82 @@ export function custoAssinaturas(
     else veredito = 'manter';
     return { ...a, uso, quotas, gasto, custoSub, veredito };
   });
+}
+
+export const PESO_VALOR = { q: 0.7, c: 0.2, r: 0.1 } as const;
+export const CUSTO_META = 2.5;
+
+const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
+
+export function valorScore(q: number, c: number, r: number): number {
+  const qualidade = clamp01(q);
+  const custo = clamp01(c);
+  const confiabilidade = clamp01(r);
+  const custoEfetivo = qualidade < 0.5 ? Math.min(custo, qualidade) : custo;
+  return Math.round(
+    100 * (PESO_VALOR.q * qualidade + PESO_VALOR.c * custoEfetivo + PESO_VALOR.r * confiabilidade),
+  );
+}
+
+export interface FrenteValor {
+  frente: string;
+  n: number;
+  q: number | null;
+  custoTarefa: number | null;
+  valor: number | null;
+}
+
+/** Placar de valor por frente, limitado às assinaturas do harness. */
+export function placarPorFrente(
+  linhas: LedgerLinha[],
+  assinaturas: Assinatura[],
+  janelaDias: number,
+): FrenteValor[] {
+  const frentes = [...new Set(assinaturas.map((a) => a.frente))].filter(
+    (frente) => frente === 'codex' || frente === 'kimi' || frente === 'claude',
+  );
+  const custoGeral = custoMedioTarefa(linhas, assinaturas, janelaDias);
+
+  return frentes
+    .map((frente): FrenteValor => {
+      const daFrente = linhas.filter((linha) => linha.frente === frente);
+      const julgaveis = daFrente.filter((linha) => linha.resultado !== 'quota');
+      const ok1 = julgaveis.filter((linha) => linha.resultado === 'ok1').length;
+      const q = julgaveis.length ? ok1 / julgaveis.length : null;
+      const uso = daFrente.length;
+      const quotas = daFrente.filter((linha) => linha.resultado === 'quota').length;
+      const gasto = assinaturas
+        .filter((assinatura) => assinatura.frente === frente)
+        .reduce((total, assinatura) => total + (assinatura.valor * janelaDias) / 30, 0);
+      const custoTarefa = uso ? gasto / uso : null;
+      const c = custoGeral != null && custoTarefa != null ? clamp01(custoGeral / custoTarefa) : 0;
+      const r = uso ? 1 - quotas / uso : 1;
+      return {
+        frente,
+        n: uso,
+        q,
+        custoTarefa,
+        valor: q == null ? null : valorScore(q, c, r),
+      };
+    })
+    .sort((a, b) => {
+      if (a.valor == null && b.valor == null) return 0;
+      if (a.valor == null) return 1;
+      if (b.valor == null) return -1;
+      return b.valor - a.valor;
+    });
+}
+
+/** Placar de valor geral do harness. */
+export function valorGeral(
+  linhas: LedgerLinha[],
+  assinaturas: Assinatura[],
+  janelaDias: number,
+): number | null {
+  const geral = kpisGerais(linhas);
+  if (geral.ok1 == null) return null;
+  const custo = custoMedioTarefa(linhas, assinaturas, janelaDias);
+  const c = custo == null ? 0 : clamp01(CUSTO_META / custo);
+  const r = 1 - (geral.quotaHit ?? 0);
+  return valorScore(geral.ok1, c, r);
 }
