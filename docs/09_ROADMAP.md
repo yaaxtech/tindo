@@ -185,6 +185,18 @@ Substitui a heurística pura por SM-2 adaptado — intervalo cresce com adiament
 
 **Critério de done**: adiamento inteligente com SM-2 funciona, próximo intervalo segue fórmula, KPIs refletem qualidade dos adiamentos.
 
+## RoadMapMind — Fase 2: Compartilhamento
+
+- [x] Fatia 0 — fundação segura de permissões e leitura
+- [x] Fatia 1a — documento compartilhado somente leitura
+- [x] Fatia 1b — lista “Compartilhados comigo”
+- [x] Fatia 2 — modal Compartilhar, convite de conta existente e gestão de acesso
+- [ ] Fatia 3 — convite pendente e email real via Resend
+- [ ] Fatia 4 — edição protegida do convidado e aviso de espelhos
+- [ ] Fatia 5 — página pública somente leitura por token
+
+**Critério da Fatia 2**: o dono convida uma conta existente, troca ou revoga o papel e gerencia o link; conta inexistente não gera convite nem email ainda.
+
 ## Fase 12+ — Futuro
 
 - Multi-usuário com convites

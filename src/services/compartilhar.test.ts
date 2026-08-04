@@ -2,7 +2,17 @@
 
 import type { ContextoAuth } from '@/lib/auth/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { carregarDocumentoCompartilhado, listarCompartilhadosComigo } from './compartilhar';
+import {
+  carregarDocumentoCompartilhado,
+  convidarPorEmail,
+  definirModoLink,
+  linkDoDocumento,
+  listarAcesso,
+  listarCompartilhadosComigo,
+  regenerarToken,
+  revogar,
+  trocarPapel,
+} from './compartilhar';
 
 /**
  * Fake do cliente Supabase: só expõe `rpc` (respondendo por nome) e um `from`
@@ -104,5 +114,141 @@ describe('services/compartilhar', () => {
       listar_compartilhados_comigo: { data: null, error: new Error('falhou') },
     });
     await expect(listarCompartilhadosComigo(contexto)).rejects.toThrow('falhou');
+  });
+
+  it('convida conta existente e normaliza o email antes da RPC', async () => {
+    const { contexto, rpc } = fakeContexto({
+      convidar_usuario_documento: {
+        data: [
+          {
+            status: 'concedido',
+            usuario_id: 'user-2',
+            email: 'ana@example.com',
+            nome: 'Ana',
+            cor: '#198b74',
+            papel: 'leitor',
+          },
+        ],
+        error: null,
+      },
+    });
+
+    await expect(
+      convidarPorEmail(contexto, 'doc-A', '  ANA@Example.com ', 'leitor'),
+    ).resolves.toEqual({ status: 'concedido' });
+    expect(rpc).toHaveBeenCalledWith('convidar_usuario_documento', {
+      p_documento: 'doc-A',
+      p_email: 'ana@example.com',
+      p_papel: 'leitor',
+    });
+  });
+
+  it.each(['pendente', 'ja_tem', 'auto'] as const)(
+    'preserva o status %s retornado pelo convite',
+    async (status) => {
+      const { contexto } = fakeContexto({
+        convidar_usuario_documento: { data: [{ status }], error: null },
+      });
+      await expect(
+        convidarPorEmail(contexto, 'doc-A', 'pessoa@example.com', 'editor'),
+      ).resolves.toEqual({ status });
+    },
+  );
+
+  it('lista os acessos com identidade e papel', async () => {
+    const { contexto, rpc } = fakeContexto({
+      listar_acessos_documento: {
+        data: [
+          {
+            usuario_id: 'user-2',
+            email: 'ana@example.com',
+            nome: 'Ana',
+            cor: '#198b74',
+            papel: 'editor',
+          },
+        ],
+        error: null,
+      },
+    });
+
+    await expect(listarAcesso(contexto, 'doc-A')).resolves.toEqual([
+      {
+        usuarioId: 'user-2',
+        email: 'ana@example.com',
+        nome: 'Ana',
+        cor: '#198b74',
+        papel: 'editor',
+        pendente: false,
+      },
+    ]);
+    expect(rpc).toHaveBeenCalledWith('listar_acessos_documento', {
+      p_documento: 'doc-A',
+    });
+  });
+
+  it('troca papel e revoga acesso pelas RPCs do dono', async () => {
+    const { contexto, rpc } = fakeContexto({
+      trocar_papel_documento: { data: null, error: null },
+      revogar_acesso_documento: { data: null, error: null },
+    });
+
+    await trocarPapel(contexto, 'doc-A', 'user-2', 'leitor');
+    await revogar(contexto, 'doc-A', 'user-2');
+
+    expect(rpc).toHaveBeenCalledWith('trocar_papel_documento', {
+      p_documento: 'doc-A',
+      p_usuario: 'user-2',
+      p_papel: 'leitor',
+    });
+    expect(rpc).toHaveBeenCalledWith('revogar_acesso_documento', {
+      p_documento: 'doc-A',
+      p_usuario: 'user-2',
+    });
+  });
+
+  it('lê, alterna e regenera o link sem expor a tabela', async () => {
+    const { contexto, rpc, from } = fakeContexto({
+      configurar_link_documento: {
+        data: [{ modo_link: 'publico_leitura', link_token: 'token-novo' }],
+        error: null,
+      },
+    });
+
+    await expect(linkDoDocumento(contexto, 'doc-A')).resolves.toEqual({
+      modo: 'publico_leitura',
+      token: 'token-novo',
+    });
+    await expect(definirModoLink(contexto, 'doc-A', 'publico_leitura')).resolves.toEqual({
+      modo: 'publico_leitura',
+      token: 'token-novo',
+    });
+    await expect(regenerarToken(contexto, 'doc-A')).resolves.toBe('token-novo');
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'configurar_link_documento', {
+      p_documento: 'doc-A',
+      p_modo: null,
+      p_regenerar: false,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'configurar_link_documento', {
+      p_documento: 'doc-A',
+      p_modo: 'publico_leitura',
+      p_regenerar: false,
+    });
+    expect(rpc).toHaveBeenNthCalledWith(3, 'configurar_link_documento', {
+      p_documento: 'doc-A',
+      p_modo: null,
+      p_regenerar: true,
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('traduz erros conhecidos do banco para PT-BR', async () => {
+    const { contexto } = fakeContexto({
+      trocar_papel_documento: { data: null, error: new Error('SEM_PERMISSAO') },
+    });
+
+    await expect(trocarPapel(contexto, 'doc-A', 'user-2', 'editor')).rejects.toThrow(
+      'Só o dono pode compartilhar este documento.',
+    );
   });
 });
