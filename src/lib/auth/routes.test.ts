@@ -43,7 +43,7 @@ describe('ehRotaRoadMapMind', () => {
 });
 
 describe('ehRotaMultiusuario', () => {
-  it.each(['/docs', '/api/docs', '/api/perfil'])('libera a área isolada %s', (rota) => {
+  it.each(['/docs', '/api/docs', '/api/perfil', '/harness'])('libera a área isolada %s', (rota) => {
     expect(ehRotaMultiusuario(rota)).toBe(true);
   });
 
