@@ -75,4 +75,43 @@ describe('serviço de autenticação', () => {
       solicitarRecuperacaoDeSenha('ausente@example.com', undefined, supabase as never),
     ).resolves.toBeUndefined();
   });
+
+  it.each(['email_address_not_authorized', 'otp_disabled'])(
+    'mantém recuperação indistinguível quando o e-mail não pode sair (%s)',
+    async (code) => {
+      const supabase = clienteAuth();
+      supabase.auth.resetPasswordForEmail.mockResolvedValueOnce({ error: { code } });
+
+      await expect(
+        solicitarRecuperacaoDeSenha('pessoa@example.com', undefined, supabase as never),
+      ).resolves.toBeUndefined();
+    },
+  );
+
+  it('mantém cadastro indistinguível quando o remetente não aceita o endereço', async () => {
+    const supabase = clienteAuth();
+    supabase.auth.signUp.mockResolvedValueOnce({
+      data: { session: null },
+      error: { code: 'email_address_not_authorized' },
+    });
+
+    await expect(
+      cadastrarComSenha(
+        { nome: 'Pessoa', email: 'pessoa@example.com', senha: 'senha-segura' },
+        undefined,
+        supabase as never,
+      ),
+    ).resolves.toEqual({ sessaoCriada: false });
+  });
+
+  it('mantém link mágico indistinguível quando o e-mail não pode sair', async () => {
+    const supabase = clienteAuth();
+    supabase.auth.signInWithOtp.mockResolvedValueOnce({
+      error: { code: 'email_address_not_authorized' },
+    });
+
+    await expect(
+      enviarLinkMagico('pessoa@example.com', '/docs', undefined, supabase as never),
+    ).resolves.toBeUndefined();
+  });
 });

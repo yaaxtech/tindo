@@ -34,9 +34,10 @@ export default function CadastroPage() {
   function whatsappComDdi(valor: string, codigoDdi: string): string | undefined {
     const texto = valor.trim();
     const numeros = texto.replace(/\D/g, '');
-    const numeroNacional = texto.startsWith(`+${codigoDdi}`) || texto.startsWith(`00${codigoDdi}`)
-      ? numeros.replace(new RegExp(`^(?:00)?${codigoDdi}`), '')
-      : numeros;
+    const numeroNacional =
+      texto.startsWith(`+${codigoDdi}`) || texto.startsWith(`00${codigoDdi}`)
+        ? numeros.replace(new RegExp(`^(?:00)?${codigoDdi}`), '')
+        : numeros;
     return numeroNacional ? `+${codigoDdi}${numeroNacional}` : undefined;
   }
 
@@ -81,12 +82,17 @@ export default function CadastroPage() {
         {confirmarEmail ? (
           <div className="space-y-5 text-center">
             <div className="rounded-md border border-jade-accent/40 bg-jade-dim/30 p-4 text-sm text-jade-accent">
-              Enviamos uma confirmação para <strong>{email}</strong>. Abra o link para ativar sua
-              conta.
+              Por segurança, não informamos se <strong>{email}</strong> já tinha uma conta. Se for
+              um cadastro novo e o envio estiver disponível, a confirmação chegará por e-mail.
             </div>
-            <Link href="/login" className="text-sm text-jade-accent hover:underline">
-              Ir para o login
-            </Link>
+            <div className="flex justify-center gap-5 text-sm">
+              <Link href="/login" className="text-jade-accent hover:underline">
+                Ir para o login
+              </Link>
+              <Link href="/recuperar-senha" className="text-jade-accent hover:underline">
+                Recuperar senha
+              </Link>
+            </div>
           </div>
         ) : (
           <form onSubmit={cadastrar} className="space-y-3">
