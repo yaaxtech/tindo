@@ -363,17 +363,14 @@ describe('services/compartilhar', () => {
   });
 
   describe('reconciliarConvitesPendentes — rede de segurança do 1º login', () => {
-    it('chama a RPC com o email normalizado', async () => {
+    it('chama a RPC sem parâmetros (identidade vem de auth.uid() no banco)', async () => {
       const { contexto, rpc } = fakeContexto({
         rpc: { reconciliar_convites_pendentes: { data: null, error: null } },
       });
 
-      await reconciliarConvitesPendentes(contexto, 'user-2', '  Nova@Example.com ');
+      await reconciliarConvitesPendentes(contexto);
 
-      expect(rpc).toHaveBeenCalledWith('reconciliar_convites_pendentes', {
-        p_usuario: 'user-2',
-        p_email: 'nova@example.com',
-      });
+      expect(rpc).toHaveBeenCalledWith('reconciliar_convites_pendentes');
     });
 
     it('nunca lança — best-effort mesmo se a RPC falhar ou ainda não existir', async () => {
@@ -386,17 +383,7 @@ describe('services/compartilhar', () => {
         },
       });
 
-      await expect(
-        reconciliarConvitesPendentes(contexto, 'user-2', 'nova@example.com'),
-      ).resolves.toBeUndefined();
-    });
-
-    it('email vazio não chama a RPC', async () => {
-      const { contexto, rpc } = fakeContexto();
-
-      await reconciliarConvitesPendentes(contexto, 'user-2', '   ');
-
-      expect(rpc).not.toHaveBeenCalled();
+      await expect(reconciliarConvitesPendentes(contexto)).resolves.toBeUndefined();
     });
   });
 });

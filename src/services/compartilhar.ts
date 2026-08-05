@@ -350,22 +350,18 @@ export async function regenerarToken(contexto: ContextoAuth, documentoId: string
  * para qualquer `doc_convites` pendente do email autenticado e marca o
  * convite como `aceito`. Idempotente (índice único de `doc_permissoes`).
  *
+ * A identidade vem de `auth.uid()` DENTRO da RPC (SECURITY DEFINER) — nunca de
+ * parâmetro. Passar email/usuário como argumento abriria um vazamento: um
+ * logado poderia materializar os convites de outra pessoa. Por isso a RPC não
+ * recebe nada; deriva o usuário e o email dele no banco.
+ *
  * Best-effort e NUNCA lança — chamada em todo carregamento de "Compartilhados
  * comigo"; se a RPC falhar (ou ainda não existir em produção), o carregamento
  * do usuário não pode quebrar por causa dela.
  */
-export async function reconciliarConvitesPendentes(
-  contexto: ContextoAuth,
-  usuarioId: string,
-  email: string,
-): Promise<void> {
-  const emailNormalizado = email.trim().toLowerCase();
-  if (!emailNormalizado) return;
+export async function reconciliarConvitesPendentes(contexto: ContextoAuth): Promise<void> {
   try {
-    await db(contexto).rpc('reconciliar_convites_pendentes', {
-      p_usuario: usuarioId,
-      p_email: emailNormalizado,
-    });
+    await db(contexto).rpc('reconciliar_convites_pendentes');
     // Erro é ignorado de propósito: rede de segurança best-effort (ver docstring).
   } catch {
     // Idem: nunca deixa a app quebrar por causa desta reconciliação.

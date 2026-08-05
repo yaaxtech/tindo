@@ -55,10 +55,6 @@ describe('GET /api/docs/compartilhados', () => {
 
   it('roda a rede de segurança de reconciliação antes de listar', async () => {
     await GET();
-    expect(mocks.reconciliarConvitesPendentes).toHaveBeenCalledWith(
-      contexto,
-      'guest-1',
-      'g@example.com',
-    );
+    expect(mocks.reconciliarConvitesPendentes).toHaveBeenCalledWith(contexto);
   });
 });

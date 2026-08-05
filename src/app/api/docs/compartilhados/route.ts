@@ -17,7 +17,7 @@ function respostaErro(e: unknown) {
 export async function GET() {
   try {
     const contexto = await exigirContextoAuth();
-    await reconciliarConvitesPendentes(contexto, contexto.usuarioId, contexto.email ?? '');
+    await reconciliarConvitesPendentes(contexto);
     const itens = await listarCompartilhadosComigo(contexto);
     return NextResponse.json({ itens });
   } catch (e) {
