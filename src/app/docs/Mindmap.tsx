@@ -500,20 +500,13 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         const nos = getNodes();
         if (nos.length === 0) return Promise.reject(new Error('O mapa está vazio.'));
         const bounds = getNodesBounds(nos);
-        // O canvas segue a PROPORÇÃO real do mapa (com folga), então o mapa
-        // inteiro cabe — antes era 1200x800 fixo com zoom mínimo 0.2, e mapa
-        // alto/largo demais estourava a moldura e saía cortado no PDF.
-        const margem = 0.06;
-        const largBounds = Math.max(bounds.width, 1) * (1 + margem * 2);
-        const altBounds = Math.max(bounds.height, 1) * (1 + margem * 2);
-        const LIMITE_PX = 2200; // teto por lado, pra não estourar memória
-        const escala = Math.min(LIMITE_PX / largBounds, LIMITE_PX / altBounds, 1.5);
-        const largura = Math.max(320, Math.round(largBounds * escala));
-        const altura = Math.max(320, Math.round(altBounds * escala));
-        // zoom mínimo baixíssimo: garante caber mesmo em mapa gigante
-        const viewport = getViewportForBounds(bounds, largura, altura, 0.02, 2, margem);
-        const orientacaoImg: 'portrait' | 'landscape' =
-          altura > largura ? 'portrait' : 'landscape';
+        // A imagem tem proporção fixa A4 paisagem — o iframe de impressão é
+        // paisagem (1123x794), então a imagem PRECISA ser paisagem, senão a
+        // página estoura pra 2 folhas e sobra fundo escuro. O mapa inteiro é
+        // REDUZIDO pra caber (zoom mínimo baixíssimo — antes era 0.2 e cortava).
+        const largura = 1600;
+        const altura = 1131;
+        const viewport = getViewportForBounds(bounds, largura, altura, 0.02, 1.5, 0.06);
         const fluxo = mapaRef.current?.querySelector('.react-flow') as HTMLElement | null;
         const camada = mapaRef.current?.querySelector(
           '.react-flow__viewport',
@@ -563,7 +556,8 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
               ),
             ),
           ]);
-          return { dataUrl, fundo, orientacao: orientacaoImg };
+          // sempre paisagem: casa com o iframe A4 paisagem da impressão
+          return { dataUrl, fundo, orientacao: 'landscape' as const };
         } finally {
           camada.style.transform = transformAnterior;
           if (!temaClaroAntes) raiz?.classList.remove('rmm-tema-light');
