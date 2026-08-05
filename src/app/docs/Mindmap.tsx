@@ -120,7 +120,7 @@ type Handlers = {
 // Layout tidy simples: folhas empilhadas, pai centralizado nos filhos.
 // `rotuloRaiz`: quando o mapa mostra o documento inteiro, cria um nó-raiz
 // virtual (o nome do usuário) amarrando os itens de primeiro nível.
-function montarNosEArestas(
+export function montarNosEArestas(
   blocks: Block[],
   colapsados: Set<string>,
   ativo: string | null,
