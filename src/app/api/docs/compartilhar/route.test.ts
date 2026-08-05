@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   exigirContextoAuth: vi.fn(),
   convidarPorEmail: vi.fn(),
   definirModoLink: vi.fn(),
+  espelhosExternosDoDocumento: vi.fn(),
   linkDoDocumento: vi.fn(),
   listarAcesso: vi.fn(),
   regenerarToken: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('@/lib/auth/server', () => ({
 vi.mock('@/services/compartilhar', () => ({
   convidarPorEmail: mocks.convidarPorEmail,
   definirModoLink: mocks.definirModoLink,
+  espelhosExternosDoDocumento: mocks.espelhosExternosDoDocumento,
   linkDoDocumento: mocks.linkDoDocumento,
   listarAcesso: mocks.listarAcesso,
   regenerarToken: mocks.regenerarToken,
@@ -51,6 +53,7 @@ describe('/api/docs/compartilhar', () => {
     mocks.exigirContextoAuth.mockResolvedValue(contexto);
     mocks.listarAcesso.mockResolvedValue([]);
     mocks.linkDoDocumento.mockResolvedValue({ modo: 'restrito', token: 'token-1' });
+    mocks.espelhosExternosDoDocumento.mockResolvedValue(0);
   });
 
   it('GET devolve pessoas e link do documento', async () => {
@@ -71,6 +74,7 @@ describe('/api/docs/compartilhar', () => {
     await expect(resposta.json()).resolves.toEqual({
       acessos,
       link: { modo: 'restrito', token: 'token-1' },
+      espelhosExternos: 0,
     });
     expect(mocks.listarAcesso).toHaveBeenCalledWith(contexto, 'doc-A');
     expect(mocks.linkDoDocumento).toHaveBeenCalledWith(contexto, 'doc-A');

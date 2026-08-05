@@ -1,7 +1,19 @@
 'use client';
 
 import type { AcessoItem, LinkDocumento, ModoLink, Papel } from '@/types/compartilhar';
-import { Check, Copy, Globe, Link2, Lock, RotateCw, Share2, Trash2, Users, X } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  Globe,
+  Link2,
+  Lock,
+  RotateCw,
+  Share2,
+  Trash2,
+  TriangleAlert,
+  Users,
+  X,
+} from 'lucide-react';
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -15,6 +27,7 @@ interface Props {
 interface RespostaInicial {
   acessos: AcessoItem[];
   link: LinkDocumento;
+  espelhosExternos?: number;
 }
 
 async function chamarApi<T>(metodo: string, corpo?: unknown, query = ''): Promise<T> {
@@ -84,6 +97,7 @@ export default function ModalCompartilhar({ documentoId, titulo, tema, onFechar 
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [espelhosExternos, setEspelhosExternos] = useState(0);
   const { emailRef, emailInvalido, setEmailInvalido, validarEmail } = useFormValidation();
 
   const carregar = useCallback(async () => {
@@ -94,6 +108,7 @@ export default function ModalCompartilhar({ documentoId, titulo, tema, onFechar 
     );
     setAcessos(dados.acessos);
     setLink(dados.link);
+    setEspelhosExternos(dados.espelhosExternos ?? 0);
   }, [documentoId]);
 
   useEffect(() => {
@@ -283,6 +298,20 @@ export default function ModalCompartilhar({ documentoId, titulo, tema, onFechar 
           {(erro || aviso) && (
             <p className={erro ? 'rmm-share-mensagem erro' : 'rmm-share-mensagem aviso'}>
               {erro ?? aviso}
+            </p>
+          )}
+
+          {espelhosExternos > 0 && (
+            <p className="rmm-share-espelho-aviso">
+              <TriangleAlert aria-hidden="true" size={15} />
+              <span>
+                Este documento tem {espelhosExternos} linha
+                {espelhosExternos > 1 ? 's' : ''} espelhada
+                {espelhosExternos > 1 ? 's' : ''} de outro documento — compartilhar vai mostrar o
+                conteúdo dela{espelhosExternos > 1 ? 's' : ''}. Quem você convidar poderá ler, mas
+                não editar essa{espelhosExternos > 1 ? 's' : ''} linha
+                {espelhosExternos > 1 ? 's' : ''}.
+              </span>
             </p>
           )}
 

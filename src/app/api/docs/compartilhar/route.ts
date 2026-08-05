@@ -2,6 +2,7 @@ import { UsuarioNaoAutenticadoError, exigirContextoAuth } from '@/lib/auth/serve
 import {
   convidarPorEmail,
   definirModoLink,
+  espelhosExternosDoDocumento,
   linkDoDocumento,
   listarAcesso,
   regenerarToken,
@@ -52,11 +53,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ erro: 'documentoId é obrigatório.' }, { status: 400 });
     }
     const contexto = await exigirContextoAuth();
-    const [acessos, link] = await Promise.all([
+    const [acessos, link, espelhosExternos] = await Promise.all([
       listarAcesso(contexto, documentoId),
       linkDoDocumento(contexto, documentoId),
+      espelhosExternosDoDocumento(contexto, documentoId),
     ]);
-    return NextResponse.json({ acessos, link });
+    return NextResponse.json({ acessos, link, espelhosExternos });
   } catch (erro) {
     return respostaErro(erro);
   }

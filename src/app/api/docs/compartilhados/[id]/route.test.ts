@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   exigirContextoAuth: vi.fn(),
   listarCompartilhadosComigo: vi.fn(),
   carregarDocumentoCompartilhado: vi.fn(),
+  salvarDocumentoCompartilhado: vi.fn(),
 }));
 
 vi.mock('@/lib/auth/server', () => ({
@@ -21,13 +22,22 @@ vi.mock('@/lib/auth/server', () => ({
 vi.mock('@/services/compartilhar', () => ({
   listarCompartilhadosComigo: mocks.listarCompartilhadosComigo,
   carregarDocumentoCompartilhado: mocks.carregarDocumentoCompartilhado,
+  salvarDocumentoCompartilhado: mocks.salvarDocumentoCompartilhado,
 }));
 
 import { UsuarioNaoAutenticadoError } from '@/lib/auth/server';
-import { GET } from './route';
+import { GET, PUT } from './route';
 
 function req() {
   return new Request('https://tindo.example/api/docs/compartilhados/doc-A');
+}
+
+function putReq(body: unknown) {
+  return new Request('https://tindo.example/api/docs/compartilhados/doc-A', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 describe('GET /api/docs/compartilhados/[id]', () => {
@@ -38,6 +48,7 @@ describe('GET /api/docs/compartilhados/[id]', () => {
     mocks.exigirContextoAuth.mockResolvedValue(contexto);
     mocks.listarCompartilhadosComigo.mockResolvedValue([]);
     mocks.carregarDocumentoCompartilhado.mockResolvedValue({ linhas: [], espelhos: [] });
+    mocks.salvarDocumentoCompartilhado.mockResolvedValue(undefined);
   });
 
   it('responde 401 sem sessão', async () => {
@@ -82,5 +93,48 @@ describe('GET /api/docs/compartilhados/[id]', () => {
     expect(corpo.dono).toBe('dono-1');
     expect(corpo.linhas).toHaveLength(1);
     expect(mocks.carregarDocumentoCompartilhado).toHaveBeenCalledWith(contexto, 'doc-A');
+  });
+});
+
+describe('PUT /api/docs/compartilhados/[id]', () => {
+  const contexto = { usuarioId: 'guest-1', supabase: {}, email: 'g@example.com' };
+  const linhas = [
+    {
+      id: 'b1',
+      paiId: 'doc-A',
+      ordem: 'a0',
+      conteudo: [],
+      textoMd: 'x',
+      tipo: 'texto',
+      tarefaEstado: null,
+      modoLista: 'marcadores',
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.exigirContextoAuth.mockResolvedValue(contexto);
+    mocks.salvarDocumentoCompartilhado.mockResolvedValue(undefined);
+  });
+
+  it('salva pela camada guarded e responde ok', async () => {
+    const resposta = await PUT(putReq({ linhas }), { params: Promise.resolve({ id: 'doc-A' }) });
+    expect(resposta.status).toBe(200);
+    expect(mocks.salvarDocumentoCompartilhado).toHaveBeenCalledWith(contexto, 'doc-A', linhas);
+  });
+
+  it('responde 403 quando o guard nega a edição (SEM_PERMISSAO)', async () => {
+    mocks.salvarDocumentoCompartilhado.mockRejectedValue(
+      new Error('Você não tem permissão para editar este documento.'),
+    );
+    const resposta = await PUT(putReq({ linhas }), { params: Promise.resolve({ id: 'doc-A' }) });
+    expect(resposta.status).toBe(403);
+  });
+
+  it('responde 401 sem sessão', async () => {
+    mocks.exigirContextoAuth.mockRejectedValue(new UsuarioNaoAutenticadoError());
+    const resposta = await PUT(putReq({ linhas }), { params: Promise.resolve({ id: 'doc-A' }) });
+    expect(resposta.status).toBe(401);
+    expect(mocks.salvarDocumentoCompartilhado).not.toHaveBeenCalled();
   });
 });
