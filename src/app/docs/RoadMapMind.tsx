@@ -906,7 +906,7 @@ export default function RoadMapMind() {
           titulo: focoTexto ?? titulo,
           mapaDataUrl: mapa.dataUrl,
           fundoMapa: mapa.fundo,
-          orientacaoMapa: orientacao === 'vertical' ? 'portrait' : 'landscape',
+          orientacaoMapa: mapa.orientacao,
         }),
         nomeArquivoPdf(focoTexto ?? titulo),
       );
@@ -945,7 +945,7 @@ export default function RoadMapMind() {
           ...documento,
           mapaDataUrl: mapa.dataUrl,
           fundoMapa: mapa.fundo,
-          orientacaoMapa: orientacao === 'vertical' ? 'portrait' : 'landscape',
+          orientacaoMapa: mapa.orientacao,
         }),
         nomeArquivoPdf(focoTexto ?? titulo),
       );
