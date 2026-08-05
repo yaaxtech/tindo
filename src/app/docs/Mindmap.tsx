@@ -85,13 +85,30 @@ type NoData = {
 
 type NoMapa = Node<NoData>;
 
-const ROW_H = 56;
-const COL_W = 300;
-const ROW_V = 130; // altura por nível no modo vertical
-// largura por folha no modo vertical: precisa ser ≥ largura máx. do nó (260px,
-// ver .mm-no no CSS) + folga, senão os nós se sobrepõem na horizontal e o mapa
-// fica "torto". Espelha o COL_W (300) que já acomoda a largura no modo horizontal.
+const COL_W = 300; // distância entre níveis no modo horizontal (eixo X)
+const ROW_V = 130; // distância entre níveis no modo vertical (eixo Y)
+// distância por folha no modo vertical (eixo X): ≥ largura máx. do nó (260px,
+// ver .mm-no no CSS) + folga, senão os nós se sobrepõem e o mapa fica "torto".
 const COL_V = 300;
+
+// O nó tem texto que quebra em várias linhas (até max-height 6em ≈ 4 linhas),
+// então a ALTURA varia. O empacotamento dos irmãos precisa reservar a altura
+// real de cada nó — senão irmãos de 2-3 linhas ficam um em cima do outro.
+const CHARS_POR_LINHA = 30; // ~caracteres que cabem em 260px (max-width de .mm-no) a 13px
+const ALT_LINHA = 18; // altura de uma linha de texto (px)
+const PAD_NO = 20; // padding + borda verticais do nó (px)
+const MAX_LINHAS = 4; // = max-height 6em de .mm-label
+const FOLGA_IRMAOS = 22; // espaço mínimo entre nós irmãos (px)
+
+function linhasEstimadas(texto: string): number {
+  let total = 0;
+  for (const parte of texto.split('\n')) total += Math.max(1, Math.ceil(parte.length / CHARS_POR_LINHA));
+  return Math.min(Math.max(total, 1), MAX_LINHAS);
+}
+
+function alturaNo(texto: string): number {
+  return linhasEstimadas(texto) * ALT_LINHA + PAD_NO;
+}
 
 type Handlers = {
   onToggle: (id: string) => void;
@@ -134,23 +151,38 @@ function montarNosEArestas(
   const filhosEspelho = (b: Block): Block[] =>
     colapsados.has(b.id) ? [] : (b.children ?? []).filter((c) => espelhos.has(c.id));
 
-  function folhas(b: Block): number {
+  // extensão de UM nó no eixo transversal (px): horizontal empilha na vertical,
+  // então usa a altura real (texto multilinha); vertical empilha na horizontal,
+  // com slot de largura fixa (o nó tem no máx. 260px).
+  const extentNo = (b: Block): number =>
+    orientacao === 'horizontal' ? alturaNo(extrairTexto(b) || '…') + FOLGA_IRMAOS : COL_V;
+
+  // extensão da subárvore inteira: a soma dos filhos, nunca menor que a do
+  // próprio nó (senão um pai "gordo" invade o irmão de baixo).
+  const cacheExtent = new Map<string, number>();
+  function extent(b: Block): number {
+    const memo = cacheExtent.get(b.id);
+    if (memo != null) return memo;
     const fs = filhosVisiveis(b);
-    if (fs.length === 0) return 1;
-    let n = 0;
-    for (const f of fs) n += folhas(f);
-    return n;
+    let v = extentNo(b);
+    if (fs.length > 0) {
+      let soma = 0;
+      for (const f of fs) soma += extent(f);
+      v = Math.max(soma, v);
+    }
+    cacheExtent.set(b.id, v);
+    return v;
   }
 
   function posicaoDe(profundidade: number, centro: number) {
     return orientacao === 'horizontal'
-      ? { x: profundidade * COL_W, y: centro * ROW_H }
-      : { x: centro * COL_V, y: profundidade * ROW_V };
+      ? { x: profundidade * COL_W, y: centro }
+      : { x: centro, y: profundidade * ROW_V };
   }
 
   function visita(b: Block, profundidade: number, offset: number): number {
     const fs = filhosVisiveis(b);
-    const altura = folhas(b);
+    const altura = extent(b);
     const cor = profundidade === base ? undefined : cores[(profundidade - base - 1) % cores.length];
     nodes.push({
       id: b.id,
@@ -416,7 +448,12 @@ export type MindmapProps = {
 /** Exposto via ref — o botão de exportar PDF fica na topbar (RoadMapMind.tsx),
  * fora do mapa; ele chama isto pra pegar o PNG do mapa inteiro. */
 export interface MindmapHandle {
-  exportarComoPng: () => Promise<{ dataUrl: string; fundo: string }>;
+  exportarComoPng: () => Promise<{
+    dataUrl: string;
+    fundo: string;
+    // proporção real da imagem gerada → orienta a página do PDF (retrato/paisagem)
+    orientacao: 'portrait' | 'landscape';
+  }>;
 }
 
 type MenuCtx = { id: string; x: number; y: number };
@@ -463,10 +500,20 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         const nos = getNodes();
         if (nos.length === 0) return Promise.reject(new Error('O mapa está vazio.'));
         const bounds = getNodesBounds(nos);
-        const vertical = orientacao === 'vertical';
-        const largura = vertical ? 800 : 1200;
-        const altura = vertical ? 1200 : 800;
-        const viewport = getViewportForBounds(bounds, largura, altura, 0.2, 2, 0.12);
+        // O canvas segue a PROPORÇÃO real do mapa (com folga), então o mapa
+        // inteiro cabe — antes era 1200x800 fixo com zoom mínimo 0.2, e mapa
+        // alto/largo demais estourava a moldura e saía cortado no PDF.
+        const margem = 0.06;
+        const largBounds = Math.max(bounds.width, 1) * (1 + margem * 2);
+        const altBounds = Math.max(bounds.height, 1) * (1 + margem * 2);
+        const LIMITE_PX = 2200; // teto por lado, pra não estourar memória
+        const escala = Math.min(LIMITE_PX / largBounds, LIMITE_PX / altBounds, 1.5);
+        const largura = Math.max(320, Math.round(largBounds * escala));
+        const altura = Math.max(320, Math.round(altBounds * escala));
+        // zoom mínimo baixíssimo: garante caber mesmo em mapa gigante
+        const viewport = getViewportForBounds(bounds, largura, altura, 0.02, 2, margem);
+        const orientacaoImg: 'portrait' | 'landscape' =
+          altura > largura ? 'portrait' : 'landscape';
         const fluxo = mapaRef.current?.querySelector('.react-flow') as HTMLElement | null;
         const camada = mapaRef.current?.querySelector(
           '.react-flow__viewport',
@@ -516,7 +563,7 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
               ),
             ),
           ]);
-          return { dataUrl, fundo };
+          return { dataUrl, fundo, orientacao: orientacaoImg };
         } finally {
           camada.style.transform = transformAnterior;
           if (!temaClaroAntes) raiz?.classList.remove('rmm-tema-light');
