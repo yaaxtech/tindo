@@ -2,6 +2,15 @@
 
 import type { ContextoAuth } from '@/lib/auth/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+  enviarEmailConvite: vi.fn(async () => undefined),
+  obterPerfil: vi.fn(async () => ({ nome: 'Maria', email: 'dono@example.com' })),
+}));
+
+vi.mock('./email', () => ({ enviarEmailConvite: mocks.enviarEmailConvite }));
+vi.mock('./perfil', () => ({ obterPerfil: mocks.obterPerfil }));
+
 import {
   carregarDocumentoCompartilhado,
   convidarPorEmail,
@@ -9,37 +18,68 @@ import {
   linkDoDocumento,
   listarAcesso,
   listarCompartilhadosComigo,
+  reconciliarConvitesPendentes,
   regenerarToken,
   revogar,
   trocarPapel,
 } from './compartilhar';
 
+type FakeResult = { data?: unknown; error?: unknown };
+
 /**
- * Fake do cliente Supabase: só expõe `rpc` (respondendo por nome) e um `from`
- * que EXPLODE se chamado — o contrato de isolamento exige que a leitura de doc
+ * Builder fluente que resolve com `resultado` independente do encadeamento
+ * (`.select().eq().is().maybeSingle()` etc.) — mesmo padrão do fake usado em
+ * kpis-adiamento.test.ts.
+ */
+function fakeBuilder(resultado: FakeResult) {
+  // biome-ignore lint/suspicious/noExplicitAny: builder fluente genérico de teste
+  const builder: Record<string, any> = {};
+  const metodos = ['select', 'eq', 'is', 'order', 'limit', 'insert', 'update', 'upsert'];
+  for (const metodo of metodos) builder[metodo] = vi.fn(() => builder);
+  builder.maybeSingle = vi.fn(() => Promise.resolve(resultado));
+  // biome-ignore lint/suspicious/noThenProperty: thenable intencional para simular Supabase query builder
+  builder.then = (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
+    Promise.resolve(resultado).then(resolve, reject);
+  return builder;
+}
+
+/**
+ * Fake do cliente Supabase: `rpc` responde por nome; `from` só responde às
+ * tabelas explicitamente whitelistadas em `opts.from` — qualquer outra
+ * chamada EXPLODE. O contrato de isolamento exige que a leitura de doc
  * alheio passe pela RPC guarded, nunca por um SELECT direto em doc_linhas.
  */
-function fakeContexto(respostas: Record<string, { data?: unknown; error?: unknown }>) {
-  const rpc = vi.fn(async (nome: string) => respostas[nome] ?? { data: [], error: null });
-  const from = vi.fn(() => {
-    throw new Error('ISOLAMENTO VIOLADO: leitura de compartilhado não pode usar .from()');
+function fakeContexto(
+  opts: { rpc?: Record<string, FakeResult>; from?: Record<string, FakeResult> } = {},
+) {
+  const rpc = vi.fn(async (nome: string) => opts.rpc?.[nome] ?? { data: [], error: null });
+  const from = vi.fn((tabela: string) => {
+    if (!opts.from || !(tabela in opts.from)) {
+      throw new Error(`ISOLAMENTO VIOLADO: acesso inesperado a .from('${tabela}')`);
+    }
+    return fakeBuilder(opts.from[tabela] as FakeResult);
   });
   const contexto = {
-    usuarioId: 'guest-1',
-    email: 'guest@example.com',
+    usuarioId: 'dono-1',
+    email: 'dono@example.com',
     supabase: { rpc, from },
   } as unknown as ContextoAuth;
   return { contexto, rpc, from };
 }
 
 describe('services/compartilhar', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.obterPerfil.mockResolvedValue({ nome: 'Maria', email: 'dono@example.com' });
+  });
 
   it('listarCompartilhadosComigo chama a RPC e mapeia snake→camel', async () => {
     const { contexto, rpc, from } = fakeContexto({
-      listar_compartilhados_comigo: {
-        data: [{ documento_id: 'doc-A', titulo_md: 'Plano', papel: 'leitor', dono: 'dono-1' }],
-        error: null,
+      rpc: {
+        listar_compartilhados_comigo: {
+          data: [{ documento_id: 'doc-A', titulo_md: 'Plano', papel: 'leitor', dono: 'dono-1' }],
+          error: null,
+        },
       },
     });
 
@@ -54,24 +94,26 @@ describe('services/compartilhar', () => {
 
   it('carregarDocumentoCompartilhado usa as RPCs guarded (nunca .from) e mapeia', async () => {
     const { contexto, rpc, from } = fakeContexto({
-      documento_compartilhado: {
-        data: [
-          {
-            id: 'l1',
-            pai_id: null,
-            ordem: 'a0',
-            conteudo: [{ type: 'text', text: 'oi' }],
-            texto_md: 'oi',
-            tipo: 'texto',
-            tarefa_estado: null,
-            modo_lista: 'herdado',
-          },
-        ],
-        error: null,
-      },
-      espelhos_do_documento_compartilhado: {
-        data: [{ id: 'e1', linha_id: 'lx', mae_id: 'l1', ordem: 'a5' }],
-        error: null,
+      rpc: {
+        documento_compartilhado: {
+          data: [
+            {
+              id: 'l1',
+              pai_id: null,
+              ordem: 'a0',
+              conteudo: [{ type: 'text', text: 'oi' }],
+              texto_md: 'oi',
+              tipo: 'texto',
+              tarefa_estado: null,
+              modo_lista: 'herdado',
+            },
+          ],
+          error: null,
+        },
+        espelhos_do_documento_compartilhado: {
+          data: [{ id: 'e1', linha_id: 'lx', mae_id: 'l1', ordem: 'a5' }],
+          error: null,
+        },
       },
     });
 
@@ -99,8 +141,10 @@ describe('services/compartilhar', () => {
 
   it('sem acesso, a RPC devolve vazio → serviço devolve vazio (isolamento do banco)', async () => {
     const { contexto } = fakeContexto({
-      documento_compartilhado: { data: [], error: null },
-      espelhos_do_documento_compartilhado: { data: [], error: null },
+      rpc: {
+        documento_compartilhado: { data: [], error: null },
+        espelhos_do_documento_compartilhado: { data: [], error: null },
+      },
     });
 
     const { linhas, espelhos } = await carregarDocumentoCompartilhado(contexto, 'doc-de-outro');
@@ -111,63 +155,26 @@ describe('services/compartilhar', () => {
 
   it('propaga erro da RPC', async () => {
     const { contexto } = fakeContexto({
-      listar_compartilhados_comigo: { data: null, error: new Error('falhou') },
+      rpc: { listar_compartilhados_comigo: { data: null, error: new Error('falhou') } },
     });
     await expect(listarCompartilhadosComigo(contexto)).rejects.toThrow('falhou');
   });
 
-  it('convida conta existente e normaliza o email antes da RPC', async () => {
-    const { contexto, rpc } = fakeContexto({
-      convidar_usuario_documento: {
-        data: [
-          {
-            status: 'concedido',
-            usuario_id: 'user-2',
-            email: 'ana@example.com',
-            nome: 'Ana',
-            cor: '#198b74',
-            papel: 'leitor',
-          },
-        ],
-        error: null,
-      },
-    });
-
-    await expect(
-      convidarPorEmail(contexto, 'doc-A', '  ANA@Example.com ', 'leitor'),
-    ).resolves.toEqual({ status: 'concedido' });
-    expect(rpc).toHaveBeenCalledWith('convidar_usuario_documento', {
-      p_documento: 'doc-A',
-      p_email: 'ana@example.com',
-      p_papel: 'leitor',
-    });
-  });
-
-  it.each(['pendente', 'ja_tem', 'auto'] as const)(
-    'preserva o status %s retornado pelo convite',
-    async (status) => {
-      const { contexto } = fakeContexto({
-        convidar_usuario_documento: { data: [{ status }], error: null },
-      });
-      await expect(
-        convidarPorEmail(contexto, 'doc-A', 'pessoa@example.com', 'editor'),
-      ).resolves.toEqual({ status });
-    },
-  );
-
   it('lista os acessos com identidade e papel', async () => {
     const { contexto, rpc } = fakeContexto({
-      listar_acessos_documento: {
-        data: [
-          {
-            usuario_id: 'user-2',
-            email: 'ana@example.com',
-            nome: 'Ana',
-            cor: '#198b74',
-            papel: 'editor',
-          },
-        ],
-        error: null,
+      rpc: {
+        listar_acessos_documento: {
+          data: [
+            {
+              usuario_id: 'user-2',
+              email: 'ana@example.com',
+              nome: 'Ana',
+              cor: '#198b74',
+              papel: 'editor',
+            },
+          ],
+          error: null,
+        },
       },
     });
 
@@ -188,8 +195,10 @@ describe('services/compartilhar', () => {
 
   it('troca papel e revoga acesso pelas RPCs do dono', async () => {
     const { contexto, rpc } = fakeContexto({
-      trocar_papel_documento: { data: null, error: null },
-      revogar_acesso_documento: { data: null, error: null },
+      rpc: {
+        trocar_papel_documento: { data: null, error: null },
+        revogar_acesso_documento: { data: null, error: null },
+      },
     });
 
     await trocarPapel(contexto, 'doc-A', 'user-2', 'leitor');
@@ -208,9 +217,11 @@ describe('services/compartilhar', () => {
 
   it('lê, alterna e regenera o link sem expor a tabela', async () => {
     const { contexto, rpc, from } = fakeContexto({
-      configurar_link_documento: {
-        data: [{ modo_link: 'publico_leitura', link_token: 'token-novo' }],
-        error: null,
+      rpc: {
+        configurar_link_documento: {
+          data: [{ modo_link: 'publico_leitura', link_token: 'token-novo' }],
+          error: null,
+        },
       },
     });
 
@@ -244,11 +255,135 @@ describe('services/compartilhar', () => {
 
   it('traduz erros conhecidos do banco para PT-BR', async () => {
     const { contexto } = fakeContexto({
-      trocar_papel_documento: { data: null, error: new Error('SEM_PERMISSAO') },
+      rpc: { trocar_papel_documento: { data: null, error: new Error('SEM_PERMISSAO') } },
     });
 
     await expect(trocarPapel(contexto, 'doc-A', 'user-2', 'editor')).rejects.toThrow(
       'Só o dono pode compartilhar este documento.',
     );
+  });
+
+  describe('convidarPorEmail — email/Resend (Fatia 3)', () => {
+    it('auto-convite não busca perfil/título nem envia email', async () => {
+      const { contexto, rpc } = fakeContexto({
+        rpc: { convidar_usuario_documento: { data: [{ status: 'auto' }], error: null } },
+      });
+
+      await expect(
+        convidarPorEmail(contexto, 'doc-A', 'dono@example.com', 'editor'),
+      ).resolves.toEqual({ status: 'auto' });
+
+      expect(rpc).toHaveBeenCalledWith('convidar_usuario_documento', {
+        p_documento: 'doc-A',
+        p_email: 'dono@example.com',
+        p_papel: 'editor',
+      });
+      expect(mocks.obterPerfil).not.toHaveBeenCalled();
+      expect(mocks.enviarEmailConvite).not.toHaveBeenCalled();
+    });
+
+    it.each(['concedido', 'ja_tem'] as const)(
+      'conta existente (%s) envia email com o link do DOCUMENTO',
+      async (status) => {
+        const { contexto } = fakeContexto({
+          rpc: { convidar_usuario_documento: { data: [{ status }], error: null } },
+          from: {
+            doc_linhas: { data: { texto_md: 'Plano de Lançamento' }, error: null },
+          },
+        });
+
+        await expect(
+          convidarPorEmail(contexto, 'doc-A', '  ANA@Example.com ', 'leitor'),
+        ).resolves.toEqual({ status });
+
+        expect(mocks.enviarEmailConvite).toHaveBeenCalledWith({
+          para: 'ana@example.com',
+          nomeDono: 'Maria',
+          tituloDoc: 'Plano de Lançamento',
+          url: 'https://tindoapp.pages.dev/docs?doc=doc-A',
+          temConta: true,
+        });
+      },
+    );
+
+    it('email sem conta (pendente) grava doc_convites e envia email de CADASTRO', async () => {
+      const { contexto, from } = fakeContexto({
+        rpc: { convidar_usuario_documento: { data: [{ status: 'pendente' }], error: null } },
+        from: {
+          doc_linhas: { data: { texto_md: 'Plano de Lançamento' }, error: null },
+          doc_convites: { data: null, error: null }, // select: nenhum pendente existente
+        },
+      });
+
+      await expect(
+        convidarPorEmail(contexto, 'doc-A', 'nova@example.com', 'editor'),
+      ).resolves.toEqual({ status: 'pendente' });
+
+      expect(from).toHaveBeenCalledWith('doc_convites');
+      expect(mocks.enviarEmailConvite).toHaveBeenCalledWith({
+        para: 'nova@example.com',
+        nomeDono: 'Maria',
+        tituloDoc: 'Plano de Lançamento',
+        url: 'https://tindoapp.pages.dev/cadastro',
+        temConta: false,
+      });
+    });
+
+    it('convite pendente repetido reenvia o email sem duplicar a linha', async () => {
+      const builderDocLinhas = fakeBuilder({ data: { texto_md: 'Plano' }, error: null });
+      const builderConvites = fakeBuilder({ data: { id: 'convite-1' }, error: null });
+      const { contexto, from } = fakeContexto({
+        rpc: { convidar_usuario_documento: { data: [{ status: 'pendente' }], error: null } },
+      });
+      from.mockImplementation((tabela: string) => {
+        if (tabela === 'doc_linhas') return builderDocLinhas;
+        if (tabela === 'doc_convites') return builderConvites;
+        throw new Error(`ISOLAMENTO VIOLADO: .from('${tabela}')`);
+      });
+
+      await convidarPorEmail(contexto, 'doc-A', 'nova@example.com', 'leitor');
+
+      expect(builderConvites.update).toHaveBeenCalled();
+      expect(builderConvites.insert).not.toHaveBeenCalled();
+      expect(mocks.enviarEmailConvite).toHaveBeenCalledTimes(1);
+    });
+
+    it('email de conta existente vazio de título usa fallback amigável', async () => {
+      const { contexto } = fakeContexto({
+        rpc: { convidar_usuario_documento: { data: [{ status: 'concedido' }], error: null } },
+        from: { doc_linhas: { data: { texto_md: null }, error: null } },
+      });
+
+      await convidarPorEmail(contexto, 'doc-A', 'ana@example.com', 'leitor');
+
+      expect(mocks.enviarEmailConvite).toHaveBeenCalledWith(
+        expect.objectContaining({ tituloDoc: 'Documento sem título' }),
+      );
+    });
+  });
+
+  describe('reconciliarConvitesPendentes — rede de segurança do 1º login', () => {
+    it('chama a RPC sem parâmetros (identidade vem de auth.uid() no banco)', async () => {
+      const { contexto, rpc } = fakeContexto({
+        rpc: { reconciliar_convites_pendentes: { data: null, error: null } },
+      });
+
+      await reconciliarConvitesPendentes(contexto);
+
+      expect(rpc).toHaveBeenCalledWith('reconciliar_convites_pendentes');
+    });
+
+    it('nunca lança — best-effort mesmo se a RPC falhar ou ainda não existir', async () => {
+      const { contexto } = fakeContexto({
+        rpc: {
+          reconciliar_convites_pendentes: {
+            data: null,
+            error: new Error('function does not exist'),
+          },
+        },
+      });
+
+      await expect(reconciliarConvitesPendentes(contexto)).resolves.toBeUndefined();
+    });
   });
 });

@@ -4,6 +4,7 @@
 // (migration 20260802000001) — NUNCA um SELECT direto em doc_linhas de doc alheio.
 // Ver spec: docs/superpowers/plans/2026-08-02-roadmapmind-fase-2-compartilhamento.md
 
+import { ORIGEM_OFICIAL } from '@/lib/app-url';
 import type { ContextoAuth } from '@/lib/auth/server';
 import type {
   AcessoItem,
@@ -16,6 +17,8 @@ import type {
 import type { DocLinha } from '@/types/doc';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DocEspelho } from './doc-markdown';
+import { enviarEmailConvite } from './email';
+import { obterPerfil } from './perfil';
 
 // doc_linhas não está em database.ts (padrão da Fase 1: client destipado nesta
 // camada; a tipagem forte vive no domínio — DocLinha/CompartilhadoComigo).
@@ -165,9 +168,73 @@ export async function listarAcesso(
   }));
 }
 
+/** Título amigável do doc para o email de convite (fallback quando vazio). */
+async function tituloDoDocumento(contexto: ContextoAuth, documentoId: string): Promise<string> {
+  const { data, error } = await db(contexto)
+    .from('doc_linhas')
+    .select('texto_md')
+    .eq('id', documentoId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) throw erroAmigavel(error);
+  const texto = (data as { texto_md: string | null } | null)?.texto_md;
+  return texto?.trim() || 'Documento sem título';
+}
+
+function urlDoDocumento(documentoId: string): string {
+  return `${ORIGEM_OFICIAL}/docs?doc=${documentoId}`;
+}
+
+function urlDeCadastro(): string {
+  return `${ORIGEM_OFICIAL}/cadastro`;
+}
+
 /**
- * Convida uma conta TinDo existente. Sem conta, a RPC retorna `pendente`, mas
- * esta fatia não grava nem envia nada; o fluxo pendente completo chega na Fatia 3.
+ * Grava/atualiza o convite pendente em `doc_convites` (email sem conta).
+ * Respeita o índice único parcial (documento_id, email) where status='pendente':
+ * se já existe um pendente para o par, atualiza o papel (reenvia, não duplica).
+ */
+async function gravarConvitePendente(
+  contexto: ContextoAuth,
+  documentoId: string,
+  email: string,
+  papel: Papel,
+): Promise<void> {
+  const cliente = db(contexto);
+  const { data: existente, error: erroSelect } = await cliente
+    .from('doc_convites')
+    .select('id')
+    .eq('documento_id', documentoId)
+    .eq('email', email)
+    .eq('status', 'pendente')
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (erroSelect) throw erroAmigavel(erroSelect);
+
+  const linhaExistente = existente as { id: string } | null;
+  if (linhaExistente) {
+    const { error } = await cliente
+      .from('doc_convites')
+      .update({ papel, updated_at: new Date().toISOString() })
+      .eq('id', linhaExistente.id);
+    if (error) throw erroAmigavel(error);
+    return;
+  }
+
+  const { error } = await cliente.from('doc_convites').insert({
+    documento_id: documentoId,
+    email,
+    papel,
+    convidado_por: contexto.usuarioId,
+  });
+  if (error) throw erroAmigavel(error);
+}
+
+/**
+ * Convida por email: conta existente (`concedido`/`ja_tem`) grava
+ * `doc_permissoes` (via RPC) e envia email com o link do documento;
+ * sem conta (`pendente`) grava um convite pendente em `doc_convites` e
+ * envia email com o link de cadastro; auto-convite (`auto`) não envia nada.
  */
 export async function convidarPorEmail(
   contexto: ContextoAuth,
@@ -175,14 +242,44 @@ export async function convidarPorEmail(
   email: string,
   papel: Papel,
 ): Promise<ResultadoConvite> {
+  const emailNormalizado = email.trim().toLowerCase();
   const data = await chamarRpc<ConviteRow[]>(contexto, 'convidar_usuario_documento', {
     p_documento: documentoId,
-    p_email: email.trim().toLowerCase(),
+    p_email: emailNormalizado,
     p_papel: papel,
   });
   const resultado = data?.[0];
   if (!resultado) throw new Error('Não foi possível concluir o convite. Tente novamente.');
-  return { status: resultado.status };
+  const { status } = resultado;
+
+  if (status === 'auto') return { status };
+
+  const [perfil, titulo] = await Promise.all([
+    obterPerfil(contexto),
+    tituloDoDocumento(contexto, documentoId),
+  ]);
+
+  if (status === 'pendente') {
+    await gravarConvitePendente(contexto, documentoId, emailNormalizado, papel);
+    await enviarEmailConvite({
+      para: emailNormalizado,
+      nomeDono: perfil.nome,
+      tituloDoc: titulo,
+      url: urlDeCadastro(),
+      temConta: false,
+    });
+    return { status };
+  }
+
+  // 'concedido' | 'ja_tem' — conta já existe, o acesso já foi gravado pela RPC.
+  await enviarEmailConvite({
+    para: emailNormalizado,
+    nomeDono: perfil.nome,
+    tituloDoc: titulo,
+    url: urlDoDocumento(documentoId),
+    temConta: true,
+  });
+  return { status };
 }
 
 /** Troca leitor↔editor para uma pessoa já convidada. */
@@ -245,4 +342,28 @@ export function definirModoLink(
 
 export async function regenerarToken(contexto: ContextoAuth, documentoId: string): Promise<string> {
   return (await configurarLink(contexto, documentoId, null, true)).token;
+}
+
+/**
+ * Rede de segurança de reconciliação no 1º login (espelha o trigger
+ * `reconciliar_convites_novo_usuario` da Fatia 0): materializa `doc_permissoes`
+ * para qualquer `doc_convites` pendente do email autenticado e marca o
+ * convite como `aceito`. Idempotente (índice único de `doc_permissoes`).
+ *
+ * A identidade vem de `auth.uid()` DENTRO da RPC (SECURITY DEFINER) — nunca de
+ * parâmetro. Passar email/usuário como argumento abriria um vazamento: um
+ * logado poderia materializar os convites de outra pessoa. Por isso a RPC não
+ * recebe nada; deriva o usuário e o email dele no banco.
+ *
+ * Best-effort e NUNCA lança — chamada em todo carregamento de "Compartilhados
+ * comigo"; se a RPC falhar (ou ainda não existir em produção), o carregamento
+ * do usuário não pode quebrar por causa dela.
+ */
+export async function reconciliarConvitesPendentes(contexto: ContextoAuth): Promise<void> {
+  try {
+    await db(contexto).rpc('reconciliar_convites_pendentes');
+    // Erro é ignorado de propósito: rede de segurança best-effort (ver docstring).
+  } catch {
+    // Idem: nunca deixa a app quebrar por causa desta reconciliação.
+  }
 }
