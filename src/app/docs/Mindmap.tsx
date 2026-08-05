@@ -88,7 +88,10 @@ type NoMapa = Node<NoData>;
 const ROW_H = 56;
 const COL_W = 300;
 const ROW_V = 130; // altura por nível no modo vertical
-const COL_V = 220; // largura por folha no modo vertical
+// largura por folha no modo vertical: precisa ser ≥ largura máx. do nó (260px,
+// ver .mm-no no CSS) + folga, senão os nós se sobrepõem na horizontal e o mapa
+// fica "torto". Espelha o COL_W (300) que já acomoda a largura no modo horizontal.
+const COL_V = 300;
 
 type Handlers = {
   onToggle: (id: string) => void;
