@@ -191,11 +191,15 @@ Substitui a heurística pura por SM-2 adaptado — intervalo cresce com adiament
 - [x] Fatia 1a — documento compartilhado somente leitura
 - [x] Fatia 1b — lista “Compartilhados comigo”
 - [x] Fatia 2 — modal Compartilhar, convite de conta existente e gestão de acesso
-- [ ] Fatia 3 — convite pendente e email real via Resend
+- [x] Fatia 3 — convite pendente e email real via Resend (código no ar, PR #38)
 - [ ] Fatia 4 — edição protegida do convidado e aviso de espelhos
 - [ ] Fatia 5 — página pública somente leitura por token
 
 **Critério da Fatia 2**: o dono convida uma conta existente, troca ou revoga o papel e gerencia o link; conta inexistente não gera convite nem email ainda.
+
+**Fatia 3 — pendências do dono para ficar 100%**:
+- Aplicar em produção a migration `20260805000001_roadmapmind_reconciliar_convites.sql` (RPC `reconciliar_convites_pendentes`, deriva identidade de `auth.uid()`). Aditiva; verificada em `BEGIN…ROLLBACK`. Até aplicar, o safety-net do 1º login fica inerte (best-effort, não quebra); o trigger `reconciliar_convites_novo_usuario` já em prod cobre o cadastro normal.
+- Configurar Resend (verificar domínio DNS + `RESEND_API_KEY` como secret) e ligar `EMAIL_ENVIO_ATIVO=true` para os emails de convite saírem. Sem isso, o convite pendente grava e materializa, só não dispara email.
 
 ## Fase 12+ — Futuro
 
