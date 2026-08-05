@@ -104,6 +104,59 @@ export async function carregarDocumentoCompartilhado(
   };
 }
 
+/**
+ * Salva a árvore de um documento compartilhado como o convidado EDITOR.
+ * Roteia para a RPC guarded `salvar_documento_compartilhado`, que confina a
+ * escrita à subárvore real do doc (migration 20260805000002): linha de fora
+ * (espelho-de-fora, injeção) é ignorada no banco. `texto_md` é derivado lá — o
+ * cliente manda só `conteudo`. Nunca faz `.from()`/upsert direto em doc alheio.
+ */
+export async function salvarDocumentoCompartilhado(
+  contexto: ContextoAuth,
+  documentoId: string,
+  linhas: DocLinha[],
+): Promise<void> {
+  const payload = linhas.map((l) => ({
+    id: l.id,
+    pai_id: l.paiId,
+    ordem: l.ordem,
+    conteudo: l.conteudo,
+    tipo: l.tipo,
+    tarefa_estado: l.tarefaEstado,
+    modo_lista: l.modoLista,
+  }));
+  const { error } = await db(contexto).rpc('salvar_documento_compartilhado', {
+    p_documento: documentoId,
+    p_linhas: payload,
+  });
+  if (error) {
+    if (mensagemDoErro(error).includes('SEM_PERMISSAO')) {
+      throw new Error('Você não tem permissão para editar este documento.');
+    }
+    throw new Error('Não foi possível salvar suas alterações. Tente novamente.');
+  }
+}
+
+/**
+ * Conta os espelhos DENTRO do documento cuja linha-alvo mora FORA dele (casa
+ * real privada do dono). Alimenta o aviso do modal de compartilhar. Best-effort:
+ * se a RPC falhar, devolve 0 — o aviso é informativo, nunca quebra o modal.
+ */
+export async function espelhosExternosDoDocumento(
+  contexto: ContextoAuth,
+  documentoId: string,
+): Promise<number> {
+  try {
+    const { data, error } = await db(contexto).rpc('espelhos_externos_do_documento', {
+      p_documento: documentoId,
+    });
+    if (error) return 0;
+    return typeof data === 'number' ? data : 0;
+  } catch {
+    return 0;
+  }
+}
+
 interface AcessoRow {
   usuario_id: string;
   email: string;

@@ -11,16 +11,19 @@ const mocks = vi.hoisted(() => ({
 vi.mock('./email', () => ({ enviarEmailConvite: mocks.enviarEmailConvite }));
 vi.mock('./perfil', () => ({ obterPerfil: mocks.obterPerfil }));
 
+import type { DocLinha } from '@/types/doc';
 import {
   carregarDocumentoCompartilhado,
   convidarPorEmail,
   definirModoLink,
+  espelhosExternosDoDocumento,
   linkDoDocumento,
   listarAcesso,
   listarCompartilhadosComigo,
   reconciliarConvitesPendentes,
   regenerarToken,
   revogar,
+  salvarDocumentoCompartilhado,
   trocarPapel,
 } from './compartilhar';
 
@@ -384,6 +387,76 @@ describe('services/compartilhar', () => {
       });
 
       await expect(reconciliarConvitesPendentes(contexto)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('salvarDocumentoCompartilhado — escrita guarded do convidado editor', () => {
+    const linha: DocLinha = {
+      id: 'b1',
+      paiId: 'doc-B',
+      ordem: 'a0',
+      conteudo: [{ type: 'text', text: 'oi' }],
+      textoMd: 'oi',
+      tipo: 'texto',
+      tarefaEstado: null,
+      modoLista: 'marcadores',
+    };
+
+    it('chama a RPC guarded com p_linhas em snake (sem texto_md) e nunca .from', async () => {
+      const { contexto, rpc, from } = fakeContexto({
+        rpc: { salvar_documento_compartilhado: { data: null, error: null } },
+      });
+
+      await salvarDocumentoCompartilhado(contexto, 'doc-B', [linha]);
+
+      expect(from).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenCalledWith('salvar_documento_compartilhado', {
+        p_documento: 'doc-B',
+        p_linhas: [
+          {
+            id: 'b1',
+            pai_id: 'doc-B',
+            ordem: 'a0',
+            conteudo: [{ type: 'text', text: 'oi' }],
+            tipo: 'texto',
+            tarefa_estado: null,
+            modo_lista: 'marcadores',
+          },
+        ],
+      });
+    });
+
+    it('SEM_PERMISSAO vira mensagem amigável de edição', async () => {
+      const { contexto } = fakeContexto({
+        rpc: {
+          salvar_documento_compartilhado: { data: null, error: { message: 'SEM_PERMISSAO' } },
+        },
+      });
+
+      await expect(salvarDocumentoCompartilhado(contexto, 'doc-B', [linha])).rejects.toThrow(
+        /permissão para editar/,
+      );
+    });
+  });
+
+  describe('espelhosExternosDoDocumento — aviso de espelho externo', () => {
+    it('retorna a contagem da RPC', async () => {
+      const { contexto, rpc } = fakeContexto({
+        rpc: { espelhos_externos_do_documento: { data: 2, error: null } },
+      });
+
+      await expect(espelhosExternosDoDocumento(contexto, 'doc-B')).resolves.toBe(2);
+      expect(rpc).toHaveBeenCalledWith('espelhos_externos_do_documento', { p_documento: 'doc-B' });
+    });
+
+    it('best-effort: devolve 0 se a RPC falhar', async () => {
+      const { contexto } = fakeContexto({
+        rpc: {
+          espelhos_externos_do_documento: { data: null, error: new Error('boom') },
+        },
+      });
+
+      await expect(espelhosExternosDoDocumento(contexto, 'doc-B')).resolves.toBe(0);
     });
   });
 });

@@ -2,17 +2,21 @@ import { UsuarioNaoAutenticadoError, exigirContextoAuth } from '@/lib/auth/serve
 import {
   carregarDocumentoCompartilhado,
   listarCompartilhadosComigo,
+  salvarDocumentoCompartilhado,
 } from '@/services/compartilhar';
-// RoadMapMind — API para abrir um documento compartilhado (só-leitura na Fatia 1).
-// O papel vem da lista de "compartilhados comigo" (evita expor o guard a probing);
-// 403 se o doc não está compartilhado comigo. A subárvore vem da RPC guarded.
+// RoadMapMind — API de um documento compartilhado. GET abre (leitura guarded; o
+// papel vem da lista "compartilhados comigo", evitando probing); PUT salva como
+// convidado EDITOR (Fatia 4) pela RPC guarded, que confina a escrita à subárvore.
+// 403 se o doc não está compartilhado comigo / sem permissão de edição.
+import type { DocLinha } from '@/types/doc';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 function respostaErro(e: unknown) {
-  const status = e instanceof UsuarioNaoAutenticadoError ? 401 : 500;
   const erro = e instanceof Error ? e.message : 'Erro inesperado ao abrir o documento.';
+  const status =
+    e instanceof UsuarioNaoAutenticadoError ? 401 : erro.includes('permissão') ? 403 : 500;
   return NextResponse.json({ erro }, { status });
 }
 
@@ -38,6 +42,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       linhas,
       espelhos,
     });
+  } catch (e) {
+    return respostaErro(e);
+  }
+}
+
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const contexto = await exigirContextoAuth();
+    const { id } = await params;
+    const body = (await req.json()) as { linhas?: DocLinha[] };
+    // A RPC guarded valida papel de editor e confina a escrita à subárvore.
+    await salvarDocumentoCompartilhado(contexto, id, body.linhas ?? []);
+    return NextResponse.json({ ok: true });
   } catch (e) {
     return respostaErro(e);
   }
