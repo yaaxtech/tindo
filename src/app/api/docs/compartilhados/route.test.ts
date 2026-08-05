@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   exigirContextoAuth: vi.fn(),
   listarCompartilhadosComigo: vi.fn(),
+  reconciliarConvitesPendentes: vi.fn(),
 }));
 
 vi.mock('@/lib/auth/server', () => ({
@@ -19,6 +20,7 @@ vi.mock('@/lib/auth/server', () => ({
 
 vi.mock('@/services/compartilhar', () => ({
   listarCompartilhadosComigo: mocks.listarCompartilhadosComigo,
+  reconciliarConvitesPendentes: mocks.reconciliarConvitesPendentes,
 }));
 
 import { UsuarioNaoAutenticadoError } from '@/lib/auth/server';
@@ -31,6 +33,7 @@ describe('GET /api/docs/compartilhados', () => {
     vi.clearAllMocks();
     mocks.exigirContextoAuth.mockResolvedValue(contexto);
     mocks.listarCompartilhadosComigo.mockResolvedValue([]);
+    mocks.reconciliarConvitesPendentes.mockResolvedValue(undefined);
   });
 
   it('responde 401 sem sessão e não consulta o serviço', async () => {
@@ -38,6 +41,7 @@ describe('GET /api/docs/compartilhados', () => {
     const resposta = await GET();
     expect(resposta.status).toBe(401);
     expect(mocks.listarCompartilhadosComigo).not.toHaveBeenCalled();
+    expect(mocks.reconciliarConvitesPendentes).not.toHaveBeenCalled();
   });
 
   it('devolve os itens compartilhados do usuário logado', async () => {
@@ -47,5 +51,14 @@ describe('GET /api/docs/compartilhados', () => {
     expect(resposta.status).toBe(200);
     await expect(resposta.json()).resolves.toEqual({ itens });
     expect(mocks.listarCompartilhadosComigo).toHaveBeenCalledWith(contexto);
+  });
+
+  it('roda a rede de segurança de reconciliação antes de listar', async () => {
+    await GET();
+    expect(mocks.reconciliarConvitesPendentes).toHaveBeenCalledWith(
+      contexto,
+      'guest-1',
+      'g@example.com',
+    );
   });
 });
