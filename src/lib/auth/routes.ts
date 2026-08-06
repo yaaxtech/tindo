@@ -15,6 +15,17 @@ export const ROTAS_PUBLICAS = [
 /** Rotas sem sessão de usuário, protegidas por segredo próprio. */
 export const ROTAS_TECNICAS = ['/api/cron/diario', '/api/push/disparar-gatilhos'] as const;
 
+/**
+ * Link público só-leitura por token (Fatia 5): página e API abertas SEM login.
+ * A segurança fica no banco — as RPCs anônimas só devolvem doc `publico_leitura`.
+ * Singular (`/compartilhado/`) ≠ rota autenticada do convidado (`/compartilhados/`).
+ */
+export function ehRotaCompartilhamentoPublico(pathname: string): boolean {
+  return (
+    pathname.startsWith('/docs/compartilhado/') || pathname.startsWith('/api/docs/compartilhado/')
+  );
+}
+
 /** Fatia já migrada para autenticação real; demais rotas entram em PRs posteriores. */
 export function ehRotaRoadMapMind(pathname: string): boolean {
   return (
@@ -47,5 +58,6 @@ export function podeAcessarRotaAutenticada(
 export function classificarAcessoRota(pathname: string): AcessoRota {
   if ((ROTAS_TECNICAS as readonly string[]).includes(pathname)) return 'tecnica';
   if ((ROTAS_PUBLICAS as readonly string[]).includes(pathname)) return 'publica';
+  if (ehRotaCompartilhamentoPublico(pathname)) return 'publica';
   return 'autenticada';
 }
