@@ -36,6 +36,38 @@ describe('PDF do RoadMapMind', () => {
     expect(html).toContain('break-before: page');
   });
 
+  it('segue o tema do sistema: claro = página branca, escuro = página escura', () => {
+    const claro = montarHtmlPdf({
+      titulo: 'Doc',
+      documentoHtml: '<main class="rmm-editor">x</main>',
+      tema: 'light',
+    });
+    expect(claro).toContain('background: #ffffff');
+    expect(claro).toContain('color: #1b222c');
+
+    const escuro = montarHtmlPdf({
+      titulo: 'Doc',
+      documentoHtml: '<main class="rmm-editor">x</main>',
+      tema: 'dark',
+    });
+    expect(escuro).toContain('background: #121820');
+    expect(escuro).toContain('color: #e8edf2');
+    // o corpo (áreas vazias da folha) também acompanha o tema
+    expect(escuro).toContain('background: #121820; }');
+  });
+
+  it('a imagem do mapa cabe em UMA página (sem estourar nem sobrar folha vazia)', () => {
+    const html = montarHtmlPdf({
+      titulo: 'Doc',
+      mapaDataUrl: 'data:image/png;base64,abc',
+    });
+    // caixa de 1 página + recorte + imagem que encolhe (nunca width/height:100%)
+    expect(html).toContain('height: 100vh');
+    expect(html).toContain('overflow: hidden');
+    expect(html).toContain('max-height: 100%');
+    expect(html).not.toContain('.pdf-mapa img { display: block; width: 100%; height: 100%');
+  });
+
   it('usa data e nome limpo no arquivo e respeita a orientação do mapa', () => {
     expect(nomeArquivoPdf('Meu Documento!', new Date(2026, 7, 1))).toBe('20260801_MeuDocumento');
 
