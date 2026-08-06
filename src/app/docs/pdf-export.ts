@@ -7,6 +7,8 @@ export type ConteudoPdf = {
   mapaDataUrl?: string;
   fundoMapa?: string;
   orientacaoMapa?: 'portrait' | 'landscape';
+  // tema do sistema no momento da exportação: escuro = páginas escuras
+  tema?: 'dark' | 'light';
 };
 
 export function escaparHtml(valor: string): string {
@@ -77,9 +79,14 @@ export function montarHtmlPdf({
   mapaDataUrl,
   fundoMapa = '#ffffff',
   orientacaoMapa = 'landscape',
+  tema = 'light',
 }: ConteudoPdf): string {
   const tituloSeguro = escaparHtml(titulo);
   const nomeArquivoSeguro = escaparHtml(nomeArquivo);
+  // cor de fundo/texto das páginas segue o tema do sistema
+  const escuro = tema === 'dark';
+  const fundoPagina = escuro ? '#121820' : '#ffffff';
+  const corTexto = escuro ? '#e8edf2' : '#1b222c';
   const temDocumento = typeof documentoHtml === 'string';
   const temMapa = typeof mapaDataUrl === 'string' && mapaDataUrl.startsWith('data:image/png');
   const combinado = temDocumento && temMapa;
@@ -94,7 +101,7 @@ export function montarHtmlPdf({
 ${estilosDocumento}
 <style>
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  html, body { margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; background: ${fundoPagina}; }
   .pdf-pagina { break-after: page; }
   .pdf-pagina:last-child { break-after: auto; }
   .pdf-documento.rmm-root {
@@ -104,8 +111,8 @@ ${estilosDocumento}
     height: auto;
     min-height: 100vh;
     overflow: visible;
-    background: #ffffff;
-    color: #1b222c;
+    background: ${fundoPagina};
+    color: ${corTexto};
   }
   .pdf-documento .rmm-editor {
     margin: 0 auto;
@@ -117,20 +124,23 @@ ${estilosDocumento}
   .pdf-mapa {
     page: mapa;
     width: 100%;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     background: var(--pdf-fundo-mapa);
   }
-  /* a imagem ENCOLHE pra caber em UMA página (limitada por largura E altura),
-     preservando a proporção. width/height:100% forçava a imagem a exceder a
-     página e o Chrome estourava em várias folhas com sobra de fundo preto. */
+  /* a imagem ENCOLHE pra caber em UMA página (limitada pela largura E pela
+     altura da própria caixa de 1 página), preservando a proporção. height:100vh
+     na CAIXA + overflow:hidden garantem exatamente 1 folha (corta sobra de
+     arredondamento); max-height:100% na imagem é relativo à caixa (confiável),
+     não ao viewport. Antes: min-height:100vh crescia 1px além da folha e criava
+     uma 2ª página vazia; width/height:100% estourava em várias folhas. */
   .pdf-mapa img {
     display: block;
     max-width: 100%;
-    max-height: 100vh;
+    max-height: 100%;
     width: auto;
     height: auto;
   }

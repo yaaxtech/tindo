@@ -862,13 +862,15 @@ export default function RoadMapMind() {
     const classes = new Set((raiz?.className ?? 'rmm-root').split(/\s+/).filter(Boolean));
     classes.delete('rmm-tema-dark');
     classes.delete('rmm-tema-light');
-    classes.add('rmm-tema-light');
+    // segue o tema atual do sistema (antes forçava claro)
+    classes.add(`rmm-tema-${tema}`);
     return {
       documentoHtml: serializarDocumentoParaPdf(elemento),
       estilosDocumento: capturarEstilosDaPagina(),
       classesRaiz: [...classes].join(' '),
+      tema,
     };
-  }, []);
+  }, [tema]);
 
   // exporta o DOCUMENTO clonando o próprio editor já renderizado — assim
   // marcadores, checkboxes, recuos, cores e tipografia são exatamente os da tela.
@@ -907,6 +909,7 @@ export default function RoadMapMind() {
           mapaDataUrl: mapa.dataUrl,
           fundoMapa: mapa.fundo,
           orientacaoMapa: mapa.orientacao,
+          tema: mapa.tema,
         }),
         nomeArquivoPdf(focoTexto ?? titulo),
       );

@@ -453,6 +453,8 @@ export interface MindmapHandle {
     fundo: string;
     // proporção real da imagem gerada → orienta a página do PDF (retrato/paisagem)
     orientacao: 'portrait' | 'landscape';
+    // tema do sistema no momento da captura → a página do PDF segue a cor
+    tema: 'dark' | 'light';
   }>;
 }
 
@@ -512,12 +514,11 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
           '.react-flow__viewport',
         ) as HTMLElement | null;
         if (!fluxo || !camada) return Promise.reject(new Error('Mapa não encontrado.'));
+        // captura no TEMA ATUAL do sistema (não força mais claro): escuro =
+        // imagem/fundo escuros, claro = branco.
         const raiz = mapaRef.current?.closest('.rmm-root');
-        const temaEscuroAntes = raiz?.classList.contains('rmm-tema-dark') ?? false;
-        const temaClaroAntes = raiz?.classList.contains('rmm-tema-light') ?? false;
-        raiz?.classList.remove('rmm-tema-dark');
-        raiz?.classList.add('rmm-tema-light');
-        const fundo = '#ffffff';
+        const escuro = raiz?.classList.contains('rmm-tema-dark') ?? false;
+        const fundo = escuro ? '#0d1219' : '#ffffff';
         const transformAnterior = camada.style.transform;
         camada.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
         // timeout de segurança: a lib percorre todas as folhas de estilo da
@@ -537,7 +538,8 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
               skipFonts: true,
               filter: (no) => {
                 const classes = (no as Element).classList;
-                // A grade pertence ao editor; o PDF mostra só o mapa em fundo branco.
+                // A grade pertence ao editor; o PDF mostra só o mapa (o fundo
+                // segue o tema atual do sistema).
                 return (
                   !classes?.contains('react-flow__controls') &&
                   !classes?.contains('react-flow__background') &&
@@ -557,11 +559,14 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
             ),
           ]);
           // sempre paisagem: casa com o iframe A4 paisagem da impressão
-          return { dataUrl, fundo, orientacao: 'landscape' as const };
+          return {
+            dataUrl,
+            fundo,
+            orientacao: 'landscape' as const,
+            tema: escuro ? ('dark' as const) : ('light' as const),
+          };
         } finally {
           camada.style.transform = transformAnterior;
-          if (!temaClaroAntes) raiz?.classList.remove('rmm-tema-light');
-          if (temaEscuroAntes) raiz?.classList.add('rmm-tema-dark');
         }
       },
     }),
