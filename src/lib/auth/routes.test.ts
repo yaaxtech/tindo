@@ -3,6 +3,7 @@ import {
   ROTAS_PUBLICAS,
   ROTAS_TECNICAS,
   classificarAcessoRota,
+  ehRotaCompartilhamentoPublico,
   ehRotaMultiusuario,
   ehRotaRoadMapMind,
   podeAcessarRotaAutenticada,
@@ -28,6 +29,31 @@ describe('classificarAcessoRota', () => {
     expect(classificarAcessoRota('/login-falso')).toBe('autenticada');
     expect(classificarAcessoRota('/api/cron/diario/falso')).toBe('autenticada');
   });
+
+  it.each(['/docs/compartilhado/abc-123', '/api/docs/compartilhado/abc-123'])(
+    'libera o link público %s',
+    (rota) => {
+      expect(classificarAcessoRota(rota)).toBe('publica');
+    },
+  );
+
+  it('NÃO libera a rota autenticada do convidado (plural /compartilhados/)', () => {
+    // singular = público; plural = área logada do convidado (Fatia 1/4)
+    expect(classificarAcessoRota('/docs/compartilhados/doc-1')).toBe('autenticada');
+    expect(classificarAcessoRota('/api/docs/compartilhados/doc-1')).toBe('autenticada');
+  });
+});
+
+describe('ehRotaCompartilhamentoPublico', () => {
+  it.each(['/docs/compartilhado/t', '/api/docs/compartilhado/t'])(
+    'inclui o link público %s',
+    (rota) => expect(ehRotaCompartilhamentoPublico(rota)).toBe(true),
+  );
+
+  it.each(['/docs/compartilhados/x', '/api/docs/compartilhados/x', '/docs', '/docs/compartilhado'])(
+    'não inclui %s',
+    (rota) => expect(ehRotaCompartilhamentoPublico(rota)).toBe(false),
+  );
 });
 
 describe('ehRotaRoadMapMind', () => {
