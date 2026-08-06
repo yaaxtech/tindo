@@ -87,9 +87,13 @@ export function montarHtmlPdf({
   const escuro = tema === 'dark';
   const fundoPagina = escuro ? '#121820' : '#ffffff';
   const corTexto = escuro ? '#e8edf2' : '#1b222c';
+  // A4 em milímetros — medida da folha, imune ao vh (que na impressão vale
+  // sempre a página inicial, mesmo quando a folha atual tem outra orientação).
+  const larguraMapa = orientacaoMapa === 'landscape' ? '297mm' : '210mm';
+  const alturaMapa = orientacaoMapa === 'landscape' ? '210mm' : '297mm';
+  const alturaDocumento = '297mm';
   const temDocumento = typeof documentoHtml === 'string';
   const temMapa = typeof mapaDataUrl === 'string' && mapaDataUrl.startsWith('data:image/png');
-  const combinado = temDocumento && temMapa;
   const documento = temDocumento
     ? `<section class="${escaparHtml(classesRaiz)} pdf-pagina pdf-documento">${documentoHtml}</section>`
     : '';
@@ -109,7 +113,7 @@ ${estilosDocumento}
     display: block;
     width: 100%;
     height: auto;
-    min-height: 100vh;
+    min-height: ${alturaDocumento};
     overflow: visible;
     background: ${fundoPagina};
     color: ${corTexto};
@@ -121,10 +125,14 @@ ${estilosDocumento}
   .pdf-documento .bn-editor { caret-color: transparent; }
   .pdf-documento .bn-side-menu,
   .pdf-documento .bn-formatting-toolbar { display: none !important; }
+  /* A caixa do mapa mede a folha em MILÍMETROS, não em vh. Na impressão, 100vh
+     vale a altura da página INICIAL (A4 retrato, 297mm); como a folha do mapa é
+     paisagem (210mm de altura), a caixa ficava ~87mm mais alta que a folha e
+     transbordava para uma 2ª página VAZIA. */
   .pdf-mapa {
     page: mapa;
-    width: 100%;
-    height: 100vh;
+    width: ${larguraMapa};
+    height: ${alturaMapa};
     display: flex;
     align-items: center;
     justify-content: center;
@@ -132,11 +140,9 @@ ${estilosDocumento}
     background: var(--pdf-fundo-mapa);
   }
   /* a imagem ENCOLHE pra caber em UMA página (limitada pela largura E pela
-     altura da própria caixa de 1 página), preservando a proporção. height:100vh
-     na CAIXA + overflow:hidden garantem exatamente 1 folha (corta sobra de
-     arredondamento); max-height:100% na imagem é relativo à caixa (confiável),
-     não ao viewport. Antes: min-height:100vh crescia 1px além da folha e criava
-     uma 2ª página vazia; width/height:100% estourava em várias folhas. */
+     altura da própria caixa de 1 página), preservando a proporção.
+     max-height:100% na imagem é relativo à CAIXA (confiável), não ao viewport;
+     overflow:hidden na caixa corta sobra de arredondamento. */
   .pdf-mapa img {
     display: block;
     max-width: 100%;
@@ -144,7 +150,9 @@ ${estilosDocumento}
     width: auto;
     height: auto;
   }
-  ${combinado ? '.pdf-mapa { break-before: page; }' : ''}
+  /* NÃO acrescentar break-before no mapa: a seção anterior já tem
+     break-after: page. Os dois juntos geram uma folha VAZIA no meio
+     (era a "página a mais" do PDF de documento+mapa). */
   @page documento { size: A4 portrait; margin: 0; }
   @page mapa { size: A4 ${orientacaoMapa}; margin: 0; }
   @page { size: ${temMapa && !temDocumento ? `A4 ${orientacaoMapa}` : 'A4 portrait'}; margin: 0; }

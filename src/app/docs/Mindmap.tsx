@@ -102,7 +102,8 @@ const FOLGA_IRMAOS = 22; // espaço mínimo entre nós irmãos (px)
 
 function linhasEstimadas(texto: string): number {
   let total = 0;
-  for (const parte of texto.split('\n')) total += Math.max(1, Math.ceil(parte.length / CHARS_POR_LINHA));
+  for (const parte of texto.split('\n'))
+    total += Math.max(1, Math.ceil(parte.length / CHARS_POR_LINHA));
   return Math.min(Math.max(total, 1), MAX_LINHAS);
 }
 
@@ -489,7 +490,7 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [emEdicao, setEmEdicao] = useState(false);
   const mapaRef = useRef<HTMLDivElement>(null);
-  const { fitView, getNodes } = useReactFlow();
+  const { fitView, getNodes, getViewport, setViewport } = useReactFlow();
 
   // Captura o mapa INTEIRO (não só a área visível) como PNG — padrão oficial
   // do React Flow: recalcula o enquadramento pelos bounds de todos os nós
@@ -519,15 +520,44 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
         const raiz = mapaRef.current?.closest('.rmm-root');
         const escuro = raiz?.classList.contains('rmm-tema-dark') ?? false;
         const fundo = escuro ? '#0d1219' : '#ffffff';
-        const transformAnterior = camada.style.transform;
-        camada.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`;
+        // O enquadramento vai pela API do React Flow (setViewport), NÃO escrevendo
+        // no style da camada: logo depois de abrir o mapa o React Flow re-renderiza
+        // e reescreve esse transform, então a rasterização pegava o zoom da tela
+        // (≈1.0) em vez do zoom que cabe tudo — mapa saía cortado no PDF.
+        const viewportAnterior = getViewport();
+        const proximoQuadro = () =>
+          new Promise<void>((resolver) => requestAnimationFrame(() => resolver()));
+        // o React Flow arredonda o transform que escreve no DOM, então a
+        // conferência é numérica (com folga), nunca por igualdade de texto
+        const enquadramentoAplicado = () => {
+          const nums = camada.style.transform.match(/-?\d+(\.\d+)?/g)?.map(Number);
+          if (!nums || nums.length < 3) return false;
+          const [x, y, zoom] = nums as [number, number, number];
+          return (
+            Math.abs(x - viewport.x) < 1 &&
+            Math.abs(y - viewport.y) < 1 &&
+            Math.abs(zoom - viewport.zoom) < 0.001
+          );
+        };
+        // confirma no DOM que o enquadramento pegou (2 quadros seguidos);
+        // se algum re-render desfizer, reaplica — sem isso a captura é uma corrida.
+        const aplicarEnquadramento = async () => {
+          let iguais = 0;
+          for (let tentativa = 0; tentativa < 20 && iguais < 2; tentativa += 1) {
+            if (enquadramentoAplicado()) {
+              iguais += 1;
+            } else {
+              iguais = 0;
+              await setViewport({ x: viewport.x, y: viewport.y, zoom: viewport.zoom });
+            }
+            await proximoQuadro();
+          }
+        };
         // timeout de segurança: a lib percorre todas as folhas de estilo da
         // página, e alguma fonte/CSS remoto lento trava a promise sem nunca
         // resolver nem rejeitar — nunca deixar o botão preso pra sempre
         try {
-          await new Promise<void>((resolver) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolver())),
-          );
+          await aplicarEnquadramento();
           const dataUrl = await Promise.race([
             toPng(fluxo, {
               backgroundColor: fundo,
@@ -566,11 +596,11 @@ const MindmapInterno = forwardRef<MindmapHandle, MindmapProps>(function MindmapI
             tema: escuro ? ('dark' as const) : ('light' as const),
           };
         } finally {
-          camada.style.transform = transformAnterior;
+          await setViewport(viewportAnterior);
         }
       },
     }),
-    [getNodes, orientacao],
+    [getNodes, getViewport, setViewport, orientacao],
   );
 
   // atalhos com nó selecionado: Delete exclui · Enter cria filha · Shift+Enter cria irmã

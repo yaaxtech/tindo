@@ -33,7 +33,10 @@ describe('PDF do RoadMapMind', () => {
     expect(html).toContain('background: #ffffff');
     expect(html).toContain('pdf-mapa');
     expect(html).toContain('--pdf-fundo-mapa:#ffffff');
-    expect(html).toContain('break-before: page');
+    // só UM corte entre documento e mapa: break-after na seção anterior.
+    // break-before junto criava uma folha vazia no meio do PDF.
+    expect(html).toContain('break-after: page');
+    expect(html).not.toContain('break-before: page');
   });
 
   it('segue o tema do sistema: claro = página branca, escuro = página escura', () => {
@@ -61,11 +64,25 @@ describe('PDF do RoadMapMind', () => {
       titulo: 'Doc',
       mapaDataUrl: 'data:image/png;base64,abc',
     });
-    // caixa de 1 página + recorte + imagem que encolhe (nunca width/height:100%)
-    expect(html).toContain('height: 100vh');
+    // caixa de 1 folha medida em mm + recorte + imagem que encolhe.
+    // vh é proibido aqui: na impressão vale a altura da página INICIAL
+    // (retrato), o que estourava a folha paisagem do mapa numa 2ª página vazia.
+    expect(html).toContain('width: 297mm');
+    expect(html).toContain('height: 210mm');
+    expect(html).not.toContain('height: 100vh');
     expect(html).toContain('overflow: hidden');
     expect(html).toContain('max-height: 100%');
     expect(html).not.toContain('.pdf-mapa img { display: block; width: 100%; height: 100%');
+  });
+
+  it('mapa em retrato usa a folha em pé (210x297mm)', () => {
+    const html = montarHtmlPdf({
+      titulo: 'Doc',
+      mapaDataUrl: 'data:image/png;base64,abc',
+      orientacaoMapa: 'portrait',
+    });
+    expect(html).toContain('width: 210mm');
+    expect(html).toContain('height: 297mm');
   });
 
   it('usa data e nome limpo no arquivo e respeita a orientação do mapa', () => {
