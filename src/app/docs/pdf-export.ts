@@ -117,14 +117,23 @@ ${estilosDocumento}
   .pdf-mapa {
     page: mapa;
     width: 100%;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     background: var(--pdf-fundo-mapa);
   }
-  .pdf-mapa img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  /* a imagem ENCOLHE pra caber em UMA página (limitada por largura E altura),
+     preservando a proporção. width/height:100% forçava a imagem a exceder a
+     página e o Chrome estourava em várias folhas com sobra de fundo preto. */
+  .pdf-mapa img {
+    display: block;
+    max-width: 100%;
+    max-height: 100vh;
+    width: auto;
+    height: auto;
+  }
   ${combinado ? '.pdf-mapa { break-before: page; }' : ''}
   @page documento { size: A4 portrait; margin: 0; }
   @page mapa { size: A4 ${orientacaoMapa}; margin: 0; }
