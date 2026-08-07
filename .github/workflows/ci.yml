@@ -27,10 +27,20 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       - name: Preparar bundle do Cloudflare Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # também roda em disparo manual: se o GitHub Actions estiver fora do ar na
+        # hora do merge, o push não gera run nenhum e a publicação some — aí a
+        # única saída era um commit vazio só pra reativar o deploy.
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: bun scripts/prepare-pages-worker.ts
       - name: Publicar tindoapp.pages.dev
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # também roda em disparo manual: se o GitHub Actions estiver fora do ar na
+        # hora do merge, o push não gera run nenhum e a publicação some — aí a
+        # única saída era um commit vazio só pra reativar o deploy.
+        if: >-
+          github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         run: bunx wrangler pages deploy .open-next/assets --project-name=tindoapp --branch=main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
