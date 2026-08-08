@@ -144,7 +144,7 @@
 - [x] Wizard `/recalibrar` 3 passos (diagnóstico + 5 sliders + proposta animada)
 - [x] Cálculo de correlação via OLS z-score (lib/recalibracao/correlacao.ts) + testes
 - [x] `/api/recalibrar/aplicar` aplica pesos novos + dispara recálculo batch das notas
-- [ ] Cron diário de refresh (ainda manual via endpoint — pg_cron/CF Cron pendente)
+- [x] Cron diário de refresh (CF Worker `tindo-cron` → `POST /api/cron/diario`, passo 1 = `refresh_kpis_usuario_diario`, 06h UTC)
 
 **Critério de done**: quando KPI passa limiar, app sugere recalibração, eu faço em 60s, pesos e notas atualizam.
 
@@ -192,13 +192,13 @@ Substitui a heurística pura por SM-2 adaptado — intervalo cresce com adiament
 - [x] Fatia 1b — lista “Compartilhados comigo”
 - [x] Fatia 2 — modal Compartilhar, convite de conta existente e gestão de acesso
 - [x] Fatia 3 — convite pendente e email real via Resend (código no ar, PR #38)
-- [ ] Fatia 4 — edição protegida do convidado e aviso de espelhos
-- [ ] Fatia 5 — página pública somente leitura por token
+- [x] Fatia 4 — edição protegida do convidado e aviso de espelhos (PR #39)
+- [x] Fatia 5 — página pública somente leitura por token (PR #44)
 
 **Critério da Fatia 2**: o dono convida uma conta existente, troca ou revoga o papel e gerencia o link; conta inexistente não gera convite nem email ainda.
 
 **Fatia 3 — pendências do dono para ficar 100%**:
-- Aplicar em produção a migration `20260805000001_roadmapmind_reconciliar_convites.sql` (RPC `reconciliar_convites_pendentes`, deriva identidade de `auth.uid()`). Aditiva; verificada em `BEGIN…ROLLBACK`. Até aplicar, o safety-net do 1º login fica inerte (best-effort, não quebra); o trigger `reconciliar_convites_novo_usuario` já em prod cobre o cadastro normal.
+- [x] Migration `20260805000001_roadmapmind_reconciliar_convites.sql` aplicada em produção em 2026-08-08 (RPC `reconciliar_convites_pendentes`, `security definer`, identidade de `auth.uid()`). O safety-net do 1º login já está ativo.
 - Configurar Resend (verificar domínio DNS + `RESEND_API_KEY` como secret) e ligar `EMAIL_ENVIO_ATIVO=true` para os emails de convite saírem. Sem isso, o convite pendente grava e materializa, só não dispara email.
 
 ## Fase 12+ — Futuro
