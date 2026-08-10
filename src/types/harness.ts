@@ -8,10 +8,16 @@ export interface LedgerLinha {
   modelo: string;
   effort: string | null;
   terreno: 'ui' | 'rotina' | 'dificil' | 'mecanico' | 'sql';
-  resultado: 'ok1' | 'retrabalho' | 'escalado' | 'falhou' | 'quota';
+  // "pendente" = linha provisória gravada pelos run.sh dos workers antes da
+  // revisão do cérebro (2026-08-10). Fica FORA de todos os KPIs da tela.
+  resultado: 'ok1' | 'retrabalho' | 'escalado' | 'falhou' | 'quota' | 'pendente';
   tarefa: string;
   nota: string | null;
   dur: number | null;
+  /** Id do registro provisório (só em linhas gravadas pelos run.sh). */
+  id?: string;
+  /** true quando a linha foi gravada automaticamente pelo run.sh. */
+  auto?: boolean;
 }
 
 export interface KpiHistoricoLinha {

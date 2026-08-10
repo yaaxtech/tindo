@@ -55,7 +55,8 @@ export function Assinaturas({
                 {custoTxt}
               </span>
               <span className="text-[11px] text-text-muted">
-                por tarefa {rotuloPeriodo} · {a.uso} tarefa{a.uso === 1 ? '' : 's'}
+                por tarefa aceita {rotuloPeriodo} · {a.aceitas} aceita{a.aceitas === 1 ? '' : 's'}{' '}
+                de {a.uso} despacho{a.uso === 1 ? '' : 's'}
               </span>
             </div>
             <span

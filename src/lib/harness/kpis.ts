@@ -7,6 +7,20 @@ import type { Assinatura, CadeiaTerreno, LedgerLinha } from '@/types/harness';
 
 const DIA_MS = 864e5;
 
+// "pendente" = provisório dos run.sh sem revisão do cérebro — nunca entra em
+// KPI nenhum (contaria como retrabalho e quebraria qualidade/retrabalho).
+// Filtrado na ENTRADA de cada função de KPI: blobs antigos (sem pendente)
+// passam intactos e blobs novos ficam corretos sem depender do caller.
+const semPendentes = (linhas: LedgerLinha[]): LedgerLinha[] =>
+  linhas.filter((r) => r.resultado !== 'pendente');
+
+/** Despachos provisórios (run.sh) aguardando revisão — só para a contagem ⏳. */
+export const contarPendentes = (linhas: LedgerLinha[]): number =>
+  linhas.filter((r) => r.resultado === 'pendente').length;
+
+/** Tarefa ACEITA = entregue de fato (ok1 ou retrabalho) — denominador de custo. */
+const ehAceita = (r: LedgerLinha): boolean => r.resultado === 'ok1' || r.resultado === 'retrabalho';
+
 /** Dias cobertos pelo ledger: do despacho mais antigo até agora (mín. 1). */
 export function diasComDados(ledger: LedgerLinha[], agora = Date.now()): number {
   if (ledger.length === 0) return 0;
@@ -25,11 +39,23 @@ const QUOTA_ALERTA = 3; // eventos de quota na janela → frente saturada
 
 export interface KpisGerais {
   n: number;
+  /** Julgáveis (n − quota): denominador de qualidade/retrabalho. */
+  julg: number;
+  /** Contagens cruas — para mostrar a amostra "x/y" ao lado de cada %. */
+  ok1N: number;
+  recN: number;
+  offN: number;
+  quotaN: number;
+  /** Tarefas aceitas (ok1 + retrabalho) — denominador de custo por tarefa. */
+  aceitas: number;
   ok1: number | null;
   offload: number | null;
   quotaHit: number | null;
   reciclo: number | null;
+  /** Mediana (p50) de despacho→aceite, em minutos. */
   durMed: number | null;
+  /** p90 de despacho→aceite, em minutos. */
+  durP90: number | null;
   durN: number;
   porFrente: Record<string, number>;
   quotaPorFrente: Record<string, number>;
@@ -65,24 +91,30 @@ export interface AssinaturaCalc {
   renova: string;
   papel: string;
   uso: number;
+  /** Tarefas aceitas (ok1 + retrabalho) da frente — denominador do custo. */
+  aceitas: number;
   quotas: number;
   /** Gasto proporcional à janela: valor * janelaDias / 30. */
   gasto: number;
-  /** Custo por tarefa da assinatura na janela (null se sem uso). */
+  /** Custo por tarefa ACEITA da assinatura na janela (null se nada aceito). */
   custoSub: number | null;
   veredito: VereditoAssinatura;
 }
 
-/** Custo médio por tarefa do harness na janela (todas as assinaturas). */
+/**
+ * Custo médio por tarefa ACEITA do harness na janela (todas as assinaturas).
+ * Denominador = ok1 + retrabalho: despacho barrado por quota, escalado ou
+ * falho não entregou nada — dividir por ele maquiaria o custo pra baixo.
+ */
 export function custoMedioTarefa(
   linhas: LedgerLinha[],
   assinaturas: Assinatura[],
   janelaDias: number,
 ): number | null {
-  const n = linhas.length;
-  if (!n) return null;
+  const aceitas = semPendentes(linhas).filter(ehAceita).length;
+  if (!aceitas) return null;
   const gastoTotal = assinaturas.reduce((s, a) => s + (a.valor * janelaDias) / 30, 0);
-  return gastoTotal / n;
+  return gastoTotal / aceitas;
 }
 
 /**
@@ -104,7 +136,8 @@ export function recorte(
 }
 
 /** KPIs gerais da janela — porta fiel de painel.mjs: kpisGerais. */
-export function kpisGerais(linhas: LedgerLinha[]): KpisGerais {
+export function kpisGerais(entrada: LedgerLinha[]): KpisGerais {
+  const linhas = semPendentes(entrada);
   const n = linhas.length;
   const julg = linhas.filter((r) => r.resultado !== 'quota');
   const ok1 = julg.filter((r) => r.resultado === 'ok1').length;
@@ -121,11 +154,21 @@ export function kpisGerais(linhas: LedgerLinha[]): KpisGerais {
     if (r.resultado === 'quota') quotaPorFrente[r.frente] = (quotaPorFrente[r.frente] || 0) + 1;
   return {
     n,
+    julg: julg.length,
+    ok1N: ok1,
+    recN: rec,
+    offN: off,
+    quotaN: n - julg.length,
+    aceitas: linhas.filter(ehAceita).length,
     ok1: julg.length ? ok1 / julg.length : null,
     offload: n ? off / n : null,
     quotaHit: n ? (n - julg.length) / n : null,
     reciclo: julg.length ? rec / julg.length : null,
     durMed: durs.length ? (durs[Math.floor(durs.length / 2)] ?? null) : null,
+    // nearest-rank: com n<10 o p90 vira o maior valor — o n exibido avisa
+    durP90: durs.length
+      ? (durs[Math.min(durs.length - 1, Math.ceil(0.9 * durs.length) - 1)] ?? null)
+      : null,
     durN: durs.length,
     porFrente,
     quotaPorFrente,
@@ -134,9 +177,10 @@ export function kpisGerais(linhas: LedgerLinha[]): KpisGerais {
 
 /** KPIs por terreno + sinal automático — porta fiel de painel.mjs: kpisTerreno. */
 export function kpisTerreno(
-  linhas: LedgerLinha[],
+  entrada: LedgerLinha[],
   cadeias: Record<string, CadeiaTerreno>,
 ): Record<string, TerrenoKpi> {
+  const linhas = semPendentes(entrada);
   const por: Record<string, TerrenoKpi> = {};
   const vazio = (): TerrenoKpi => ({
     n: 0,
@@ -169,12 +213,12 @@ export function kpisTerreno(
     else if (t.ok1Pct != null && t.ok1Pct < OK1_PISO)
       t.sinal = {
         tipo: 'subir',
-        texto: `subir o modelo — ok1 ${Math.round(t.ok1Pct * 100)}% < 70%`,
+        texto: `subir o modelo — ok1 ${Math.round(t.ok1Pct * 100)}% (${t.ok1}/${t.julgaveis}) < 70%`,
       };
     else if (t.ok1Pct != null && t.ok1Pct >= OK1_TETO && t.julgaveis >= 8 && !cad?.piso)
       t.sinal = {
         tipo: 'baratear',
-        texto: `dá pra testar modelo mais barato — ok1 ${Math.round(t.ok1Pct * 100)}%`,
+        texto: `dá pra testar modelo mais barato — ok1 ${Math.round(t.ok1Pct * 100)}% (${t.ok1}/${t.julgaveis})`,
       };
     else t.sinal = { tipo: 'ok', texto: 'manter — sustentado pelos dados' };
     if (t.quota >= QUOTA_ALERTA)
@@ -186,15 +230,29 @@ export function kpisTerreno(
   return por;
 }
 
+// Espelho de ~/.claude/orquestracao/modelos.mjs (fonte canônica dos nomes).
+// O publicar-painel.mjs normaliza antes do upsert, mas blobs ANTIGOS do
+// harness_snapshot chegam crus — por isso a tela normaliza de novo na leitura.
+const CANON_MODELO: [RegExp, string][] = [
+  // "opus" seco é sempre Opus 4.8 (registros anteriores a 2026-08-04)
+  [/^(claude-)?opus([-_.]?4[-_.]?8)?$/i, 'opus-4.8'],
+  [/^(claude-)?opus[-_.]?5$/i, 'opus-5'],
+  [/^(kimi-code\/)?k3(-256k)?$/i, 'k3-256k'],
+  [/^(claude-)?fable(-5)?$/i, 'fable'],
+  [/^(claude-)?sonnet(-5)?$/i, 'sonnet'],
+  [/^(claude-)?haiku(-4[-_.]?5)?$/i, 'haiku'],
+];
+
 /** Normaliza nomes variantes do mesmo modelo (logados diferente ao longo do tempo). */
 export function normModelo(modelo: string): string {
-  let s = String(modelo).replace(/^kimi-code\//, ''); // kimi-code/k3-256k → k3-256k
-  if (s === 'claude-opus-4-8') s = 'opus-4.8'; // apelidos do Opus 4.8
-  return s;
+  const s = String(modelo ?? '').trim();
+  for (const [re, canon] of CANON_MODELO) if (re.test(s)) return canon;
+  return s; // gpt-5.6-sol/terra/luna e desconhecidos passam intactos
 }
 
 /** Chamadas por modelo+effort — porta fiel de painel.mjs: porModelo (30d). */
-export function porModelo(linhas: LedgerLinha[]): ModeloRow[] {
+export function porModelo(entrada: LedgerLinha[]): ModeloRow[] {
+  const linhas = semPendentes(entrada);
   const mapa = new Map<string, ModeloRow>();
   for (const r of linhas) {
     const nome = `${normModelo(r.modelo)}${r.effort ? ` · ${r.effort}` : ''}`;
@@ -217,17 +275,19 @@ export function porModelo(linhas: LedgerLinha[]): ModeloRow[] {
  * Porta fiel de painel.mjs (bloco Assinaturas), parametrizada por janelaDias.
  */
 export function custoAssinaturas(
-  linhas: LedgerLinha[],
+  entrada: LedgerLinha[],
   assinaturas: Assinatura[],
   janelaDias: number,
 ): AssinaturaCalc[] {
+  const linhas = semPendentes(entrada);
   const g = kpisGerais(linhas);
   const custoMedio = custoMedioTarefa(linhas, assinaturas, janelaDias);
   return assinaturas.map((a) => {
     const uso = g.porFrente[a.frente] || 0;
+    const aceitas = linhas.filter((r) => r.frente === a.frente && ehAceita(r)).length;
     const quotas = g.quotaPorFrente[a.frente] || 0;
     const gasto = (a.valor * janelaDias) / 30;
-    const custoSub = uso ? gasto / uso : null;
+    const custoSub = aceitas ? gasto / aceitas : null;
     // Veredito de renovação: saturada (quer mais) > sem uso (cancelar) >
     // cara por uso > rende bem. Usa o custo médio do harness como régua.
     let veredito: VereditoAssinatura;
@@ -236,7 +296,7 @@ export function custoAssinaturas(
     else if (custoMedio != null && custoSub != null && custoSub > 1.6 * custoMedio)
       veredito = 'observar';
     else veredito = 'manter';
-    return { ...a, uso, quotas, gasto, custoSub, veredito };
+    return { ...a, uso, aceitas, quotas, gasto, custoSub, veredito };
   });
 }
 
@@ -265,10 +325,11 @@ export interface FrenteValor {
 
 /** Placar de valor por frente, limitado às assinaturas do harness. */
 export function placarPorFrente(
-  linhas: LedgerLinha[],
+  entrada: LedgerLinha[],
   assinaturas: Assinatura[],
   janelaDias: number,
 ): FrenteValor[] {
+  const linhas = semPendentes(entrada);
   const frentes = [...new Set(assinaturas.map((a) => a.frente))].filter(
     (frente) => frente === 'codex' || frente === 'kimi' || frente === 'claude',
   );
@@ -281,11 +342,12 @@ export function placarPorFrente(
       const ok1 = julgaveis.filter((linha) => linha.resultado === 'ok1').length;
       const q = julgaveis.length ? ok1 / julgaveis.length : null;
       const uso = daFrente.length;
+      const aceitas = daFrente.filter(ehAceita).length;
       const quotas = daFrente.filter((linha) => linha.resultado === 'quota').length;
       const gasto = assinaturas
         .filter((assinatura) => assinatura.frente === frente)
         .reduce((total, assinatura) => total + (assinatura.valor * janelaDias) / 30, 0);
-      const custoTarefa = uso ? gasto / uso : null;
+      const custoTarefa = aceitas ? gasto / aceitas : null;
       const c = custoGeral != null && custoTarefa != null ? clamp01(custoGeral / custoTarefa) : 0;
       const r = uso ? 1 - quotas / uso : 1;
       return {

@@ -9,7 +9,7 @@ import { Terrenos } from '@/app/harness/_components/Terrenos';
 import { Tiles } from '@/app/harness/_components/Tiles';
 import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistorico';
 import { Secao } from '@/app/harness/_components/ui';
-import { diasComDados, kpisGerais, recorte } from '@/lib/harness/kpis';
+import { contarPendentes, diasComDados, kpisGerais, recorte } from '@/lib/harness/kpis';
 import { getHarnessSnapshot } from '@/services/harness';
 import type { HarnessSnapshot } from '@/types/harness';
 import { Gauge } from 'lucide-react';
@@ -33,6 +33,8 @@ export default function HarnessPage() {
   const anterior = useMemo(() => recorte(ledger, janelaDias, 1), [ledger, janelaDias]);
   const gAtual = useMemo(() => kpisGerais(atual), [atual]);
   const gAnterior = useMemo(() => kpisGerais(anterior), [anterior]);
+  // Provisórios dos run.sh sem revisão: fora de todos os KPIs, só a contagem.
+  const pendentes = useMemo(() => contarPendentes(atual), [atual]);
 
   const hora = snap
     ? new Date(snap.geradoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -47,7 +49,7 @@ export default function HarnessPage() {
             <h1 className="text-lg font-semibold">Painel do Harness</h1>
             <p className="text-xs text-text-muted">
               {snap
-                ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${janelaDias > dias ? ` · só há ${dias}d de dados` : ''} · atualizado às ${hora}`
+                ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''} · atualizado às ${hora}`
                 : carregando
                   ? 'Carregando…'
                   : 'KPIs da orquestração multi-LLM'}
