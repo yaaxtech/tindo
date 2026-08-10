@@ -1,6 +1,7 @@
 import type { Assinatura, CadeiaTerreno, LedgerLinha } from '@/types/harness';
 import { describe, expect, it } from 'vitest';
 import {
+  contarPendentes,
   custoAssinaturas,
   custoMedioTarefa,
   diasComDados,
@@ -160,11 +161,18 @@ describe('kpisGerais', () => {
   it('calcula os 5 KPIs com os valores exatos', () => {
     const g = kpisGerais(ATUAL);
     expect(g.n).toBe(7);
+    expect(g.julg).toBe(6);
+    expect(g.ok1N).toBe(4);
+    expect(g.recN).toBe(2);
+    expect(g.offN).toBe(5);
+    expect(g.quotaN).toBe(1);
+    expect(g.aceitas).toBe(5); // 4 ok1 + 1 retrabalho (escalado/quota fora)
     expect(g.ok1).toBeCloseTo(4 / 6, 10); // quota fora do julgamento
     expect(g.offload).toBeCloseTo(5 / 7, 10); // claude e cerebro ficam de fora
     expect(g.quotaHit).toBeCloseTo(1 / 7, 10);
     expect(g.reciclo).toBeCloseTo(2 / 6, 10);
     expect(g.durMed).toBe(40); // mediana de [15,25,30,40,60,90] → índice 3
+    expect(g.durP90).toBe(90); // nearest-rank: ceil(0.9·6)−1 = índice 5
     expect(g.durN).toBe(6);
     expect(g.porFrente).toEqual({ codex: 3, kimi: 2, claude: 1, cerebro: 1 });
     expect(g.quotaPorFrente).toEqual({ codex: 1 });
@@ -178,6 +186,21 @@ describe('kpisGerais', () => {
     expect(g.quotaHit).toBeNull();
     expect(g.reciclo).toBeNull();
     expect(g.durMed).toBeNull();
+    expect(g.durP90).toBeNull();
+  });
+
+  it('exclui "pendente" de todos os KPIs (não é retrabalho)', () => {
+    const comPendentes = [
+      ...ATUAL,
+      linha({ ts: tsDiasAtras(1), resultado: 'pendente', id: 'p1', auto: true }),
+      linha({ ts: tsDiasAtras(2), resultado: 'pendente', id: 'p2', auto: true }),
+    ];
+    expect(kpisGerais(comPendentes)).toEqual(kpisGerais(ATUAL));
+    expect(contarPendentes(comPendentes)).toBe(2);
+    expect(contarPendentes(ATUAL)).toBe(0);
+    // por terreno e por modelo também ficam intactos
+    expect(kpisTerreno(comPendentes, CADEIAS)).toEqual(kpisTerreno(ATUAL, CADEIAS));
+    expect(porModelo(comPendentes)).toEqual(porModelo(ATUAL));
   });
 });
 
@@ -246,9 +269,19 @@ describe('porModelo', () => {
     expect(rows[0]?.nome).toBe('k3-256k'); // ordenado por n desc
   });
 
-  it('normModelo cobre as variantes conhecidas', () => {
+  it('normModelo cobre as variantes conhecidas (espelho de modelos.mjs)', () => {
+    // K3: as 3 grafias reais do ledger fundem numa só
     expect(normModelo('kimi-code/k3-256k')).toBe('k3-256k');
+    expect(normModelo('kimi-code/k3')).toBe('k3-256k');
+    expect(normModelo('k3')).toBe('k3-256k');
+    // Opus 4.8 e apelidos; opus-5 fica separado
     expect(normModelo('claude-opus-4-8')).toBe('opus-4.8');
+    expect(normModelo('opus')).toBe('opus-4.8');
+    expect(normModelo('opus-5')).toBe('opus-5');
+    // família Claude só tolera prefixo/versão
+    expect(normModelo('claude-fable-5')).toBe('fable');
+    expect(normModelo('sonnet')).toBe('sonnet');
+    // desconhecidos passam intactos
     expect(normModelo('gpt-5.6-sol')).toBe('gpt-5.6-sol');
   });
 });
@@ -261,24 +294,29 @@ describe('custoAssinaturas', () => {
     { nome: 'Gemini', frente: 'gemini', valor: 10, renova: '2026-09-01', papel: 'teste' },
   ];
 
-  it('calcula gasto proporcional, custo por tarefa e veredito', () => {
+  it('calcula gasto proporcional, custo por tarefa ACEITA e veredito', () => {
     const calc = custoAssinaturas(ATUAL, ASSINATURAS, 7);
-    // custo médio do harness: 330 * 7/30 / 7 tarefas = 11
-    expect(custoMedioTarefa(ATUAL, ASSINATURAS, 7)).toBeCloseTo(11, 10);
+    // custo médio do harness: 330 * 7/30 ÷ 5 ACEITAS (4 ok1 + 1 retrabalho;
+    // quota e escalado não entregaram → fora do denominador) = 15.4
+    expect(custoMedioTarefa(ATUAL, ASSINATURAS, 7)).toBeCloseTo(15.4, 10);
 
     const claude = calc[0];
     expect(claude?.uso).toBe(1);
+    expect(claude?.aceitas).toBe(1);
     expect(claude?.gasto).toBeCloseTo((200 * 7) / 30, 10);
-    expect(claude?.custoSub).toBeCloseTo((200 * 7) / 30, 10); // > 1.6 * 11 → observar
+    expect(claude?.custoSub).toBeCloseTo((200 * 7) / 30, 10); // > 1.6 * 15.4 → observar
     expect(claude?.veredito).toBe('observar');
 
     const codex = calc[1];
     expect(codex?.uso).toBe(3);
+    expect(codex?.aceitas).toBe(2); // 2 ok1; a quota não conta como aceita
+    expect(codex?.custoSub).toBeCloseTo((100 * 7) / 30 / 2, 10);
     expect(codex?.quotas).toBe(1); // quota > 0 → aumentar (prioridade máxima)
     expect(codex?.veredito).toBe('aumentar');
 
     const kimi = calc[2];
     expect(kimi?.uso).toBe(2);
+    expect(kimi?.aceitas).toBe(2); // ok1 + retrabalho — ambas entregues
     expect(kimi?.custoSub).toBeCloseTo((20 * 7) / 30 / 2, 10);
     expect(kimi?.veredito).toBe('manter');
 

@@ -50,28 +50,28 @@ export function Tiles({
 }) {
   const totalMes = assinaturas.reduce((s, a) => s + a.valor, 0);
   const custoDesp = custoMedioTarefa(linhasAtual, assinaturas, janelaDias);
-  const custoDespAnt = anterior.n
-    ? assinaturas.reduce((s, a) => s + (a.valor * janelaDias) / 30, 0) / anterior.n
+  const custoDespAnt = anterior.aceitas
+    ? assinaturas.reduce((s, a) => s + (a.valor * janelaDias) / 30, 0) / anterior.aceitas
     : null;
 
   const diff = (a: number | null, b: number | null): number | null =>
     a == null || b == null ? null : a - b;
 
   // Economia REAL: as assinaturas são flat — o que muda com o volume é o
-  // custo POR despacho entregue. Gasto proporcional à janela.
+  // custo POR tarefa ACEITA (ok1 + retrabalho). Gasto proporcional à janela.
   const gastoJanela = (totalMes * janelaDias) / 30;
   const rotuloPeriodo =
     janelaDias === 1 ? 'no dia' : janelaDias === 7 ? 'na semana' : `em ${janelaDias} dias`;
   const comoEconomia =
     custoDesp != null
-      ? `Some as ${assinaturas.length} assinaturas ($${totalMes}/mês = $${gastoJanela.toFixed(0)} em ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'}) e divida pelas ${atual.n} tarefas entregues ${rotuloPeriodo}. Dá o custo médio de cada tarefa. Como as assinaturas são de valor fixo, quanto MAIS tarefas o harness entrega, MENOR fica este número — é a medida de aproveitar o que já se paga.`
-      : 'Custo médio por tarefa entregue, somando as assinaturas.';
+      ? `Some as ${assinaturas.length} assinaturas ($${totalMes}/mês = $${gastoJanela.toFixed(0)} em ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'}) e divida pelas ${atual.aceitas} tarefas ACEITAS ${rotuloPeriodo} (concluídas de 1ª ou após retrabalho — quota, escalada e falha não entregaram nada e ficam fora da divisão). Como as assinaturas são de valor fixo, quanto MAIS tarefas o harness entrega, MENOR fica este número — é a medida de aproveitar o que já se paga.`
+      : 'Custo médio por tarefa aceita (ok de 1ª + retrabalho), somando as assinaturas.';
 
   const tiles: TileDef[] = [
     {
       k: 'Qualidade',
       v: pc(atual.ok1),
-      meta: 'certo de primeira · meta ≥80%',
+      meta: `certo de primeira · ${atual.ok1N}/${atual.julg} · meta ≥80%`,
       st:
         atual.ok1 == null ? 'mut' : atual.ok1 >= 0.8 ? 'good' : atual.ok1 >= 0.7 ? 'warn' : 'crit',
       como: 'De cada 100 tarefas despachadas, quantas foram aceitas na 1ª revisão, sem precisar de correção. Tarefas barradas por quota não entram na conta (não julgam a qualidade do modelo). Meta: 80% ou mais.',
@@ -82,7 +82,7 @@ export function Tiles({
     {
       k: 'Economia',
       v: custoDesp != null ? `$${custoDesp.toFixed(2)}` : '—',
-      meta: `por tarefa entregue · fora do Claude ${pc(atual.offload)}`,
+      meta: `por tarefa aceita (${atual.aceitas}) · fora do Claude ${pc(atual.offload)} (${atual.offN}/${atual.n})`,
       st: custoDesp == null ? 'mut' : custoDesp <= 2.5 ? 'good' : custoDesp <= 5 ? 'acc' : 'warn',
       como: comoEconomia,
       delta: diff(custoDesp, custoDespAnt),
@@ -92,7 +92,7 @@ export function Tiles({
     {
       k: 'Quota',
       v: pc(atual.quotaHit),
-      meta: 'despachos barrados por limite · ideal baixo, >0',
+      meta: `barrados por limite · ${atual.quotaN}/${atual.n} · ideal baixo, >0`,
       st:
         atual.quotaHit == null
           ? 'mut'
@@ -109,7 +109,7 @@ export function Tiles({
     {
       k: 'Retrabalho',
       v: pc(atual.reciclo),
-      meta: 'precisou de rodada extra · meta ≤20%',
+      meta: `rodada extra · ${atual.recN}/${atual.julg} · meta ≤20%`,
       st:
         atual.reciclo == null
           ? 'mut'
@@ -126,24 +126,42 @@ export function Tiles({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-      {tiles.map((t) => (
-        <Card key={t.k}>
-          <div className="text-xs font-semibold text-text-muted">
-            {t.k}
-            <PopoverInfo texto={t.como} />
-          </div>
-          <div
-            className={cn('my-1 text-2xl font-bold tabular-nums sm:text-[28px]', corStatus(t.st))}
-          >
-            {t.v}
-          </div>
-          <div className="text-[11.5px] leading-snug text-text-muted">{t.meta}</div>
-          <div className="mt-1 text-[11px] leading-snug">
-            <Delta delta={t.delta} fmt={t.deltaFmt} melhor={t.melhor} />
-          </div>
+    <div className="flex flex-col gap-2.5">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        {tiles.map((t) => (
+          <Card key={t.k}>
+            <div className="text-xs font-semibold text-text-muted">
+              {t.k}
+              <PopoverInfo texto={t.como} />
+            </div>
+            <div
+              className={cn('my-1 text-2xl font-bold tabular-nums sm:text-[28px]', corStatus(t.st))}
+            >
+              {t.v}
+            </div>
+            <div className="text-[11.5px] leading-snug text-text-muted">{t.meta}</div>
+            <div className="mt-1 text-[11px] leading-snug">
+              <Delta delta={t.delta} fmt={t.deltaFmt} melhor={t.melhor} />
+            </div>
+          </Card>
+        ))}
+      </div>
+      {atual.durN > 0 && (
+        <Card className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="text-xs font-semibold text-text-muted">
+            Tempo despacho→aceite
+            <PopoverInfo texto="Quanto tempo passa entre despachar uma tarefa e ela ser aceita na revisão. p50 = metade das tarefas fechou nesse tempo ou menos; p90 = 9 em cada 10 fecharam nesse tempo ou menos. Só entram tarefas com duração registrada no ledger (--dur) — o n mostra quantas são, do total julgável do período." />
+          </span>
+          <span className="text-lg font-bold tabular-nums">
+            p50 {atual.durMed} min
+            <span className="mx-2 font-normal text-text-muted">·</span>
+            p90 {atual.durP90} min
+          </span>
+          <span className="text-[11.5px] tabular-nums text-text-muted">
+            n={atual.durN} de {atual.julg} com duração registrada
+          </span>
         </Card>
-      ))}
+      )}
     </div>
   );
 }

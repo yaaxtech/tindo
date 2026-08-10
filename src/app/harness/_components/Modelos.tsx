@@ -27,7 +27,7 @@ export function Modelos({ linhas }: { linhas: LedgerLinha[] }) {
       {modelos.map((m) => (
         <div
           key={m.nome}
-          className="grid grid-cols-[minmax(120px,1.4fr)_1fr_42px_56px] items-center gap-3"
+          className="grid grid-cols-[minmax(120px,1.4fr)_1fr_42px_86px] items-center gap-3"
         >
           <span className="truncate text-[13px] font-semibold tabular-nums">
             {m.nome}
@@ -45,7 +45,7 @@ export function Modelos({ linhas }: { linhas: LedgerLinha[] }) {
             <b>{m.n}</b>×
           </span>
           <span className="text-right text-[11.5px] tabular-nums text-text-muted">
-            {m.julg ? `ok ${pc(m.ok1 / m.julg)}` : '—'}
+            {m.julg ? `ok ${pc(m.ok1 / m.julg)} · ${m.ok1}/${m.julg}` : '—'}
           </span>
         </div>
       ))}

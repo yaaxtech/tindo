@@ -76,9 +76,11 @@ export function Terrenos({
               </span>
               <span>
                 ok de 1ª <b className="text-text-primary">{pc(t?.ok1Pct ?? null)}</b>
+                {t && t.julgaveis > 0 && ` · ${t.ok1}/${t.julgaveis}`}
               </span>
               <span>
                 retrabalho <b className="text-text-primary">{pc(t?.recicloPct ?? null)}</b>
+                {t && t.julgaveis > 0 && ` · ${t.reciclo}/${t.julgaveis}`}
               </span>
               <span>
                 quota <b className="text-text-primary">{t?.quota ?? 0}</b>
