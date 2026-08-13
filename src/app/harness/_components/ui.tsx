@@ -38,6 +38,14 @@ export function corPill(st: Status): string {
 
 export const pc = (x: number | null): string => (x == null ? '—' : `${Math.round(100 * x)}%`);
 
+/** Segundos em unidade legível (s → min → h). Usado pelos blocos do GitHub. */
+export function formatarSegundos(segundos: number | null): string {
+  if (segundos == null || !Number.isFinite(segundos) || segundos < 0) return '—';
+  if (segundos < 90) return `${Math.round(segundos)} s`;
+  if (segundos < 90 * 60) return `${Math.round(segundos / 60)} min`;
+  return `${(segundos / 3600).toFixed(1)} h`;
+}
+
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div className={cn('rounded-xl border border-border-strong bg-bg-elevated p-4', className)}>
@@ -51,16 +59,21 @@ export function Secao({
   info,
   subtitulo,
   escopo,
+  id,
   children,
 }: {
   titulo: string;
   info?: string;
   subtitulo?: string;
   escopo?: { tipo: 'filtro'; dias: number } | { tipo: 'fixo'; rotulo: string };
+  /** Âncora da NavPainel. O scroll-mt vem da CSS var --harness-nav-topo,
+   * medida em runtime pela nav (header + nav + respiro); o fallback 8rem
+   * cobre a 1ª pintura antes da medição. */
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section>
+    <section id={id} className={id ? 'scroll-mt-[var(--harness-nav-topo,8rem)]' : undefined}>
       <h2 className="mb-3 flex items-baseline gap-1 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
         {titulo}
         {info && <PopoverInfo texto={info} />}

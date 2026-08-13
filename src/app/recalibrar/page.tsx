@@ -97,7 +97,7 @@ function KpiTile({
     <div
       className={`rounded-xl border p-4 transition-colors ${
         ativo
-          ? 'border-[var(--danger)] bg-[var(--danger)]/10'
+          ? 'border-[var(--danger)] bg-danger/10'
           : 'border-[var(--border)] bg-[var(--bg-elevated)]'
       }`}
     >
@@ -149,7 +149,7 @@ function PassoDiagnostico({
       </div>
 
       {deveRecalibrar && (
-        <div className="flex items-start gap-3 rounded-xl border border-[var(--danger)]/40 bg-[var(--danger)]/10 p-4">
+        <div className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/10 p-4">
           <AlertTriangle size={18} className="shrink-0 text-[var(--danger)] mt-0.5" />
           <div>
             <p className="text-sm font-medium text-[var(--danger)]">
@@ -287,10 +287,10 @@ function PassoCalibracao({
             <span
               className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
                 tarefa.faixa === 'alta'
-                  ? 'bg-[var(--jade-dim)]/40 text-[var(--jade-accent)]'
+                  ? 'bg-jade-dim/40 text-[var(--jade-accent)]'
                   : tarefa.faixa === 'media'
-                    ? 'bg-[var(--warn)]/20 text-[var(--warn)]'
-                    : 'bg-[var(--text-muted)]/20 text-[var(--text-muted)]'
+                    ? 'bg-warning/20 text-warning'
+                    : 'bg-text-muted/20 text-[var(--text-muted)]'
               }`}
             >
               nota sistema: {tarefa.nota}
@@ -477,7 +477,7 @@ function PassoProposta({
             {(correlacaoAntes * 100).toFixed(0)}%
           </p>
         </div>
-        <div className="rounded-xl border border-[var(--jade-primary)]/40 bg-[var(--jade-dim)]/20 p-4 text-center">
+        <div className="rounded-xl border border-jade/40 bg-jade-dim/20 p-4 text-center">
           <p className="text-xs text-[var(--text-muted)] mb-1">Correlação depois</p>
           <p className="text-2xl font-bold text-[var(--jade-accent)]">
             {(correlacaoDepois * 100).toFixed(0)}%
@@ -528,7 +528,7 @@ function TelaSucesso() {
           boxShadow: ['0 0 0 0 rgba(44,175,147,0.4)', '0 0 0 24px rgba(44,175,147,0)'],
         }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
-        className="rounded-full p-4 bg-[var(--jade-dim)]/40"
+        className="rounded-full p-4 bg-jade-dim/40"
       >
         <CheckCircle2 size={52} className="text-[var(--jade-accent)]" />
       </motion.div>
@@ -681,7 +681,7 @@ export default function RecalibrarPage() {
 
   return (
     <main className="min-h-dvh pb-24 safe-top safe-bottom">
-      <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--bg-deep)]/80 px-6 py-4 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-md items-center gap-4">
           {passo !== 'sucesso' && (
             <Link
@@ -706,7 +706,7 @@ export default function RecalibrarPage() {
                     p === passo
                       ? 'w-6 bg-[var(--jade-accent)]'
                       : i < ['diagnostico', 'calibracao', 'proposta'].indexOf(passo)
-                        ? 'w-3 bg-[var(--jade-primary)]/60'
+                        ? 'w-3 bg-jade/60'
                         : 'w-3 bg-[var(--border-strong)]'
                   }`}
                 />

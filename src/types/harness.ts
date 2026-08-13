@@ -4,6 +4,7 @@
 
 export interface LedgerLinha {
   ts: string;
+  ts_fechado?: string | null;
   frente: 'codex' | 'kimi' | 'claude' | 'cerebro';
   modelo: string;
   effort: string | null;

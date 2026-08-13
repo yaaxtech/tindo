@@ -12,64 +12,68 @@ const config: Config = {
     },
     extend: {
       colors: {
+        // Tokens are declared as RGB channels in globals.css so the opacity
+        // modifier works (`bg-bg-deep/80`). A hex behind `var()` makes Tailwind
+        // emit `rgb(var(--x) / 0.8)`, which the browser drops to transparent.
         // Obsidian
-        'bg-deep': 'var(--bg-deep)',
-        'bg-elevated': 'var(--bg-elevated)',
-        'bg-surface': 'var(--bg-surface)',
-        'bg-hover': 'var(--bg-hover)',
+        'bg-deep': 'rgb(var(--bg-deep-rgb) / <alpha-value>)',
+        'bg-elevated': 'rgb(var(--bg-elevated-rgb) / <alpha-value>)',
+        'bg-surface': 'rgb(var(--bg-surface-rgb) / <alpha-value>)',
+        'bg-hover': 'rgb(var(--bg-hover-rgb) / <alpha-value>)',
         // Text
-        'text-primary': 'var(--text-primary)',
-        'text-secondary': 'var(--text-secondary)',
-        'text-muted': 'var(--text-muted)',
-        'text-inverse': 'var(--text-inverse)',
+        'text-primary': 'rgb(var(--text-primary-rgb) / <alpha-value>)',
+        'text-secondary': 'rgb(var(--text-secondary-rgb) / <alpha-value>)',
+        'text-muted': 'rgb(var(--text-muted-rgb) / <alpha-value>)',
+        'text-inverse': 'rgb(var(--text-inverse-rgb) / <alpha-value>)',
         // Jade
         jade: {
-          DEFAULT: 'var(--jade-primary)',
-          accent: 'var(--jade-accent)',
-          dim: 'var(--jade-dim)',
+          DEFAULT: 'rgb(var(--jade-primary-rgb) / <alpha-value>)',
+          accent: 'rgb(var(--jade-accent-rgb) / <alpha-value>)',
+          dim: 'rgb(var(--jade-dim-rgb) / <alpha-value>)',
+          // Alpha is part of the glow itself — not alpha-modifiable.
           glow: 'var(--jade-glow)',
         },
         // Feedback
-        success: 'var(--success)',
-        warning: 'var(--warning)',
-        danger: 'var(--danger)',
-        info: 'var(--info)',
-        // Borders
+        success: 'rgb(var(--success-rgb) / <alpha-value>)',
+        warning: 'rgb(var(--warning-rgb) / <alpha-value>)',
+        danger: 'rgb(var(--danger-rgb) / <alpha-value>)',
+        info: 'rgb(var(--info-rgb) / <alpha-value>)',
+        // Borders — alpha is baked into the token, so no modifier support here.
         border: 'var(--border-subtle)',
         'border-strong': 'var(--border-strong)',
         // shadcn compat
-        background: 'var(--bg-deep)',
-        foreground: 'var(--text-primary)',
+        background: 'rgb(var(--bg-deep-rgb) / <alpha-value>)',
+        foreground: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
         primary: {
-          DEFAULT: 'var(--jade-primary)',
-          foreground: 'var(--text-inverse)',
+          DEFAULT: 'rgb(var(--jade-primary-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--text-inverse-rgb) / <alpha-value>)',
         },
         secondary: {
-          DEFAULT: 'var(--bg-surface)',
-          foreground: 'var(--text-primary)',
+          DEFAULT: 'rgb(var(--bg-surface-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
         },
         destructive: {
-          DEFAULT: 'var(--danger)',
-          foreground: 'var(--text-primary)',
+          DEFAULT: 'rgb(var(--danger-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
         },
         muted: {
-          DEFAULT: 'var(--bg-surface)',
-          foreground: 'var(--text-secondary)',
+          DEFAULT: 'rgb(var(--bg-surface-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--text-secondary-rgb) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: 'var(--jade-accent)',
-          foreground: 'var(--text-inverse)',
+          DEFAULT: 'rgb(var(--jade-accent-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--text-inverse-rgb) / <alpha-value>)',
         },
         card: {
-          DEFAULT: 'var(--bg-elevated)',
-          foreground: 'var(--text-primary)',
+          DEFAULT: 'rgb(var(--bg-elevated-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
         },
         popover: {
-          DEFAULT: 'var(--bg-elevated)',
-          foreground: 'var(--text-primary)',
+          DEFAULT: 'rgb(var(--bg-elevated-rgb) / <alpha-value>)',
+          foreground: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
         },
         input: 'var(--border-subtle)',
-        ring: 'var(--jade-accent)',
+        ring: 'rgb(var(--jade-accent-rgb) / <alpha-value>)',
       },
       borderRadius: {
         sm: '6px',

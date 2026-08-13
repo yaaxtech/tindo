@@ -40,17 +40,23 @@ export async function GET() {
         .not('todoist_id', 'is', null),
     ]);
 
-    // Últimas 20 ações de sync Todoist
+    // Últimas 20 ações de sync Todoist.
+    // `todoist_sync` é o único valor gravado por write-back e exportação (migration
+    // 20260813000004); `dados.origem` distingue qual dos dois. Antes esta query filtrava por
+    // três valores que não existem no CHECK da coluna — voltava sempre vazia, sem erro.
     const { data: acoes } = await admin
       .from('historico_acoes')
       .select('id, acao, dados, created_at, tarefa_id')
       .eq('usuario_id', usuarioId)
-      .in('acao', ['sincronizado', 'todoist_sync', 'todoist_writeback'])
+      .eq('acao', 'todoist_sync')
       .order('created_at', { ascending: false })
       .limit(20);
 
     // Tenta buscar títulos das tarefas para exibir nas ações
-    const tarefaIds = [...new Set((acoes ?? []).map((a) => a.tarefa_id).filter(Boolean))];
+    // `tarefa_id` é NULL-able desde a migration 20260813000003 (ação de sistema não tem tarefa).
+    const tarefaIds = [
+      ...new Set((acoes ?? []).map((a) => a.tarefa_id).filter((id): id is string => id !== null)),
+    ];
     const titulosPorId: Record<string, string> = {};
     if (tarefaIds.length > 0) {
       const { data: tarefas } = await admin

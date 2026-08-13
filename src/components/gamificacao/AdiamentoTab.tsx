@@ -301,7 +301,7 @@ function KpiTile({
         'group relative flex flex-col gap-3 rounded-xl border bg-bg-elevated p-5',
         'opacity-0 animate-[fadeInScale_320ms_cubic-bezier(0,0,0.2,1)_forwards]',
         sev === 'ok' ? 'border-jade-accent/30' : 'border-border-strong',
-        'transition-colors hover:border-border-strong/80',
+        'transition-colors hover:border-border-strong',
       )}
       style={{ animationDelay: `${delayMs}ms` }}
     >
