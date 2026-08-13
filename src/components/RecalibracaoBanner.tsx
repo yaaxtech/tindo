@@ -84,9 +84,9 @@ export function RecalibracaoBanner() {
           role="alert"
           aria-live="polite"
         >
-          <div className="rounded-2xl border border-[var(--jade-primary)]/40 bg-[var(--bg-elevated)] shadow-xl shadow-black/30 p-4">
+          <div className="rounded-2xl border border-jade/40 bg-[var(--bg-elevated)] shadow-xl shadow-black/30 p-4">
             <div className="flex items-start gap-3">
-              <div className="shrink-0 rounded-full p-1.5 bg-[var(--jade-dim)]/40 mt-0.5">
+              <div className="shrink-0 rounded-full p-1.5 bg-jade-dim/40 mt-0.5">
                 <AlertTriangle size={14} className="text-[var(--jade-accent)]" />
               </div>
               <div className="flex-1 min-w-0">
