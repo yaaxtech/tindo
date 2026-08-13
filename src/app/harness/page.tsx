@@ -5,18 +5,20 @@ import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
 import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
 import { PlacarValor } from '@/app/harness/_components/PlacarValor';
+import { TemposGithub } from '@/app/harness/_components/TemposGithub';
 import { Terrenos } from '@/app/harness/_components/Terrenos';
 import { Tiles } from '@/app/harness/_components/Tiles';
 import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistorico';
 import { Secao } from '@/app/harness/_components/ui';
 import { contarPendentes, diasComDados, kpisGerais, recorte } from '@/lib/harness/kpis';
-import { getHarnessSnapshot } from '@/services/harness';
-import type { HarnessSnapshot } from '@/types/harness';
+import { getGithubRuns, getHarnessSnapshot } from '@/services/harness';
+import type { GithubRunLinha, HarnessSnapshot } from '@/types/harness';
 import { Gauge } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 export default function HarnessPage() {
   const [snap, setSnap] = useState<HarnessSnapshot | null>(null);
+  const [githubRuns, setGithubRuns] = useState<GithubRunLinha[] | undefined>(undefined);
   const [carregando, setCarregando] = useState(true);
   const [janelaDias, setJanelaDias] = useState(7);
 
@@ -24,6 +26,9 @@ export default function HarnessPage() {
     void (async () => {
       setSnap(await getHarnessSnapshot());
       setCarregando(false);
+    })();
+    void (async () => {
+      setGithubRuns(await getGithubRuns());
     })();
   }, []);
 
@@ -105,7 +110,10 @@ export default function HarnessPage() {
             <FluxoGithub prs={snap.dados.prs} gerais={gAtual} />
           </Secao>
 
-          {/* Bloco 4 — segue o filtro */}
+          {/* Bloco 4 — semanal fixo, independente do filtro */}
+          <TemposGithub runs={githubRuns} />
+
+          {/* Bloco 5 — segue o filtro */}
           <Secao
             titulo="Por terreno — modelo titular, fallback e sinal"
             escopo={{ tipo: 'filtro', dias: janelaDias }}
@@ -118,7 +126,7 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 5 — segue o filtro */}
+          {/* Bloco 6 — segue o filtro */}
           <Secao
             titulo="Chamadas por modelo"
             info='Quantas vezes cada modelo foi acionado, separado por nível de esforço (ex.: Luna no max, Luna no low, Sonnet no medium). "ok" = quanto ele acertou de primeira. Mostra onde o trabalho está de fato caindo e se o modelo certo está sendo usado para cada peso.'
@@ -127,7 +135,7 @@ export default function HarnessPage() {
             <Modelos linhas={atual} />
           </Secao>
 
-          {/* Bloco 6 — segue o filtro */}
+          {/* Bloco 7 — segue o filtro */}
           <Secao
             titulo={`Assinaturas — $${totalMes}/mês`}
             info="Cada card mostra o custo por tarefa daquela assinatura no período (valor mensal proporcional aos dias, dividido pelas tarefas que ela executou). O veredito traduz isso em decisão: rende bem = manter; sem uso = candidata a cancelar; custo alto = observar; saturada = está batendo no limite, candidata a aumentar. A decisão real sai do histórico na data de renovação, nunca de um dia só."
@@ -145,7 +153,7 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 7 — fixos */}
+          {/* Bloco 8 — fixos */}
           <Secao
             titulo="Volume de código — linhas alteradas por semana"
             info="Soma das linhas adicionadas e removidas nos commits de cada semana, direto do git (lockfiles e arquivos gerados ficam de fora). Mede o VOLUME de desenvolvimento — lido junto com a Qualidade: volume alto com qualidade alta = harness rendendo."
