@@ -145,13 +145,19 @@ export async function POST(request: NextRequest) {
         // Salva todoist_id na tarefa
         await admin.from('tarefas').update({ todoist_id: created.id }).eq('id', tarefa.id);
 
-        // Registra em historico_acoes
-        await admin.from('historico_acoes').insert({
+        // Registra em historico_acoes (migration 20260813000004: existe o valor 'todoist_sync').
+        // Não usa 'editada': exportar não é reavaliar a tarefa, e 'editada' alimenta
+        // n_editadas na kpis_usuario_diario, base da taxaReavaliacao (RN-07).
+        const { error: erroLog } = await admin.from('historico_acoes').insert({
           usuario_id: usuarioId,
           tarefa_id: tarefa.id,
-          acao: 'editada',
+          acao: 'todoist_sync',
           dados: { origem: 'exportacao_manual', todoist_id: created.id },
         });
+        // O supabase-js devolve `{ error }` em vez de lançar — sem isto o log morre calado.
+        if (erroLog) {
+          console.error('/api/todoist/exportar: falha ao registrar historico_acoes', erroLog);
+        }
 
         tarefasExportadas++;
 
