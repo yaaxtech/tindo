@@ -72,9 +72,7 @@ interface ResultadoAplicar {
 const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
 
 function SkeletonBlock({ className }: { className?: string }) {
-  return (
-    <div className={`animate-pulse rounded-xl bg-[var(--bg-elevated)] ${className ?? 'h-24'}`} />
-  );
+  return <div className={`animate-pulse rounded-xl bg-bg-elevated ${className ?? 'h-24'}`} />;
 }
 
 // ─── Passo 1 — Diagnóstico ────────────────────────────────────────────────────
@@ -96,19 +94,15 @@ function KpiTile({
   return (
     <div
       className={`rounded-xl border p-4 transition-colors ${
-        ativo ? 'border-[var(--danger)] bg-danger/10' : 'border-border bg-[var(--bg-elevated)]'
+        ativo ? 'border-danger bg-danger/10' : 'border-border bg-bg-elevated'
       }`}
     >
-      <p className="text-xs text-[var(--text-secondary)] mb-1">{label}</p>
-      <p
-        className={`text-2xl font-bold ${
-          ativo ? 'text-[var(--danger)]' : 'text-[var(--text-primary)]'
-        }`}
-      >
+      <p className="text-xs text-text-secondary mb-1">{label}</p>
+      <p className={`text-2xl font-bold ${ativo ? 'text-danger' : 'text-text-primary'}`}>
         {displayVal}
       </p>
       {limiar !== undefined && (
-        <p className="text-xs mt-1 text-[var(--text-muted)]">
+        <p className="text-xs mt-1 text-text-muted">
           limiar: {formato === 'pct' ? pct(limiar) : limiar.toFixed(1)}
         </p>
       )}
@@ -135,12 +129,12 @@ function PassoDiagnostico({
       className="flex flex-col gap-6"
     >
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Diagnóstico</h2>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
+        <h2 className="text-xl font-semibold text-text-primary">Diagnóstico</h2>
+        <p className="text-sm text-text-secondary mt-1">
           Análise dos seus padrões dos últimos {kpis.periodo}
         </p>
         {ultimaRecalibracaoEm && (
-          <p className="text-xs text-[var(--text-muted)] mt-1">
+          <p className="text-xs text-text-muted mt-1">
             Última recalibração: {new Date(ultimaRecalibracaoEm).toLocaleDateString('pt-BR')}
           </p>
         )}
@@ -148,12 +142,12 @@ function PassoDiagnostico({
 
       {deveRecalibrar && (
         <div className="flex items-start gap-3 rounded-xl border border-danger/40 bg-danger/10 p-4">
-          <AlertTriangle size={18} className="shrink-0 text-[var(--danger)] mt-0.5" />
+          <AlertTriangle size={18} className="shrink-0 text-danger mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-[var(--danger)]">
+            <p className="text-sm font-medium text-danger">
               Seus padrões mudaram — vale recalibrar
             </p>
-            <p className="text-xs text-[var(--text-secondary)] mt-1">
+            <p className="text-xs text-text-secondary mt-1">
               {gatilhos.map((g) => g.label).join(' · ')}
             </p>
           </div>
@@ -194,8 +188,8 @@ function PassoDiagnostico({
         onClick={onAvancar}
         className={`w-full h-12 rounded-xl font-semibold text-sm transition-all ${
           deveRecalibrar
-            ? 'bg-gradient-to-r from-[var(--jade-primary)] to-[var(--jade-accent)] text-white animate-pulse-jade'
-            : 'border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            ? 'bg-gradient-to-r from-jade to-jade-accent text-white animate-pulse-jade'
+            : 'border border-border-strong text-text-secondary hover:text-text-primary'
         }`}
       >
         {deveRecalibrar ? 'Começar recalibração' : 'Recalibrar mesmo assim'}
@@ -245,23 +239,23 @@ function PassoCalibracao({
       className="flex flex-col gap-6"
     >
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Avalie as tarefas</h2>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
+        <h2 className="text-xl font-semibold text-text-primary">Avalie as tarefas</h2>
+        <p className="text-sm text-text-secondary mt-1">
           Quanto cada tarefa é importante pra você? (0 = nada, 100 = crítico)
         </p>
       </div>
 
       {/* Barra de progresso */}
       <div className="space-y-1">
-        <div className="flex justify-between text-xs text-[var(--text-muted)]">
+        <div className="flex justify-between text-xs text-text-muted">
           <span>
             {idx + 1} de {total}
           </span>
           <span>{Math.round(progresso)}%</span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+        <div className="h-1.5 w-full rounded-full bg-bg-elevated overflow-hidden">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-[var(--jade-primary)] to-[var(--jade-accent)]"
+            className="h-full rounded-full bg-gradient-to-r from-jade to-jade-accent"
             animate={{ width: `${progresso}%` }}
             transition={{ duration: 0.3 }}
           />
@@ -279,16 +273,16 @@ function PassoCalibracao({
           className="rounded-2xl border border-border bg-bg-elevated p-5 space-y-5"
         >
           <div className="flex items-start justify-between gap-3">
-            <p className="text-base font-medium text-[var(--text-primary)] leading-snug flex-1">
+            <p className="text-base font-medium text-text-primary leading-snug flex-1">
               {tarefa.titulo}
             </p>
             <span
               className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
                 tarefa.faixa === 'alta'
-                  ? 'bg-jade-dim/40 text-[var(--jade-accent)]'
+                  ? 'bg-jade-dim/40 text-jade-accent'
                   : tarefa.faixa === 'media'
                     ? 'bg-warning/20 text-warning'
-                    : 'bg-text-muted/20 text-[var(--text-muted)]'
+                    : 'bg-text-muted/20 text-text-muted'
               }`}
             >
               nota sistema: {tarefa.nota}
@@ -297,10 +291,8 @@ function PassoCalibracao({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-[var(--text-secondary)]">Sua avaliação</span>
-              <span className="text-2xl font-bold text-[var(--jade-accent)]">
-                {notas[tarefa.id] ?? 50}
-              </span>
+              <span className="text-sm text-text-secondary">Sua avaliação</span>
+              <span className="text-2xl font-bold text-jade-accent">{notas[tarefa.id] ?? 50}</span>
             </div>
             <input
               type="range"
@@ -309,9 +301,9 @@ function PassoCalibracao({
               step={1}
               value={notas[tarefa.id] ?? 50}
               onChange={(e) => onNota(tarefa.id, Number(e.target.value))}
-              className="w-full accent-[var(--jade-accent)] h-2 cursor-pointer"
+              className="w-full accent-jade-accent h-2 cursor-pointer"
             />
-            <div className="flex justify-between text-xs text-[var(--text-muted)]">
+            <div className="flex justify-between text-xs text-text-muted">
               <span>Não importa</span>
               <span>Crítico</span>
             </div>
@@ -324,7 +316,7 @@ function PassoCalibracao({
         <button
           type="button"
           onClick={() => (idx === 0 ? onVoltar() : ir(-1))}
-          className="flex items-center gap-2 h-11 px-4 rounded-xl border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm"
+          className="flex items-center gap-2 h-11 px-4 rounded-xl border border-border-strong text-text-secondary hover:text-text-primary transition-colors text-sm"
         >
           <ArrowLeft size={15} />
           {idx === 0 ? 'Voltar' : 'Anterior'}
@@ -339,7 +331,7 @@ function PassoCalibracao({
             }
           }}
           disabled={notas[tarefa.id] === undefined && idx === total - 1 && !todasAvaliadas}
-          className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-to-r from-[var(--jade-primary)] to-[var(--jade-accent)] text-white font-medium text-sm disabled:opacity-40 transition-opacity"
+          className="flex-1 flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-to-r from-jade to-jade-accent text-white font-medium text-sm disabled:opacity-40 transition-opacity"
         >
           {idx < total - 1 ? (
             <>
@@ -380,32 +372,22 @@ function BarraPeso({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-[var(--text-secondary)]">{label}</span>
-        <span className="flex items-center gap-1.5 font-medium text-[var(--text-primary)]">
-          <span className="text-[var(--text-muted)] line-through text-xs">
-            {pctAntigo.toFixed(0)}%
-          </span>
+        <span className="text-text-secondary">{label}</span>
+        <span className="flex items-center gap-1.5 font-medium text-text-primary">
+          <span className="text-text-muted line-through text-xs">{pctAntigo.toFixed(0)}%</span>
           {subiu ? (
-            <TrendingUp size={13} className="text-[var(--jade-accent)]" />
+            <TrendingUp size={13} className="text-jade-accent" />
           ) : pctNovo < pctAntigo ? (
-            <TrendingDown size={13} className="text-[var(--danger)]" />
+            <TrendingDown size={13} className="text-danger" />
           ) : null}
-          <span
-            className={
-              subiu
-                ? 'text-[var(--jade-accent)]'
-                : pctNovo < pctAntigo
-                  ? 'text-[var(--danger)]'
-                  : ''
-            }
-          >
+          <span className={subiu ? 'text-jade-accent' : pctNovo < pctAntigo ? 'text-danger' : ''}>
             {pctNovo.toFixed(0)}%
           </span>
         </span>
       </div>
-      <div className="h-2 w-full rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-bg-elevated overflow-hidden">
         <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-[var(--jade-primary)] to-[var(--jade-accent)]"
+          className="h-full rounded-full bg-gradient-to-r from-jade to-jade-accent"
           initial={{ width: `${pctAntigo}%` }}
           animate={{ width: `${pctNovo}%` }}
           transition={{ duration: 0.6, ease: [0, 0, 0.2, 1] }}
@@ -444,8 +426,8 @@ function PassoProposta({
       className="flex flex-col gap-6"
     >
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Novos pesos</h2>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
+        <h2 className="text-xl font-semibold text-text-primary">Novos pesos</h2>
+        <p className="text-sm text-text-secondary mt-1">
           Calculados a partir das suas avaliações via regressão linear.
         </p>
       </div>
@@ -469,22 +451,22 @@ function PassoProposta({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border bg-[var(--bg-elevated)] p-4 text-center">
-          <p className="text-xs text-[var(--text-muted)] mb-1">Correlação antes</p>
-          <p className="text-2xl font-bold text-[var(--text-secondary)]">
+        <div className="rounded-xl border border-border bg-bg-elevated p-4 text-center">
+          <p className="text-xs text-text-muted mb-1">Correlação antes</p>
+          <p className="text-2xl font-bold text-text-secondary">
             {(correlacaoAntes * 100).toFixed(0)}%
           </p>
         </div>
         <div className="rounded-xl border border-jade/40 bg-jade-dim/20 p-4 text-center">
-          <p className="text-xs text-[var(--text-muted)] mb-1">Correlação depois</p>
-          <p className="text-2xl font-bold text-[var(--jade-accent)]">
+          <p className="text-xs text-text-muted mb-1">Correlação depois</p>
+          <p className="text-2xl font-bold text-jade-accent">
             {(correlacaoDepois * 100).toFixed(0)}%
           </p>
         </div>
       </div>
 
       {melhora > 0.01 && (
-        <p className="text-center text-sm text-[var(--jade-accent)]">
+        <p className="text-center text-sm text-jade-accent">
           +{(melhora * 100).toFixed(0)}% de alinhamento com suas preferências
         </p>
       )}
@@ -494,7 +476,7 @@ function PassoProposta({
           whileTap={{ scale: 0.97 }}
           onClick={() => void onAplicar()}
           disabled={aplicando}
-          className="w-full h-12 rounded-xl bg-gradient-to-r from-[var(--jade-primary)] to-[var(--jade-accent)] text-white font-semibold text-sm disabled:opacity-60 transition-opacity animate-pulse-jade"
+          className="w-full h-12 rounded-xl bg-gradient-to-r from-jade to-jade-accent text-white font-semibold text-sm disabled:opacity-60 transition-opacity animate-pulse-jade"
         >
           {aplicando ? 'Aplicando…' : 'Aplicar novos pesos'}
         </motion.button>
@@ -502,7 +484,7 @@ function PassoProposta({
           type="button"
           onClick={onCancelar}
           disabled={aplicando}
-          className="w-full h-11 rounded-xl border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm transition-colors"
+          className="w-full h-11 rounded-xl border border-border-strong text-text-secondary hover:text-text-primary text-sm transition-colors"
         >
           Cancelar
         </button>
@@ -528,17 +510,15 @@ function TelaSucesso() {
         transition={{ duration: 0.8, ease: 'easeOut' }}
         className="rounded-full p-4 bg-jade-dim/40"
       >
-        <CheckCircle2 size={52} className="text-[var(--jade-accent)]" />
+        <CheckCircle2 size={52} className="text-jade-accent" />
       </motion.div>
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-          Recalibração concluída!
-        </h2>
-        <p className="text-sm text-[var(--text-secondary)] mt-2">
+        <h2 className="text-xl font-semibold text-text-primary">Recalibração concluída!</h2>
+        <p className="text-sm text-text-secondary mt-2">
           Seus pesos foram atualizados e as notas estão sendo recalculadas.
         </p>
       </div>
-      <p className="text-xs text-[var(--text-muted)]">Redirecionando para os cards…</p>
+      <p className="text-xs text-text-muted">Redirecionando para os cards…</p>
     </motion.div>
   );
 }
@@ -687,14 +667,14 @@ export default function RecalibrarPage() {
             <Link
               href="/cards"
               aria-label="Voltar aos cards"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-text-secondary hover:bg-bg-hover hover:text-text-primary"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
           )}
           <div className="flex-1">
             <h1 className="text-lg font-semibold">Recalibração</h1>
-            <p className="text-xs text-[var(--text-muted)]">{tituloPasso[passo]}</p>
+            <p className="text-xs text-text-muted">{tituloPasso[passo]}</p>
           </div>
           {/* Indicador de passos */}
           {passo !== 'sucesso' && (
@@ -704,10 +684,10 @@ export default function RecalibrarPage() {
                   key={p}
                   className={`h-1.5 rounded-full transition-all ${
                     p === passo
-                      ? 'w-6 bg-[var(--jade-accent)]'
+                      ? 'w-6 bg-jade-accent'
                       : i < ['diagnostico', 'calibracao', 'proposta'].indexOf(passo)
                         ? 'w-3 bg-jade/60'
-                        : 'w-3 bg-[var(--border-strong)]'
+                        : 'w-3 bg-border-strong'
                   }`}
                 />
               ))}
@@ -746,8 +726,8 @@ export default function RecalibrarPage() {
                   exit={{ opacity: 0 }}
                   className="flex flex-col items-center gap-4 py-16 text-center"
                 >
-                  <X size={36} className="text-[var(--danger)]" />
-                  <p className="text-sm text-[var(--text-secondary)]">{erroDiagnostico}</p>
+                  <X size={36} className="text-danger" />
+                  <p className="text-sm text-text-secondary">{erroDiagnostico}</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -755,7 +735,7 @@ export default function RecalibrarPage() {
                       setCarregandoDiagnostico(true);
                       setErroDiagnostico(null);
                     }}
-                    className="flex items-center gap-2 text-sm text-[var(--jade-accent)] hover:underline"
+                    className="flex items-center gap-2 text-sm text-jade-accent hover:underline"
                   >
                     <RefreshCw size={14} />
                     Tentar novamente
@@ -782,7 +762,7 @@ export default function RecalibrarPage() {
                     />
                   )}
                   {erroTarefas && (
-                    <p className="mt-3 text-center text-sm text-[var(--danger)]">{erroTarefas}</p>
+                    <p className="mt-3 text-center text-sm text-danger">{erroTarefas}</p>
                   )}
                 </>
               )}
@@ -833,9 +813,7 @@ export default function RecalibrarPage() {
           {passo === 'sucesso' && <TelaSucesso key="sucesso" />}
         </AnimatePresence>
 
-        {erroAplicar && (
-          <p className="mt-4 text-center text-sm text-[var(--danger)]">{erroAplicar}</p>
-        )}
+        {erroAplicar && <p className="mt-4 text-center text-sm text-danger">{erroAplicar}</p>}
       </section>
     </main>
   );
