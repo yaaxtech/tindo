@@ -51,7 +51,8 @@ export const SECOES_PAINEL: SecaoNavGrupo[] = [
     rotulo: 'Onde agir',
     itens: [
       { id: 'terrenos', rotulo: 'Terrenos', icone: Layers },
-      { id: 'tempo-perdido', rotulo: 'Tempo', icone: Timer },
+      { id: 'tempo-despacho', rotulo: 'Despacho', icone: Timer },
+      { id: 'tempo-entrega', rotulo: 'Entrega', icone: GitPullRequest },
       { id: 'fluxo', rotulo: 'Fluxo', icone: GitPullRequest },
     ],
   },
