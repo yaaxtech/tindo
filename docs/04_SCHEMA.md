@@ -151,14 +151,23 @@ CREATE TABLE public.tarefa_tags (
 CREATE TABLE public.historico_acoes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   usuario_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  tarefa_id uuid NOT NULL REFERENCES public.tarefas(id) ON DELETE CASCADE,
+  tarefa_id uuid NULL REFERENCES public.tarefas(id) ON DELETE CASCADE, -- NULL = ação de sistema
   acao varchar(30) NOT NULL
-    CHECK (acao IN ('mostrada','concluida','pulada','voltada','adiada_auto','adiada_manual','excluida','editada','criada','recalibrada')),
+    CHECK (acao IN ('mostrada','concluida','pulada','voltada','adiada_auto','adiada_manual','excluida','editada','criada','recalibrada','ai_auto_classificada','sistema')),
   tempo_ms int,                               -- tempo na tela
   dados jsonb,                                -- snapshot relevante (nota, adiada_ate, etc)
   created_at timestamptz NOT NULL DEFAULT now()
 );
 ```
+
+`tarefa_id NULL` e os valores `ai_auto_classificada`/`sistema` vieram da migration
+`20260813000003_historico_acoes_sistema.sql`. Os dois valores novos ficam **fora de todos os
+contadores** da view `kpis_usuario_diario` de propósito:
+
+- `ai_auto_classificada` — classificação feita pela IA. Como `editada`, contaria como
+  reavaliação humana na `taxaReavaliacao` e dispararia recalibração à toa (RN-07).
+- `sistema` — evento sem tarefa (desconectar Todoist, ganhar freezer); `dados.origem` diz qual.
+  Como `concluida`, poluiria `n_concluidas`, streak, anéis e o push de streak em risco.
 
 ### 05 — Gamificação
 

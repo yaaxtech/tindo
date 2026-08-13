@@ -47,7 +47,12 @@ export async function GET(request: NextRequest) {
       .limit(200);
     if (errHist) throw errHist;
 
-    const idsAlvo = (acoes ?? []).map((a: { tarefa_id: string }) => a.tarefa_id);
+    // `tarefa_id` é NULL-able desde a migration 20260813000003 (ação de sistema não tem
+    // tarefa). Adiamento sempre tem uma, mas o filtro deixa isso explícito no tipo.
+    const acoesComTarefa = (acoes ?? []).filter(
+      (a): a is typeof a & { tarefa_id: string } => a.tarefa_id !== null,
+    );
+    const idsAlvo = acoesComTarefa.map((a) => a.tarefa_id);
     const { data: tarefasHist } = idsAlvo.length
       ? await admin.from('tarefas').select('id, projeto_id').in('id', idsAlvo)
       : { data: [] as { id: string; projeto_id: string | null }[] };
@@ -65,7 +70,7 @@ export async function GET(request: NextRequest) {
       tagsPorTarefa.set(link.tarefa_id, arr);
     }
 
-    const historico: AcaoAdiamentoPassada[] = (acoes ?? [])
+    const historico: AcaoAdiamentoPassada[] = acoesComTarefa
       .map((a) => {
         const ateISO = lerTexto(a.dados, 'ateISO');
         if (!ateISO) return null;
