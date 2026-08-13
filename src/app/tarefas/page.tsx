@@ -220,7 +220,10 @@ function TarefaRow({ tarefa }: { tarefa: Tarefa }) {
               <span
                 key={tag.id}
                 className="rounded-full border px-1.5 py-0.5 text-[10px]"
-                style={{ borderColor: `${tag.cor}55`, color: tag.cor }}
+                style={{
+                  borderColor: tag.cor ? `${tag.cor}55` : undefined,
+                  color: tag.cor ?? undefined,
+                }}
               >
                 {tag.nome}
               </span>

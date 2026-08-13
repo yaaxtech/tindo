@@ -1,4 +1,6 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
+import type { TablesUpdate } from '@/types/database';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -57,14 +59,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       const tagsSugeridas: string[] = Array.isArray(p.tags_sugeridas) ? p.tags_sugeridas : [];
 
       // Atualiza tarefa
-      const updatePayload: Record<string, unknown> = {};
+      const updatePayload: TablesUpdate<'tarefas'> = {};
       if (importancia !== undefined && !Number.isNaN(importancia))
         updatePayload.importancia = importancia;
       if (urgencia !== undefined && !Number.isNaN(urgencia)) updatePayload.urgencia = urgencia;
       if (facilidade !== undefined && !Number.isNaN(facilidade))
         updatePayload.facilidade = facilidade;
 
-      if (Object.keys(updatePayload).length > 0) {
+      // `tarefa_id` é NULL-able em sugestoes_ai; sem id não há o que atualizar.
+      if (Object.keys(updatePayload).length > 0 && sugestao.tarefa_id) {
         await admin.from('tarefas').update(updatePayload).eq('id', sugestao.tarefa_id);
       }
 
@@ -112,7 +115,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .update({
         status: 'aceita',
         resolvida_em: agora,
-        resposta_usuario: respostaFinal,
+        resposta_usuario: paraJson(respostaFinal),
       })
       .eq('id', id);
 

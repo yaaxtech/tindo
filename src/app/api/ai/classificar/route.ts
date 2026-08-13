@@ -1,4 +1,5 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
 import { classificarTarefa } from '@/services/ai';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
           tarefa_id: body.tarefaId,
           tipo: 'classificar',
           status: 'pendente',
-          payload: classificacao,
+          payload: paraJson(classificacao),
         })
         .select('id')
         .single();

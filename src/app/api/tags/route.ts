@@ -1,4 +1,5 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import type { TablesUpdate } from '@/types/database';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,7 @@ export async function PATCH(request: NextRequest) {
     const body = (await request.json()) as UpdatePayload;
 
     for (const t of body.tags) {
-      const patch: Record<string, unknown> = {};
+      const patch: TablesUpdate<'tags'> = {};
       if (t.tipo_peso !== undefined) patch.tipo_peso = t.tipo_peso;
       if (t.valor_peso !== undefined) patch.valor_peso = t.valor_peso;
       if (t.ativo !== undefined) patch.ativo = t.ativo;

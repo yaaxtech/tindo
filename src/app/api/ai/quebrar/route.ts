@@ -1,4 +1,5 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
 import { quebrarTarefa } from '@/services/ai';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
         tarefa_id: body.tarefaId,
         tipo: 'quebrar',
         status: 'pendente',
-        payload: resultado,
+        payload: paraJson(resultado),
       })
       .select('id')
       .single();

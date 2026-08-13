@@ -1,4 +1,5 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import type { TablesUpdate } from '@/types/database';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,7 @@ export async function PATCH(request: NextRequest) {
     const body = (await request.json()) as UpdatePayload;
 
     for (const p of body.projetos) {
-      const patch: Record<string, unknown> = {};
+      const patch: TablesUpdate<'projetos'> = {};
       if (p.ordem_prioridade !== undefined) patch.ordem_prioridade = p.ordem_prioridade;
       if (p.multiplicador !== undefined) patch.multiplicador = p.multiplicador;
       if (Object.keys(patch).length === 0) continue;

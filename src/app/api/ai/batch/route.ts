@@ -1,4 +1,5 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
 import { classificarBatch } from '@/services/ai';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -70,15 +71,19 @@ export async function POST(request: NextRequest) {
     );
 
     // Grava sugestoes_ai para cada resultado com sucesso
-    const sugestoesParaInserir = resultados
-      .filter((r) => r.classificacao)
-      .map((r) => ({
-        usuario_id: usuarioId,
-        tarefa_id: r.id,
-        tipo: 'classificar' as const,
-        status: 'pendente',
-        payload: r.classificacao,
-      }));
+    const sugestoesParaInserir = resultados.flatMap((r) =>
+      r.classificacao
+        ? [
+            {
+              usuario_id: usuarioId,
+              tarefa_id: r.id,
+              tipo: 'classificar' as const,
+              status: 'pendente',
+              payload: paraJson(r.classificacao),
+            },
+          ]
+        : [],
+    );
 
     if (sugestoesParaInserir.length > 0) {
       const { error: insertErr } = await admin.from('sugestoes_ai').insert(sugestoesParaInserir);

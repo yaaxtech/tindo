@@ -72,10 +72,7 @@ async function handler(request: NextRequest) {
   try {
     const coleta = await coletarRunsGithub({
       async upsert(linhas: GithubRunLinha[]) {
-        // harness_github_runs ainda não está no Database gerado; roda
-        // `bun run db:types` após aplicar a migration em prod para tirar o cast.
-        // biome-ignore lint/suspicious/noExplicitAny: tabela fora do Database tipado por ora
-        const { error } = await (admin as any)
+        const { error } = await admin
           .from('harness_github_runs')
           .upsert(linhas, { onConflict: 'run_id' });
         return { erro: error ? error.message : null };

@@ -1,8 +1,16 @@
 import { type AcaoAdiamentoPassada, sugerirAdiamento } from '@/lib/adiamento/heuristica';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import type { Json } from '@/types/database';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+/** `historico_acoes.dados` é jsonb livre — lê um campo de texto sem assumir formato. */
+function lerTexto(dados: Json | null, campo: string): string | undefined {
+  if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return undefined;
+  const valor = dados[campo];
+  return typeof valor === 'string' ? valor : undefined;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,8 +66,8 @@ export async function GET(request: NextRequest) {
     }
 
     const historico: AcaoAdiamentoPassada[] = (acoes ?? [])
-      .map((a: { tarefa_id: string; created_at: string; dados: { ateISO?: string } | null }) => {
-        const ateISO = a.dados?.ateISO;
+      .map((a) => {
+        const ateISO = lerTexto(a.dados, 'ateISO');
         if (!ateISO) return null;
         const criadaEm = a.created_at;
         const d = new Date(criadaEm);
