@@ -77,7 +77,7 @@ function MensagemErro({ msg }: { msg: string }) {
     <motion.p
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-2 text-sm text-[var(--danger)]"
+      className="mt-2 text-sm text-danger"
       role="alert"
     >
       {msg}
@@ -107,26 +107,26 @@ function TelaJaCalibrado({
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center gap-6 text-center"
     >
-      <CheckCircle2 size={56} className="text-[var(--jade-accent)]" />
+      <CheckCircle2 size={56} className="text-jade-accent" />
       <div>
-        <h1 className="text-xl font-semibold text-[var(--text-primary)]">Já calibrado!</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">Concluído em {data}</p>
+        <h1 className="text-xl font-semibold text-text-primary">Já calibrado!</h1>
+        <p className="mt-1 text-sm text-text-secondary">Concluído em {data}</p>
       </div>
-      <p className="max-w-xs text-sm text-[var(--text-secondary)]">
+      <p className="max-w-xs text-sm text-text-secondary">
         Seus critérios de sucesso já foram registrados. Você pode refazer a qualquer momento.
       </p>
       <div className="flex flex-col gap-3 w-full max-w-xs">
         <button
           type="button"
           onClick={() => router.push('/cards')}
-          className="h-11 rounded-xl bg-[var(--jade-primary)] text-[var(--text-primary)] font-medium hover:bg-[var(--jade-accent)] transition-colors"
+          className="h-11 rounded-xl bg-jade text-text-primary font-medium hover:bg-jade-accent transition-colors"
         >
           Ir para as tarefas
         </button>
         <button
           type="button"
           onClick={onRefazer}
-          className="flex items-center justify-center gap-2 h-11 rounded-xl border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-sm"
+          className="flex items-center justify-center gap-2 h-11 rounded-xl border border-border-strong text-text-secondary hover:text-text-primary transition-colors text-sm"
         >
           <RefreshCw size={15} />
           Refazer calibração
@@ -151,13 +151,13 @@ function TelaSucesso() {
           boxShadow: ['0 0 0 0 rgba(44,175,147,0.4)', '0 0 0 20px rgba(44,175,147,0)'],
         }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
-        className="rounded-full p-4 bg-[var(--jade-dim)]"
+        className="rounded-full p-4 bg-jade-dim"
       >
-        <CheckCircle2 size={48} className="text-[var(--jade-accent)]" />
+        <CheckCircle2 size={48} className="text-jade-accent" />
       </motion.div>
       <div>
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Calibração concluída!</h2>
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+        <h2 className="text-xl font-semibold text-text-primary">Calibração concluída!</h2>
+        <p className="mt-2 text-sm text-text-secondary">
           Suas preferências foram salvas. Redirecionando...
         </p>
       </div>
@@ -300,11 +300,11 @@ export default function CalibracacaoPage() {
 
   if (carregando) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-[var(--bg-deep)]">
+      <div className="min-h-dvh flex items-center justify-center bg-bg-deep">
         <motion.div
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
-          className="w-8 h-8 rounded-full bg-[var(--jade-primary)]"
+          className="w-8 h-8 rounded-full bg-jade"
         />
       </div>
     );
@@ -312,7 +312,7 @@ export default function CalibracacaoPage() {
 
   if (concluidaEm && !modoRefazer) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-[var(--bg-deep)] px-4">
+      <div className="min-h-dvh flex items-center justify-center bg-bg-deep px-4">
         <div className="w-full max-w-md">
           <TelaJaCalibrado concluidaEm={concluidaEm} onRefazer={() => setModoRefazer(true)} />
         </div>
@@ -321,7 +321,7 @@ export default function CalibracacaoPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--bg-deep)] flex flex-col items-center justify-center px-4 py-10">
+    <div className="min-h-dvh bg-bg-deep flex flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-md lg:max-w-lg">
         {/* Cabeçalho com progresso */}
         {passo < 4 && (
@@ -331,14 +331,14 @@ export default function CalibracacaoPage() {
             className="mb-8"
           >
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={18} className="text-[var(--jade-accent)]" />
-              <span className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-widest">
+              <Sparkles size={18} className="text-jade-accent" />
+              <span className="text-xs font-medium text-text-secondary uppercase tracking-widest">
                 Calibração de IA
               </span>
             </div>
             {/* Barra de progresso */}
             <div
-              className="h-1.5 w-full rounded-full bg-[var(--bg-surface)]"
+              className="h-1.5 w-full rounded-full bg-bg-surface"
               role="progressbar"
               tabIndex={-1}
               aria-valuenow={passo + 1}
@@ -353,12 +353,12 @@ export default function CalibracacaoPage() {
                 transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
               />
             </div>
-            <p className="mt-2 text-xs text-[var(--text-muted)]">Passo {passo + 1} de 4</p>
+            <p className="mt-2 text-xs text-text-muted">Passo {passo + 1} de 4</p>
           </motion.div>
         )}
 
         {/* Conteúdo animado */}
-        <div className="relative overflow-hidden rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xl min-h-[340px] flex flex-col">
+        <div className="relative overflow-hidden rounded-2xl bg-bg-surface border border-border shadow-xl min-h-[340px] flex flex-col">
           <AnimatePresence custom={dir} mode="wait">
             {passo === 4 ? (
               <motion.div key="sucesso" className="flex-1 flex items-center justify-center p-8">
@@ -380,12 +380,12 @@ export default function CalibracacaoPage() {
                   <div className="flex flex-col gap-4 flex-1">
                     <label
                       htmlFor="objetivo"
-                      className="text-lg font-semibold text-[var(--text-primary)] leading-snug"
+                      className="text-lg font-semibold text-text-primary leading-snug"
                       aria-current="step"
                     >
                       Qual é o seu objetivo principal?
                     </label>
-                    <p className="text-sm text-[var(--text-secondary)]">
+                    <p className="text-sm text-text-secondary">
                       O que define sucesso pra você nos próximos 3 meses?
                     </p>
                     <textarea
@@ -398,7 +398,7 @@ export default function CalibracacaoPage() {
                       }}
                       placeholder="O que define sucesso pra você nos próximos 3 meses?"
                       rows={5}
-                      className="flex-1 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--jade-accent)] transition-shadow"
+                      className="flex-1 rounded-xl bg-bg-elevated border border-border p-3 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:ring-2 focus:ring-jade-accent transition-shadow"
                     />
                     {erro && <MensagemErro msg={erro} />}
                   </div>
@@ -409,12 +409,12 @@ export default function CalibracacaoPage() {
                   <div className="flex flex-col gap-4 flex-1">
                     <fieldset>
                       <legend
-                        className="text-lg font-semibold text-[var(--text-primary)] leading-snug mb-1"
+                        className="text-lg font-semibold text-text-primary leading-snug mb-1"
                         aria-current="step"
                       >
                         Qual é o seu estilo de trabalho?
                       </legend>
-                      <p className="text-sm text-[var(--text-secondary)] mb-4">
+                      <p className="text-sm text-text-secondary mb-4">
                         Escolha o que mais combina com você.
                       </p>
                       <div className="flex flex-col gap-3">
@@ -429,8 +429,8 @@ export default function CalibracacaoPage() {
                                 transition-all duration-200
                                 ${
                                   ativo
-                                    ? 'border-[var(--jade-accent)] bg-[var(--jade-dim)] text-[var(--text-primary)]'
-                                    : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'
+                                    ? 'border-jade-accent bg-jade-dim text-text-primary'
+                                    : 'border-border bg-bg-elevated text-text-secondary hover:border-border-strong hover:text-text-primary'
                                 }
                               `}
                             >
@@ -451,16 +451,14 @@ export default function CalibracacaoPage() {
                                   mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0
                                   ${
                                     ativo
-                                      ? 'border-[var(--jade-accent)] bg-[var(--jade-accent)]'
-                                      : 'border-[var(--border-strong)]'
+                                      ? 'border-jade-accent bg-jade-accent'
+                                      : 'border-border-strong'
                                   }
                                 `}
                               />
                               <div>
                                 <p className="font-medium text-sm">{e.titulo}</p>
-                                <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                                  {e.descricao}
-                                </p>
+                                <p className="text-xs text-text-muted mt-0.5">{e.descricao}</p>
                               </div>
                             </label>
                           );
@@ -476,12 +474,12 @@ export default function CalibracacaoPage() {
                   <div className="flex flex-col gap-4 flex-1">
                     <fieldset>
                       <legend
-                        className="text-lg font-semibold text-[var(--text-primary)] leading-snug mb-1"
+                        className="text-lg font-semibold text-text-primary leading-snug mb-1"
                         aria-current="step"
                       >
                         Quando você é mais produtivo?
                       </legend>
-                      <p className="text-sm text-[var(--text-secondary)] mb-4">
+                      <p className="text-sm text-text-secondary mb-4">
                         Selecione todas as faixas que se aplicam.
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -496,8 +494,8 @@ export default function CalibracacaoPage() {
                                 border text-sm font-medium transition-all duration-200 select-none
                                 ${
                                   ativo
-                                    ? 'border-[var(--jade-accent)] bg-[var(--jade-dim)] text-[var(--jade-accent)]'
-                                    : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'
+                                    ? 'border-jade-accent bg-jade-dim text-jade-accent'
+                                    : 'border-border bg-bg-elevated text-text-secondary hover:border-border-strong hover:text-text-primary'
                                 }
                               `}
                             >
@@ -532,12 +530,12 @@ export default function CalibracacaoPage() {
                   <div className="flex flex-col gap-4 flex-1">
                     <label
                       htmlFor="procrastinacao"
-                      className="text-lg font-semibold text-[var(--text-primary)] leading-snug"
+                      className="text-lg font-semibold text-text-primary leading-snug"
                       aria-current="step"
                     >
                       O que você costuma procrastinar?
                     </label>
-                    <p className="text-sm text-[var(--text-secondary)]">
+                    <p className="text-sm text-text-secondary">
                       Que tipo de tarefa costuma ficar pra depois?
                     </p>
                     <textarea
@@ -550,7 +548,7 @@ export default function CalibracacaoPage() {
                       }}
                       placeholder="Que tipo de tarefa costuma ficar pra depois?"
                       rows={5}
-                      className="flex-1 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--jade-accent)] transition-shadow"
+                      className="flex-1 rounded-xl bg-bg-elevated border border-border p-3 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:ring-2 focus:ring-jade-accent transition-shadow"
                     />
                     {erro && <MensagemErro msg={erro} />}
                   </div>
@@ -573,7 +571,7 @@ export default function CalibracacaoPage() {
                   ${
                     passo === 0
                       ? 'opacity-0 pointer-events-none'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'
                   }
                 `}
               >
@@ -587,8 +585,8 @@ export default function CalibracacaoPage() {
                   onClick={() => void avancar()}
                   aria-label="Avançar para o próximo passo"
                   className="flex items-center gap-1.5 px-5 h-10 rounded-xl text-sm font-medium
-                    bg-[var(--jade-primary)] text-[var(--text-primary)]
-                    hover:bg-[var(--jade-accent)] transition-colors active:scale-95"
+                    bg-jade text-text-primary
+                    hover:bg-jade-accent transition-colors active:scale-95"
                 >
                   Próximo
                   <ArrowRight size={16} />
@@ -610,8 +608,8 @@ export default function CalibracacaoPage() {
                   }
                   transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
                   className="flex items-center gap-1.5 px-5 h-10 rounded-xl text-sm font-medium
-                    bg-[var(--jade-primary)] text-[var(--text-primary)]
-                    hover:bg-[var(--jade-accent)] transition-colors active:scale-95
+                    bg-jade text-text-primary
+                    hover:bg-jade-accent transition-colors active:scale-95
                     disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {salvando ? 'Salvando...' : 'Concluir'}

@@ -84,27 +84,24 @@ export function RecalibracaoBanner() {
           role="alert"
           aria-live="polite"
         >
-          <div className="rounded-2xl border border-jade/40 bg-[var(--bg-elevated)] shadow-xl shadow-black/30 p-4">
+          <div className="rounded-2xl border border-jade/40 bg-bg-elevated shadow-xl shadow-black/30 p-4">
             <div className="flex items-start gap-3">
               <div className="shrink-0 rounded-full p-1.5 bg-jade-dim/40 mt-0.5">
-                <AlertTriangle size={14} className="text-[var(--jade-accent)]" />
+                <AlertTriangle size={14} className="text-jade-accent" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--text-primary)] leading-snug">
+                <p className="text-sm font-medium text-text-primary leading-snug">
                   Hora de recalibrar
                 </p>
                 {motivo && (
-                  <p
-                    className="text-xs text-[var(--text-secondary)] mt-0.5 truncate"
-                    title={motivo}
-                  >
+                  <p className="text-xs text-text-secondary mt-0.5 truncate" title={motivo}>
                     {motivo}
                   </p>
                 )}
                 <Link
                   href="/recalibrar"
                   onClick={fechar}
-                  className="mt-2 inline-flex items-center text-xs font-medium text-[var(--jade-accent)] hover:underline"
+                  className="mt-2 inline-flex items-center text-xs font-medium text-jade-accent hover:underline"
                 >
                   Recalibrar agora →
                 </Link>
@@ -113,7 +110,7 @@ export function RecalibracaoBanner() {
                 type="button"
                 onClick={fechar}
                 aria-label="Fechar aviso de recalibração"
-                className="shrink-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                className="shrink-0 text-text-muted hover:text-text-secondary transition-colors"
               >
                 <X size={14} />
               </button>
