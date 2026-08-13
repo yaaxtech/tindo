@@ -1,5 +1,11 @@
 import { createClient } from '@/lib/supabase/client';
-import type { GithubRunLinha, HarnessBlob, HarnessSnapshot } from '@/types/harness';
+import type {
+  AlertaLinha,
+  AvaliacaoLinha,
+  GithubRunLinha,
+  HarnessBlob,
+  HarnessSnapshot,
+} from '@/types/harness';
 
 /**
  * Lê o snapshot singleton do Painel do Harness.
@@ -44,4 +50,54 @@ export async function getGithubRuns(dias = 90): Promise<GithubRunLinha[]> {
 
   if (error || !data) return [];
   return data as GithubRunLinha[];
+}
+
+/** Avaliações do revisor de KPIs + as violações que cada uma encontrou. */
+export interface HistoricoAlertas {
+  /** Mais recente primeiro. Vazio = revisor ainda não rodou nenhuma vez. */
+  avaliacoes: AvaliacaoLinha[];
+  /** Violações de TODAS as avaliações da lista — a tela conta por código. */
+  alertas: AlertaLinha[];
+}
+
+/**
+ * Lê as últimas `quantas` avaliações do revisor e seus alertas.
+ * Traz o histórico inteiro (não só a última) de propósito: é a contagem de
+ * disparos por limiar que separa alerta de barulho.
+ * Erro ou tabela vazia → listas vazias, nunca throw: a faixa some, o resto do
+ * painel continua de pé.
+ */
+export async function getHarnessAlertas(quantas = 12): Promise<HistoricoAlertas> {
+  const supabase = createClient();
+  const vazio: HistoricoAlertas = { avaliacoes: [], alertas: [] };
+
+  // harness_avaliacoes/harness_alertas ainda não estão no Database gerado; roda
+  // `bun run db:types` após aplicar a migration em prod para remover os casts.
+  // biome-ignore lint/suspicious/noExplicitAny: tabelas fora do Database tipado por ora
+  const { data: avaliacoes, error } = await (supabase as any)
+    .from('harness_avaliacoes')
+    .select('id, avaliado_em, motivo, janela_dias, violacoes_n')
+    .order('avaliado_em', { ascending: false })
+    .limit(quantas);
+
+  if (error || !avaliacoes || avaliacoes.length === 0) return vazio;
+
+  const ids = (avaliacoes as AvaliacaoLinha[]).map((a) => a.id);
+  // biome-ignore lint/suspicious/noExplicitAny: tabelas fora do Database tipado por ora
+  const { data: alertas } = await (supabase as any)
+    .from('harness_alertas')
+    .select('id, avaliacao_id, avaliado_em, codigo, severidade, valor, limiar, amostra')
+    .in('avaliacao_id', ids)
+    .order('avaliado_em', { ascending: false });
+
+  return {
+    avaliacoes: avaliacoes as AvaliacaoLinha[],
+    // numeric do Postgres chega como string no PostgREST — normaliza aqui para
+    // a tela nunca formatar "0.7551020408163265" achando que é número.
+    alertas: ((alertas ?? []) as AlertaLinha[]).map((a) => ({
+      ...a,
+      valor: a.valor == null ? null : Number(a.valor),
+      limiar: Number(a.limiar),
+    })),
+  };
 }

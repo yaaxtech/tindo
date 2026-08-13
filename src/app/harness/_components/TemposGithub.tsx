@@ -1,6 +1,6 @@
 import { ROTULO_SEGMENTO, SEGMENTOS, segmentosGithub } from '@/lib/harness/github-timings';
 import type { GithubRunLinha, SegmentoGithub } from '@/types/harness';
-import { Card, PopoverInfo, Secao } from './ui';
+import { Card, PopoverInfo, Secao, formatarSegundos } from './ui';
 
 const EXPLICACAO_SEGMENTO: Record<SegmentoGithub, string> = {
   fila_ci:
@@ -15,13 +15,6 @@ const EXPLICACAO_SEGMENTO: Record<SegmentoGithub, string> = {
 
 const EXPLICACAO_AMOSTRA =
   'A amostra mostra quantos runs (execuções automáticas do GitHub) entraram nesta conta nos últimos 7 dias. Quanto menor ela for, mais cuidado é preciso ao tirar conclusões.';
-
-function formatarSegundos(segundos: number | null): string {
-  if (segundos == null || !Number.isFinite(segundos) || segundos < 0) return '—';
-  if (segundos < 90) return `${Math.round(segundos)} s`;
-  if (segundos < 90 * 60) return `${Math.round(segundos / 60)} min`;
-  return `${(segundos / 3600).toFixed(1)} h`;
-}
 
 function textoP50(segmento: SegmentoGithub): string {
   return `${EXPLICACAO_SEGMENTO[segmento]} p50 é o tempo típico: metade das vezes foi mais rápido que isso.`;

@@ -1,6 +1,7 @@
 'use client';
 
 import { Assinaturas } from '@/app/harness/_components/Assinaturas';
+import { FaixaAlertas } from '@/app/harness/_components/FaixaAlertas';
 import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
 import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
@@ -11,7 +12,12 @@ import { Tiles } from '@/app/harness/_components/Tiles';
 import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistorico';
 import { Secao } from '@/app/harness/_components/ui';
 import { contarPendentes, diasComDados, kpisGerais, recorte } from '@/lib/harness/kpis';
-import { getGithubRuns, getHarnessSnapshot } from '@/services/harness';
+import {
+  type HistoricoAlertas,
+  getGithubRuns,
+  getHarnessAlertas,
+  getHarnessSnapshot,
+} from '@/services/harness';
 import type { GithubRunLinha, HarnessSnapshot } from '@/types/harness';
 import { Gauge } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -19,6 +25,7 @@ import { useEffect, useMemo, useState } from 'react';
 export default function HarnessPage() {
   const [snap, setSnap] = useState<HarnessSnapshot | null>(null);
   const [githubRuns, setGithubRuns] = useState<GithubRunLinha[] | undefined>(undefined);
+  const [alertas, setAlertas] = useState<HistoricoAlertas | undefined>(undefined);
   const [carregando, setCarregando] = useState(true);
   const [janelaDias, setJanelaDias] = useState(7);
 
@@ -29,6 +36,9 @@ export default function HarnessPage() {
     })();
     void (async () => {
       setGithubRuns(await getGithubRuns());
+    })();
+    void (async () => {
+      setAlertas(await getHarnessAlertas());
     })();
   }, []);
 
@@ -81,6 +91,10 @@ export default function HarnessPage() {
 
       {snap && (
         <div className="mx-auto mt-6 flex w-full max-w-3xl flex-col gap-9 px-6">
+          {/* Faixa de alerta — o que o revisor de KPIs achou na última checagem.
+              Fica no topo e só aparece depois da primeira avaliação. */}
+          <FaixaAlertas historico={alertas} />
+
           {/* Bloco 1 — segue o filtro */}
           <Secao titulo="Como estamos" escopo={{ tipo: 'filtro', dias: janelaDias }}>
             <Tiles
