@@ -80,7 +80,7 @@ export default function HarnessPage() {
           divisa. O `/80` funciona desde que os tokens viraram canais RGB
           (PR #58); antes disso resolvia para rgba(0,0,0,0) e esta barra
           precisava de fundo 100% opaco como contorno. */}
-      <div className="sticky top-0 z-10 bg-bg-deep/80 backdrop-blur-xl">
+      <div className="sticky top-[var(--app-header-h)] z-10 bg-bg-deep/80 backdrop-blur-xl">
         <header className="border-b border-border px-6 py-4">
           <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-4">
             <div className="flex-1">

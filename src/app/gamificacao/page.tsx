@@ -89,43 +89,46 @@ export default function GamificacaoPage() {
 
   return (
     <main className="min-h-dvh pb-16 safe-top safe-bottom">
-      <header className="sticky top-0 z-10 border-b border-border bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-3xl items-center gap-4">
-          <Link
-            href="/cards"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-text-secondary hover:bg-bg-hover hover:text-text-primary"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold">Sua evolução</h1>
-            <p className="text-xs text-text-muted">
-              {aba === 'evolucao'
-                ? 'Juízo humano + prazer = caminho sustentável.'
-                : 'Como o adiamento está te servindo.'}
-            </p>
+      {/* Cabeçalho e abas grudam JUNTOS, num container só — mesmo padrão do
+          /harness. Antes as abas tinham `top-[57px]` próprio: um número mágico
+          que envelheceu junto com o cabeçalho e passou a cobrir 20px dele.
+          O fundo translúcido vive no container, senão as duas camadas de /80
+          somariam opacidade na divisa. */}
+      <div className="sticky top-[var(--app-header-h)] z-10 bg-bg-deep/80 backdrop-blur-xl">
+        <header className="border-b border-border px-6 py-4">
+          <div className="mx-auto flex w-full max-w-3xl items-center gap-4">
+            <Link
+              href="/cards"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border-strong bg-bg-elevated text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold">Sua evolução</h1>
+              <p className="text-xs text-text-muted">
+                {aba === 'evolucao'
+                  ? 'Juízo humano + prazer = caminho sustentável.'
+                  : 'Como o adiamento está te servindo.'}
+              </p>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Abas */}
-      <nav
-        aria-label="Abas de gamificação"
-        className="sticky top-[57px] z-[9] border-b border-border bg-bg-deep/80 backdrop-blur-xl"
-      >
-        <div className="mx-auto flex w-full max-w-3xl items-end gap-1 px-6">
-          <AbaBotao
-            ativo={aba === 'evolucao'}
-            onClick={() => setAba('evolucao')}
-            rotulo="Evolução"
-          />
-          <AbaBotao
-            ativo={aba === 'adiamento'}
-            onClick={() => setAba('adiamento')}
-            rotulo="Adiamento"
-          />
-        </div>
-      </nav>
+        <nav aria-label="Abas de gamificação" className="border-b border-border">
+          <div className="mx-auto flex w-full max-w-3xl items-end gap-1 px-6">
+            <AbaBotao
+              ativo={aba === 'evolucao'}
+              onClick={() => setAba('evolucao')}
+              rotulo="Evolução"
+            />
+            <AbaBotao
+              ativo={aba === 'adiamento'}
+              onClick={() => setAba('adiamento')}
+              rotulo="Adiamento"
+            />
+          </div>
+        </nav>
+      </div>
 
       {aba === 'adiamento' && (
         <section className="mx-auto mt-6 w-full max-w-3xl px-6">

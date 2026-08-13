@@ -84,7 +84,7 @@ export default function TarefasPage() {
   return (
     <main className="min-h-dvh pb-16 safe-top safe-bottom">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
+      <header className="sticky top-[var(--app-header-h)] z-10 border-b border-border bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-4xl items-center gap-4">
           <Link
             href="/cards"

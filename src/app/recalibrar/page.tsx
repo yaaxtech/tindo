@@ -679,6 +679,8 @@ export default function RecalibrarPage() {
 
   return (
     <main className="min-h-dvh pb-24 safe-top safe-bottom">
+      {/* `top-0` de propósito: /recalibrar é rota fullscreen no AppShell, sem a
+          barra fixa do app — aqui não existe o offset `--app-header-h`. */}
       <header className="sticky top-0 z-10 border-b border-border bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-md items-center gap-4">
           {passo !== 'sucesso' && (

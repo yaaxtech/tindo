@@ -33,9 +33,14 @@ export function NavPainel({ grupos }: { grupos: SecaoNavGrupo[] }) {
     const medir = () => {
       const altura = container.getBoundingClientRect().height;
       if (altura <= 0) return; // página ainda sem layout — não grava lixo
+      // O container não gruda em y=0: no mobile ele para embaixo da barra fixa
+      // do app (`top: var(--app-header-h)`). Lemos esse `top` já resolvido pelo
+      // CSS em vez de repetir o breakpoint aqui — assim a âncora acerta nos dois
+      // tamanhos, e o listener de resize atualiza quando o breakpoint vira.
+      const topo = Number.parseFloat(getComputedStyle(container).top) || 0;
       document.documentElement.style.setProperty(
         '--harness-nav-topo',
-        `${Math.round(altura + 12)}px`,
+        `${Math.round(altura + topo + 12)}px`,
       );
     };
     medir();
