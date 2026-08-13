@@ -56,16 +56,33 @@ function tempoRelativo(iso: string): string {
   return `há ${d}d`;
 }
 
-function labelAcao(acao: string): string {
+const LABEL_WRITEBACK: Record<string, string> = {
+  concluir: 'Concluída no Todoist',
+  reabrir: 'Reaberta no Todoist',
+  atualizar: 'Alteração enviada ao Todoist',
+  excluir: 'Excluída no Todoist',
+};
+
+/**
+ * Toda ação de sync chega como `acao = 'todoist_sync'` (migration 20260813000004);
+ * quem diz o que aconteceu é `dados.origem` — e, no write-back, `dados.acao`.
+ */
+function labelAcao(a: UltimaAcao): string {
+  if (a.acao === 'todoist_sync') {
+    const origem = a.dados?.origem;
+    if (origem === 'exportacao_manual') return 'Exportada para o Todoist';
+    if (origem === 'todoist_writeback') {
+      const sub = a.dados?.acao;
+      return (typeof sub === 'string' ? LABEL_WRITEBACK[sub] : undefined) ?? 'Write-back enviado';
+    }
+    return 'Sincronizada com o Todoist';
+  }
   const mapa: Record<string, string> = {
-    sincronizado: 'Sincronizado',
-    todoist_sync: 'Sync recebido',
-    todoist_writeback: 'Write-back enviado',
     concluida: 'Concluída',
     adiada_manual: 'Adiada',
     adiada_auto: 'Adiamento auto',
   };
-  return mapa[acao] ?? acao;
+  return mapa[a.acao] ?? a.acao;
 }
 
 // ---------------------------------------------------------------------------
@@ -354,10 +371,10 @@ export default function StatusTodoistPage() {
                     <li key={a.id} className="flex items-start justify-between py-2 gap-2">
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-text-primary truncate">
-                          {a.tarefaTitulo ?? labelAcao(a.acao)}
+                          {a.tarefaTitulo ?? labelAcao(a)}
                         </p>
                         {a.tarefaTitulo && (
-                          <p className="text-[10px] text-text-muted">{labelAcao(a.acao)}</p>
+                          <p className="text-[10px] text-text-muted">{labelAcao(a)}</p>
                         )}
                       </div>
                       <span className="shrink-0 text-[10px] text-text-muted">
