@@ -38,6 +38,14 @@ export function corPill(st: Status): string {
 
 export const pc = (x: number | null): string => (x == null ? '—' : `${Math.round(100 * x)}%`);
 
+/** Segundos em unidade legível (s → min → h). Usado pelos blocos do GitHub. */
+export function formatarSegundos(segundos: number | null): string {
+  if (segundos == null || !Number.isFinite(segundos) || segundos < 0) return '—';
+  if (segundos < 90) return `${Math.round(segundos)} s`;
+  if (segundos < 90 * 60) return `${Math.round(segundos / 60)} min`;
+  return `${(segundos / 3600).toFixed(1)} h`;
+}
+
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div className={cn('rounded-xl border border-border-strong bg-bg-elevated p-4', className)}>
