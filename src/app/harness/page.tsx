@@ -65,14 +65,12 @@ export default function HarnessPage() {
           presa no valor da 1ª pintura — se a janela mudasse de tamanho depois,
           a barra flutuava fora do lugar. Com um container só, quem resolve é o
           CSS, que nunca fica desatualizado. */}
-      {/* O fundo OPACO fica no container, não nas duas barras. Motivo: no
-          Tailwind 3 o modificador de opacidade não funciona sobre cor vinda de
-          `var()` com hex — `bg-bg-deep/80` resolve para rgba(0,0,0,0), ou seja,
-          fundo TRANSPARENTE, e o conteúdo passa por baixo do cabeçalho ao
-          rolar (dava pra ver no mobile). O bug é do app inteiro (16 usos
-          iguais em outras telas) e o conserto de raiz está estacionado; aqui
-          resolvemos a barra desta tela, que é a que ficou com 2 andares. */}
-      <div className="sticky top-0 z-10 bg-bg-deep">
+      {/* O fundo fica no container, não nas duas barras — assim as duas
+          compartilham um único plano translúcido, sem somar opacidade na
+          divisa. O `/80` funciona desde que os tokens viraram canais RGB
+          (PR #58); antes disso resolvia para rgba(0,0,0,0) e esta barra
+          precisava de fundo 100% opaco como contorno. */}
+      <div className="sticky top-0 z-10 bg-bg-deep/80 backdrop-blur-xl">
         <header className="border-b border-border px-6 py-4">
           <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-4">
             <div className="flex-1">
