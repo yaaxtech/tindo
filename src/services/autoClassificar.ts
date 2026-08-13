@@ -212,14 +212,21 @@ export async function autoClassificarSeHabilitado(params: {
       resposta_usuario: { auto_aceita: true },
     });
 
-    // 11. Log em historico_acoes: PENDENTE DE MIGRATION.
-    // O insert que existia aqui mandava a coluna `tipo`, que não existe na tabela
-    // (a coluna é `acao`) — ou seja, sempre falhou e o erro nunca foi conferido.
-    // Não dá pra só renomear: `acao` tem CHECK fechado e o único valor plausível
-    // ('editada') alimenta `n_editadas`, que é a base da taxaReavaliacao — uma
-    // classificação automática da IA passaria a contar como reavaliação humana e
-    // dispararia recalibração à toa (RN-07). Registrar isso exige um valor novo de
-    // `acao` (migration), fora do escopo deste PR.
+    // 11. Log em historico_acoes (migration 20260813000003).
+    // `ai_auto_classificada` é valor próprio de propósito: gravar como 'editada' faria a
+    // classificação da máquina contar como reavaliação humana na taxaReavaliacao e
+    // dispararia recalibração à toa (RN-07).
+    const { error: erroLog } = await admin.from('historico_acoes').insert({
+      usuario_id: usuarioId,
+      tarefa_id: tarefaId,
+      acao: 'ai_auto_classificada',
+      dados: { origem: 'ai_auto_classificacao' },
+    });
+    // O supabase-js devolve `{ error }` em vez de lançar — conferir é o que faltava antes.
+    if (erroLog) {
+      console.error('[autoClassificar] falha ao registrar historico_acoes', tarefaId, erroLog);
+    }
+
     return { pulada: false, classificacao };
   } catch (err) {
     console.error('[autoClassificar] erro ao classificar tarefa', tarefaId, err);

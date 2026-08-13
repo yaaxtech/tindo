@@ -1,6 +1,7 @@
 'use client';
 
 import { Assinaturas } from '@/app/harness/_components/Assinaturas';
+import { Autonomia } from '@/app/harness/_components/Autonomia';
 import { FaixaAlertas } from '@/app/harness/_components/FaixaAlertas';
 import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
 import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
@@ -8,6 +9,7 @@ import { MinutosGithub } from '@/app/harness/_components/MinutosGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
 import { NavPainel } from '@/app/harness/_components/NavPainel';
 import { PlacarValor } from '@/app/harness/_components/PlacarValor';
+import { TemposDespacho } from '@/app/harness/_components/TemposDespacho';
 import { TemposGithub } from '@/app/harness/_components/TemposGithub';
 import { Terrenos } from '@/app/harness/_components/Terrenos';
 import { Tiles } from '@/app/harness/_components/Tiles';
@@ -73,14 +75,12 @@ export default function HarnessPage() {
           presa no valor da 1ª pintura — se a janela mudasse de tamanho depois,
           a barra flutuava fora do lugar. Com um container só, quem resolve é o
           CSS, que nunca fica desatualizado. */}
-      {/* O fundo OPACO fica no container, não nas duas barras. Motivo: no
-          Tailwind 3 o modificador de opacidade não funciona sobre cor vinda de
-          `var()` com hex — `bg-bg-deep/80` resolve para rgba(0,0,0,0), ou seja,
-          fundo TRANSPARENTE, e o conteúdo passa por baixo do cabeçalho ao
-          rolar (dava pra ver no mobile). O bug é do app inteiro (16 usos
-          iguais em outras telas) e o conserto de raiz está estacionado; aqui
-          resolvemos a barra desta tela, que é a que ficou com 2 andares. */}
-      <div className="sticky top-0 z-10 bg-bg-deep">
+      {/* O fundo fica no container, não nas duas barras — assim as duas
+          compartilham um único plano translúcido, sem somar opacidade na
+          divisa. O `/80` funciona desde que os tokens viraram canais RGB
+          (PR #58); antes disso resolvia para rgba(0,0,0,0) e esta barra
+          precisava de fundo 100% opaco como contorno. */}
+      <div className="sticky top-0 z-10 bg-bg-deep/80 backdrop-blur-xl">
         <header className="border-b border-border px-6 py-4">
           <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-4">
             <div className="flex-1">
@@ -150,6 +150,18 @@ export default function HarnessPage() {
             />
           </Secao>
 
+          {/* Bloco 2.5 — segue o filtro; some quando o coletor ainda não subiu */}
+          {snap.dados.autonomia && (
+            <Secao
+              id="autonomia"
+              titulo="Autonomia — quanto eu te interrompo"
+              info="Quantas vezes o assistente parou o trabalho para te perguntar algo, e o que aconteceu com cada pergunta. Aceite alto = pergunta que não precisava existir. Correção alta = pergunta que valeu. Sai do histórico das sessões, atualizado junto com o resto do painel."
+              escopo={{ tipo: 'filtro', dias: janelaDias }}
+            >
+              <Autonomia autonomia={snap.dados.autonomia} janelaDias={janelaDias} />
+            </Secao>
+          )}
+
           {/* Bloco 3 — segue o filtro */}
           <Secao
             id="terrenos"
@@ -164,10 +176,13 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 4 — semanal fixo, independente do filtro */}
-          <TemposGithub id="tempo-perdido" runs={githubRuns} />
+          {/* Bloco 4 — segue o filtro */}
+          <TemposDespacho id="tempo-despacho" linhas={atual} janelaDias={janelaDias} />
 
-          {/* Bloco 5 — semanal fixo, não segue o filtro */}
+          {/* Bloco 5 — semanal fixo, independente do filtro */}
+          <TemposGithub id="tempo-entrega" runs={githubRuns} />
+
+          {/* Bloco 6 — semanal fixo, não segue o filtro */}
           <Secao
             id="fluxo"
             titulo="Fluxo de entrega (GitHub)"
@@ -176,7 +191,7 @@ export default function HarnessPage() {
             <FluxoGithub prs={snap.dados.prs} gerais={gAtual} />
           </Secao>
 
-          {/* Bloco 6 — ciclo mensal fixo */}
+          {/* Bloco 6.5 — ciclo mensal fixo */}
           <MinutosGithub id="minutos-github" snapshot={actionsSnapshot} />
 
           {/* Bloco 7 — segue o filtro */}
@@ -198,7 +213,7 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 7 — segue o filtro */}
+          {/* Bloco 8 — segue o filtro */}
           <Secao
             id="modelos"
             titulo="Chamadas por modelo"
@@ -208,7 +223,7 @@ export default function HarnessPage() {
             <Modelos linhas={atual} />
           </Secao>
 
-          {/* Bloco 8 — fixo */}
+          {/* Bloco 9 — fixo */}
           <Secao
             id="volume"
             titulo="Volume de código — linhas alteradas por semana"
@@ -218,7 +233,7 @@ export default function HarnessPage() {
             <VolumeCodigo volume={snap.dados.volume_codigo} />
           </Secao>
 
-          {/* Bloco 9 — fixo */}
+          {/* Bloco 10 — fixo */}
           <Secao
             id="historico-kpis"
             titulo="Histórico dos KPIs"

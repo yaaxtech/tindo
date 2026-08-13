@@ -29,7 +29,14 @@ type FakeResult = { data?: unknown; error?: unknown; count?: number | null };
  * query builder como funções que retornam `this`. Isso evita o problema de
  * Proxy onde `then` não é chamado no receiver correto.
  */
-function makeBuilder(result: FakeResult) {
+/** Uma chamada de método do builder, registrada para inspeção nos testes. */
+interface Chamada {
+  tabela: string;
+  metodo: string;
+  args: unknown[];
+}
+
+function makeBuilder(result: FakeResult, tabela = '', chamadas: Chamada[] = []) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const builder: Record<string, any> = {};
 
@@ -68,7 +75,10 @@ function makeBuilder(result: FakeResult) {
   ];
 
   for (const m of methods) {
-    builder[m] = () => builder; // encadeia de volta para si mesmo
+    builder[m] = (...args: unknown[]) => {
+      chamadas.push({ tabela, metodo: m, args });
+      return builder; // encadeia de volta para si mesmo
+    };
   }
 
   return builder;
@@ -81,14 +91,17 @@ function makeBuilder(result: FakeResult) {
  */
 function makeClient(calls: Record<string, FakeResult[]>) {
   const counters: Record<string, number> = {};
+  /** Toda chamada de método do builder, em ordem — usado para checar filtros. */
+  const chamadas: Chamada[] = [];
 
   return {
+    chamadas,
     from: vi.fn((table: string) => {
       const queue = calls[table] ?? [];
       const idx = counters[table] ?? 0;
       counters[table] = idx + 1;
       const result = queue[idx] ?? { data: [], error: null };
-      return makeBuilder(result);
+      return makeBuilder(result, table, chamadas);
     }),
   };
 }
@@ -162,6 +175,36 @@ describe('calcularKpisAdiamento — TRA', () => {
     expect(resultado.tra.amostras).toBe(4);
     expect(resultado.tra.valor).toBeCloseTo(50);
     expect(resultado.tra.dentroDaMeta).toBe(false); // 50% ≥ meta 25%
+  });
+
+  it('ignora ai_auto_classificada ao procurar a próxima ação (não dilui TRA/TCA)', async () => {
+    const acoesAuto = [{ id: '1', tarefa_id: 'ta', created_at: '2026-04-01T10:00:00Z' }];
+
+    const client = makeClient({
+      historico_acoes: [
+        { data: acoesAuto, error: null },
+        { data: { acao: 'concluida' }, error: null },
+      ],
+      tarefas: [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: null, error: null, count: 0 },
+        { data: null, error: null, count: 0 },
+      ],
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await calcularKpisAdiamento(client as any, 'uid-1');
+
+    const filtrouIa = client.chamadas.some(
+      (c) =>
+        c.tabela === 'historico_acoes' &&
+        c.metodo === 'neq' &&
+        c.args[0] === 'acao' &&
+        c.args[1] === 'ai_auto_classificada',
+    );
+    expect(filtrouIa).toBe(true);
   });
 });
 

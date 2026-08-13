@@ -4,6 +4,7 @@
 
 export interface LedgerLinha {
   ts: string;
+  ts_fechado?: string | null;
   frente: 'codex' | 'kimi' | 'claude' | 'cerebro';
   modelo: string;
   effort: string | null;
@@ -61,6 +62,31 @@ export interface CadeiaTerreno {
   revisor: string;
 }
 
+export interface AutonomiaDia {
+  data: string; // 'YYYY-MM-DD'
+  perguntas: number;
+  aceitou: number; // clicou na 1ª opção (sempre a recomendada)
+  outra: number; // clicou em outra opção da lista
+  corrigiu: number; // respondeu fora da lista, trazendo regra que só ele sabia
+  ignorou: number; // dispensou a pergunta sem responder
+  esperas_longas: number; // perguntas >1h na tela sem resposta
+  espera_mediana_min: number | null;
+  espera_p90_min: number | null;
+}
+
+export interface AutonomiaN2 {
+  carimbadas: number; // decisões que o assistente tomou sozinho e carimbou p/ revisão
+  desfeitas: number; // quantas o dono mandou desfazer
+  por_dia: Record<string, { carimbadas: number; desfeitas: number }>;
+}
+
+export interface AutonomiaBlob {
+  dias: number;
+  gerado_em: string;
+  perguntas_por_dia: AutonomiaDia[];
+  n2: AutonomiaN2 | null;
+}
+
 export interface HarnessBlob {
   gerado_em: string;
   ledger: LedgerLinha[];
@@ -69,6 +95,7 @@ export interface HarnessBlob {
   prs: PrSemana[];
   assinaturas: Assinatura[];
   cadeias: Record<string, CadeiaTerreno>;
+  autonomia?: AutonomiaBlob | null;
 }
 
 export interface HarnessSnapshot {

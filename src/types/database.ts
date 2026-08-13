@@ -582,7 +582,7 @@ export type Database = {
           created_at: string
           dados: Json | null
           id: string
-          tarefa_id: string
+          tarefa_id: string | null
           tempo_ms: number | null
           usuario_id: string
         }
@@ -591,7 +591,7 @@ export type Database = {
           created_at?: string
           dados?: Json | null
           id?: string
-          tarefa_id: string
+          tarefa_id?: string | null
           tempo_ms?: number | null
           usuario_id: string
         }
@@ -600,7 +600,7 @@ export type Database = {
           created_at?: string
           dados?: Json | null
           id?: string
-          tarefa_id?: string
+          tarefa_id?: string | null
           tempo_ms?: number | null
           usuario_id?: string
         }

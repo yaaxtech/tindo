@@ -7,6 +7,7 @@ import {
   History,
   Layers,
   type LucideIcon,
+  MessageCircleQuestion,
   Timer,
   Trophy,
 } from 'lucide-react';
@@ -44,6 +45,7 @@ export const SECOES_PAINEL: SecaoNavGrupo[] = [
     itens: [
       { id: 'visao-geral', rotulo: 'Visão geral', icone: Gauge },
       { id: 'placar', rotulo: 'Placar', icone: Trophy },
+      { id: 'autonomia', rotulo: 'Autonomia', icone: MessageCircleQuestion },
     ],
   },
   {
@@ -51,7 +53,8 @@ export const SECOES_PAINEL: SecaoNavGrupo[] = [
     rotulo: 'Onde agir',
     itens: [
       { id: 'terrenos', rotulo: 'Terrenos', icone: Layers },
-      { id: 'tempo-perdido', rotulo: 'Tempo', icone: Timer },
+      { id: 'tempo-despacho', rotulo: 'Despacho', icone: Timer },
+      { id: 'tempo-entrega', rotulo: 'Entrega', icone: GitPullRequest },
       { id: 'fluxo', rotulo: 'Fluxo', icone: GitPullRequest },
     ],
   },

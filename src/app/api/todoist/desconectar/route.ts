@@ -22,12 +22,19 @@ export async function POST() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Log em historico_acoes: PENDENTE DE MIGRATION.
-    // O insert que existia aqui mandava `tarefa_id: null`, mas a coluna é NOT NULL
-    // com FK para tarefas — sempre violava a constraint. O `try/catch` não pegava
-    // nada (o supabase-js devolve `{ error }`, não lança), então o log nunca foi
-    // gravado. Registrar ação de sistema sem tarefa exige tornar `tarefa_id`
-    // NULL-able, o que é migration — fora do escopo deste PR.
+    // Log em historico_acoes (migration 20260813000003: `tarefa_id` aceita NULL e existe
+    // o valor 'sistema'). Não usa 'editada' porque isso contaria como reavaliação humana
+    // na taxaReavaliacao (RN-07) — desconectar o Todoist não é editar tarefa nenhuma.
+    const { error: erroLog } = await admin.from('historico_acoes').insert({
+      usuario_id: usuarioId,
+      tarefa_id: null,
+      acao: 'sistema',
+      dados: { origem: 'todoist_desconectado' },
+    });
+    // O supabase-js devolve `{ error }` em vez de lançar — o try/catch sozinho não via nada.
+    if (erroLog) {
+      console.error('/api/todoist/desconectar: falha ao registrar historico_acoes', erroLog);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

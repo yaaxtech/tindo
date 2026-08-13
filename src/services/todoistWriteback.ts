@@ -101,13 +101,19 @@ export async function propagarParaTodoist(params: PropagacaoParams): Promise<Pro
         break;
     }
 
-    // 5. Registrar em historico_acoes
-    await admin.from('historico_acoes').insert({
+    // 5. Registrar em historico_acoes (migration 20260813000004: existe o valor 'todoist_sync').
+    //    Não usa 'editada' porque isso alimentaria n_editadas na kpis_usuario_diario e o
+    //    write-back automático contaria como reavaliação humana na taxaReavaliacao (RN-07).
+    const { error: erroLog } = await admin.from('historico_acoes').insert({
       usuario_id: usuarioId,
       tarefa_id: tarefaId,
-      acao: 'editada',
+      acao: 'todoist_sync',
       dados: { origem: 'todoist_writeback', acao },
     });
+    // O supabase-js devolve `{ error }` em vez de lançar — o try/catch sozinho não veria nada.
+    if (erroLog) {
+      console.error('[todoist-writeback] falha ao registrar historico_acoes', erroLog);
+    }
 
     return { pulada: false };
   } catch (err) {
