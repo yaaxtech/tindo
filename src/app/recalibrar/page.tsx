@@ -96,9 +96,7 @@ function KpiTile({
   return (
     <div
       className={`rounded-xl border p-4 transition-colors ${
-        ativo
-          ? 'border-[var(--danger)] bg-danger/10'
-          : 'border-[var(--border)] bg-[var(--bg-elevated)]'
+        ativo ? 'border-[var(--danger)] bg-danger/10' : 'border-border bg-[var(--bg-elevated)]'
       }`}
     >
       <p className="text-xs text-[var(--text-secondary)] mb-1">{label}</p>
@@ -278,7 +276,7 @@ function PassoCalibracao({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: dir === 'next' ? -60 : 60 }}
           transition={{ duration: 0.25 }}
-          className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-5"
+          className="rounded-2xl border border-border bg-bg-elevated p-5 space-y-5"
         >
           <div className="flex items-start justify-between gap-3">
             <p className="text-base font-medium text-[var(--text-primary)] leading-snug flex-1">
@@ -452,7 +450,7 @@ function PassoProposta({
         </p>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-5 space-y-5">
+      <div className="rounded-2xl border border-border bg-bg-elevated p-5 space-y-5">
         <BarraPeso
           label="Urgência"
           valorAntigo={pesosAtuais.urgencia}
@@ -471,7 +469,7 @@ function PassoProposta({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 text-center">
+        <div className="rounded-xl border border-border bg-[var(--bg-elevated)] p-4 text-center">
           <p className="text-xs text-[var(--text-muted)] mb-1">Correlação antes</p>
           <p className="text-2xl font-bold text-[var(--text-secondary)]">
             {(correlacaoAntes * 100).toFixed(0)}%
@@ -681,7 +679,7 @@ export default function RecalibrarPage() {
 
   return (
     <main className="min-h-dvh pb-24 safe-top safe-bottom">
-      <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 border-b border-border bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-md items-center gap-4">
           {passo !== 'sucesso' && (
             <Link

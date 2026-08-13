@@ -352,7 +352,7 @@ export default function ConfiguracoesPage() {
         {/* Diagnóstico e recalibração */}
         <Link
           href="/recalibrar"
-          className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] px-5 py-4 hover:border-jade/40 hover:bg-[var(--bg-hover)] transition-colors"
+          className="flex items-center justify-between rounded-2xl border border-border bg-[var(--bg-elevated)] px-5 py-4 hover:border-jade/40 hover:bg-[var(--bg-hover)] transition-colors"
         >
           <div>
             <p className="text-sm font-medium text-text-primary">Ver diagnóstico e recalibrar</p>
