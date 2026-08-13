@@ -60,7 +60,7 @@ export function AppShell({ children }: AppShellProps) {
       <main
         className={[
           'md:pl-60', // offset da sidebar em desktop
-          'pt-12 md:pt-0', // offset do MobileHeader em mobile
+          'pt-[var(--app-header-h)]', // offset do MobileHeader (zero em desktop)
           'pb-20 md:pb-0', // espaço pro BottomNav em mobile
           'min-h-dvh',
         ].join(' ')}

@@ -63,7 +63,22 @@
     --grad-jade: linear-gradient(135deg, #198b74 0%, #2caf93 100%);
     --grad-card: linear-gradient(180deg, #1b222c 0%, #121820 100%);
 
+    /*
+     * Height of the app-wide fixed bar (MobileHeader, `h-12`). Single source of
+     * truth for both the main padding and the `top` of every page header that
+     * sticks: without it a sticky header parks at y=0, i.e. UNDER the fixed bar,
+     * and its first 48px — where the <h1> lives — disappear on scroll.
+     * Desktop swaps the bar for the sidebar, so the offset drops to zero.
+     */
+    --app-header-h: 3rem;
+
     color-scheme: dark;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --app-header-h: 0px;
+    }
   }
 
   html,
