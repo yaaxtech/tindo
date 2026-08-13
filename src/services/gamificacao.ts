@@ -13,7 +13,7 @@ export interface FreezerInfo {
 
 /**
  * Incrementa freezers_disponiveis e total_freezers_ganhos, com cap de 3.
- * Registra em historico_acoes (fire-and-forget — sem bloquear).
+ * Registra em historico_acoes (falha do log é reportada no console, nunca derruba o fluxo).
  * Uso server-side: passa o client admin e o usuarioId.
  */
 export async function ganharFreezerAdmin(
@@ -38,14 +38,19 @@ export async function ganharFreezerAdmin(
     .update({ freezers_disponiveis: novoDisponivel, total_freezers_ganhos: novoTotal })
     .eq('usuario_id', usuarioId);
 
-  // Log no historico_acoes (sem tarefa_id — usa sentinela null-safe via RPC não disponível;
-  // dados ficam no log de eventos genérico)
-  void adminClient.from('historico_acoes').insert({
+  // Log no historico_acoes: evento de sistema, sem tarefa (migration 20260813000003).
+  // Antes usava o uuid sentinela 00000000-…, que a FK para tarefas sempre rejeitou — o
+  // insert nunca gravou. E 'concluida' seria errado: poluiria n_concluidas, o streak,
+  // os anéis e o push de streak em risco com uma conclusão que nunca houve.
+  const { error: erroLog } = await adminClient.from('historico_acoes').insert({
     usuario_id: usuarioId,
-    tarefa_id: '00000000-0000-0000-0000-000000000000', // sentinela: ação de sistema
-    acao: 'concluida', // campo mais próximo; dados distinguem
+    tarefa_id: null,
+    acao: 'sistema',
     dados: { origem: 'ganhou_freezer', motivo },
   });
+  if (erroLog) {
+    console.error('[gamificacao] falha ao registrar historico_acoes do freezer', erroLog);
+  }
 
   return {
     freezersDisponiveis: novoDisponivel,

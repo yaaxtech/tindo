@@ -99,7 +99,9 @@ export async function calcularKpisAdiamento(
   if (acoesAuto && acoesAuto.length > 0) {
     totalAuto = acoesAuto.length;
 
-    // Para cada adiada_auto, busca próxima ação da mesma tarefa (1 query por item).
+    // Para cada adiada_auto, busca próxima ação HUMANA da mesma tarefa (1 query por item).
+    // `ai_auto_classificada` é ação da máquina: se entrasse aqui, viraria a "próxima ação"
+    // e diluiria TRA e TCA (entra no denominador, nunca no numerador).
     // Limitação conhecida: N queries no loop; aceitável para janelas de 30d (~décadas de dados).
     for (const acaoAuto of acoesAuto) {
       const { data: proxima } = await supabase
@@ -107,6 +109,7 @@ export async function calcularKpisAdiamento(
         .select('acao')
         .eq('usuario_id', usuarioId)
         .eq('tarefa_id', acaoAuto.tarefa_id)
+        .neq('acao', 'ai_auto_classificada')
         .gt('created_at', acaoAuto.created_at)
         .order('created_at', { ascending: true })
         .limit(1)

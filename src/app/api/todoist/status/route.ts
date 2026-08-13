@@ -50,7 +50,10 @@ export async function GET() {
       .limit(20);
 
     // Tenta buscar títulos das tarefas para exibir nas ações
-    const tarefaIds = [...new Set((acoes ?? []).map((a) => a.tarefa_id).filter(Boolean))];
+    // `tarefa_id` é NULL-able desde a migration 20260813000003 (ação de sistema não tem tarefa).
+    const tarefaIds = [
+      ...new Set((acoes ?? []).map((a) => a.tarefa_id).filter((id): id is string => id !== null)),
+    ];
     const titulosPorId: Record<string, string> = {};
     if (tarefaIds.length > 0) {
       const { data: tarefas } = await admin
