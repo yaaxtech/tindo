@@ -31,7 +31,7 @@ function textoP90(segmento: SegmentoGithub): string {
   return `${EXPLICACAO_SEGMENTO[segmento]} p90 mostra os casos mais lentos: só 1 em 10 foi mais lento que isso.`;
 }
 
-export function TemposGithub({ runs }: { runs: GithubRunLinha[] | undefined }) {
+export function TemposGithub({ runs, id }: { runs: GithubRunLinha[] | undefined; id?: string }) {
   const resumo = runs ? segmentosGithub(runs, { janelaDias: 7 }).janela : null;
 
   return (
@@ -39,6 +39,7 @@ export function TemposGithub({ runs }: { runs: GithubRunLinha[] | undefined }) {
       titulo="Onde o tempo se perde (GitHub)"
       info="Separa a entrega em quatro esperas. Assim fica claro o que depende do GitHub, do repositório ou de uma decisão humana."
       escopo={{ tipo: 'fixo', rotulo: 'semanal' }}
+      id={id}
     >
       {runs === undefined && (
         <Card>
