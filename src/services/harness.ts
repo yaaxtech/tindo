@@ -1,11 +1,31 @@
 import { createClient } from '@/lib/supabase/client';
 import type {
+  ActionsBlob,
+  ActionsSnapshot,
   AlertaLinha,
   AvaliacaoLinha,
   GithubRunLinha,
   HarnessBlob,
   HarnessSnapshot,
 } from '@/types/harness';
+
+/** Snapshot agregado dos minutos do GitHub. Erro ou tabela vazia → null. */
+export async function getActionsSnapshot(): Promise<ActionsSnapshot | null> {
+  try {
+    const supabase = createClient();
+    // biome-ignore lint/suspicious/noExplicitAny: migration ainda fora do Database gerado
+    const { data, error } = await (supabase as any)
+      .from('harness_actions_snapshot')
+      .select('dados, gerado_em')
+      .eq('id', 'singleton')
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return { dados: data.dados as ActionsBlob, geradoEm: data.gerado_em as string };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Lê o snapshot singleton do Painel do Harness.

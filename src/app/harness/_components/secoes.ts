@@ -58,7 +58,10 @@ export const SECOES_PAINEL: SecaoNavGrupo[] = [
   {
     id: 'dinheiro',
     rotulo: 'Dinheiro',
-    itens: [{ id: 'assinaturas', rotulo: 'Assinaturas', icone: CreditCard }],
+    itens: [
+      { id: 'minutos-github', rotulo: 'Minutos', icone: Timer },
+      { id: 'assinaturas', rotulo: 'Assinaturas', icone: CreditCard },
+    ],
   },
   {
     id: 'historico',

@@ -4,6 +4,7 @@ import { Assinaturas } from '@/app/harness/_components/Assinaturas';
 import { FaixaAlertas } from '@/app/harness/_components/FaixaAlertas';
 import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
 import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
+import { MinutosGithub } from '@/app/harness/_components/MinutosGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
 import { NavPainel } from '@/app/harness/_components/NavPainel';
 import { PlacarValor } from '@/app/harness/_components/PlacarValor';
@@ -16,17 +17,21 @@ import { Secao } from '@/app/harness/_components/ui';
 import { contarPendentes, diasComDados, kpisGerais, recorte } from '@/lib/harness/kpis';
 import {
   type HistoricoAlertas,
+  getActionsSnapshot,
   getGithubRuns,
   getHarnessAlertas,
   getHarnessSnapshot,
 } from '@/services/harness';
-import type { GithubRunLinha, HarnessSnapshot } from '@/types/harness';
+import type { ActionsSnapshot, GithubRunLinha, HarnessSnapshot } from '@/types/harness';
 import { Gauge } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 export default function HarnessPage() {
   const [snap, setSnap] = useState<HarnessSnapshot | null>(null);
   const [githubRuns, setGithubRuns] = useState<GithubRunLinha[] | undefined>(undefined);
+  const [actionsSnapshot, setActionsSnapshot] = useState<ActionsSnapshot | null | undefined>(
+    undefined,
+  );
   const [alertas, setAlertas] = useState<HistoricoAlertas | undefined>(undefined);
   const [carregando, setCarregando] = useState(true);
   const [janelaDias, setJanelaDias] = useState(7);
@@ -38,6 +43,9 @@ export default function HarnessPage() {
     })();
     void (async () => {
       setGithubRuns(await getGithubRuns());
+    })();
+    void (async () => {
+      setActionsSnapshot(await getActionsSnapshot());
     })();
     void (async () => {
       setAlertas(await getHarnessAlertas());
@@ -168,7 +176,10 @@ export default function HarnessPage() {
             <FluxoGithub prs={snap.dados.prs} gerais={gAtual} />
           </Secao>
 
-          {/* Bloco 6 — segue o filtro */}
+          {/* Bloco 6 — ciclo mensal fixo */}
+          <MinutosGithub id="minutos-github" snapshot={actionsSnapshot} />
+
+          {/* Bloco 7 — segue o filtro */}
           <Secao
             id="assinaturas"
             titulo={`Assinaturas — $${totalMes}/mês`}
