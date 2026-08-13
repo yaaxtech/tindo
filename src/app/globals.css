@@ -4,33 +4,60 @@
 
 @layer base {
   :root {
+    /*
+     * Source of truth: each palette color lives as space-separated RGB channels
+     * so Tailwind can inject `<alpha-value>` (`bg-bg-deep/80`). Feeding a plain
+     * hex through `var()` silently breaks the opacity modifier.
+     * The `--token` aliases below stay for plain CSS usage.
+     */
+
     /* Obsidian */
-    --bg-deep: #0a0e13;
-    --bg-elevated: #121820;
-    --bg-surface: #1b222c;
-    --bg-hover: #222b38;
+    --bg-deep-rgb: 10 14 19;
+    --bg-elevated-rgb: 18 24 32;
+    --bg-surface-rgb: 27 34 44;
+    --bg-hover-rgb: 34 43 56;
+
+    --bg-deep: rgb(var(--bg-deep-rgb));
+    --bg-elevated: rgb(var(--bg-elevated-rgb));
+    --bg-surface: rgb(var(--bg-surface-rgb));
+    --bg-hover: rgb(var(--bg-hover-rgb));
 
     /* Text */
-    --text-primary: #e8edf2;
-    --text-secondary: #7a8796;
-    --text-muted: #4a5563;
-    --text-inverse: #0a0e13;
+    --text-primary-rgb: 232 237 242;
+    --text-secondary-rgb: 122 135 150;
+    --text-muted-rgb: 74 85 99;
+    --text-inverse-rgb: 10 14 19;
+
+    --text-primary: rgb(var(--text-primary-rgb));
+    --text-secondary: rgb(var(--text-secondary-rgb));
+    --text-muted: rgb(var(--text-muted-rgb));
+    --text-inverse: rgb(var(--text-inverse-rgb));
 
     /* Jade */
-    --jade-primary: #198b74;
-    --jade-accent: #2caf93;
-    --jade-dim: #0f5446;
-    --jade-glow: rgba(44, 175, 147, 0.35);
+    --jade-primary-rgb: 25 139 116;
+    --jade-accent-rgb: 44 175 147;
+    --jade-dim-rgb: 15 84 70;
+
+    --jade-primary: rgb(var(--jade-primary-rgb));
+    --jade-accent: rgb(var(--jade-accent-rgb));
+    --jade-dim: rgb(var(--jade-dim-rgb));
+    --jade-glow: rgb(var(--jade-accent-rgb) / 0.35);
 
     /* Feedback */
-    --success: #198b74;
-    --warning: #f2b94b;
-    --danger: #e3546c;
-    --info: #6aa9e6;
+    --success-rgb: 25 139 116;
+    --warning-rgb: 242 185 75;
+    --danger-rgb: 227 84 108;
+    --info-rgb: 106 169 230;
 
-    /* Borders */
-    --border-subtle: rgba(232, 237, 242, 0.08);
-    --border-strong: rgba(232, 237, 242, 0.15);
+    --success: rgb(var(--success-rgb));
+    --warning: rgb(var(--warning-rgb));
+    --danger: rgb(var(--danger-rgb));
+    --info: rgb(var(--info-rgb));
+
+    /* Borders — alpha is baked in, so they are not alpha-modifiable tokens */
+    --border-rgb: 232 237 242;
+    --border-subtle: rgb(var(--border-rgb) / 0.08);
+    --border-strong: rgb(var(--border-rgb) / 0.15);
 
     /* Gradients */
     --grad-jade: linear-gradient(135deg, #198b74 0%, #2caf93 100%);
