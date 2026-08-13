@@ -185,3 +185,52 @@ export interface AlertaLinha {
   limiar: number;
   amostra: number;
 }
+
+// ── Minutos do GitHub Actions (snapshot agregado pelo coletor local) ─────
+
+export interface ActionsDia {
+  dia: string;
+  repo: string;
+  min_faturado: number;
+  min_mac: number;
+  runs: number;
+  jobs: number;
+  jobs_falha: number;
+  jobs_cancelado: number;
+  min_perdido: number;
+  fila_seg: number[];
+}
+
+export interface ActionsBranch {
+  branch: string;
+  runs: number;
+  min_total: number;
+  virou_pr: boolean;
+  mergeado: boolean;
+}
+
+export interface ActionsStep {
+  nome: string;
+  seg_total: number;
+  n: number;
+}
+
+export interface ActionsBlob {
+  gerado_em: string;
+  ciclo_inicio: string;
+  cota_min: number;
+  custo_min_usd: number;
+  repos: string[];
+  dias: ActionsDia[];
+  branches: ActionsBranch[];
+  steps: ActionsStep[];
+  fila_por_hora: { hora: number; p50: number | null; p90: number | null; n: number }[];
+  prs_mergeados_ciclo: number;
+  destino: { RUNNER_CI: string | null; RUNNER_LEVE: string | null };
+  parcial: string | null;
+}
+
+export interface ActionsSnapshot {
+  dados: ActionsBlob;
+  geradoEm: string;
+}

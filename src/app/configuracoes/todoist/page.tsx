@@ -67,9 +67,7 @@ function tempoRelativo(iso: string): string {
 // ---------------------------------------------------------------------------
 
 function Skeleton({ className }: { className?: string }) {
-  return (
-    <div className={cn('animate-pulse rounded-md bg-bg-hover', className)} />
-  );
+  return <div className={cn('animate-pulse rounded-md bg-bg-hover', className)} />;
 }
 
 function Toggle({
@@ -166,7 +164,11 @@ function ConectarPanel({ onConectado }: { onConectado: () => void }) {
         onChange={(e) => setToken(e.target.value)}
         placeholder="Cole seu token aqui..."
         className="mb-3 w-full rounded-xl border border-border-strong bg-bg-deep px-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-jade"
-        onKeyDown={(e) => { if (e.key === 'Enter') { void handleTestar(); } }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            void handleTestar();
+          }
+        }}
       />
       {erro && (
         <p className="mb-3 flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
@@ -185,7 +187,9 @@ function ConectarPanel({ onConectado }: { onConectado: () => void }) {
       </button>
       <p className="mt-4 text-xs text-text-muted">
         Encontre seu token em{' '}
-        <span className="text-jade-accent">todoist.com → Configurações → Integrações → API token</span>
+        <span className="text-jade-accent">
+          todoist.com → Configurações → Integrações → API token
+        </span>
       </p>
     </div>
   );
@@ -318,7 +322,9 @@ export default function TodoistHubPage() {
   useEffect(() => {
     if (conectado) {
       void carregarLocalCount();
-      intervalRef.current = setInterval(() => { void carregarStatus(); }, 30000);
+      intervalRef.current = setInterval(() => {
+        void carregarStatus();
+      }, 30000);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -333,7 +339,12 @@ export default function TodoistHubPage() {
     setSyncing(true);
     try {
       const res = await fetch('/api/todoist/sync', { method: 'POST' });
-      const body = (await res.json()) as { ok: boolean; importadas?: number; atualizadas?: number; error?: string };
+      const body = (await res.json()) as {
+        ok: boolean;
+        importadas?: number;
+        atualizadas?: number;
+        error?: string;
+      };
       if (body.ok) {
         toast({
           titulo: `Sync concluído — ${body.importadas ?? 0} importadas, ${body.atualizadas ?? 0} atualizadas`,
@@ -350,7 +361,10 @@ export default function TodoistHubPage() {
     }
   };
 
-  const handleToggle = async (campo: 'todoist_sync_habilitado' | 'todoist_writeback_habilitado', valor: boolean) => {
+  const handleToggle = async (
+    campo: 'todoist_sync_habilitado' | 'todoist_writeback_habilitado',
+    valor: boolean,
+  ) => {
     if (!status) return;
     if (campo === 'todoist_writeback_habilitado' && valor && !status.writebackHabilitado) {
       setWritebackWarn(true);
@@ -431,7 +445,11 @@ export default function TodoistHubPage() {
             <ArrowLeft className="h-4 w-4" />
             Configurações
           </Link>
-          <ConectarPanel onConectado={() => { void carregarStatus(); }} />
+          <ConectarPanel
+            onConectado={() => {
+              void carregarStatus();
+            }}
+          />
           <p className="text-center text-xs text-text-muted">
             <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
             Seu token Todoist é armazenado criptografado e nunca compartilhado.
@@ -513,7 +531,11 @@ export default function TodoistHubPage() {
                   disabled={desconectando}
                   className="flex items-center gap-1.5 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
                 >
-                  {desconectando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
+                  {desconectando ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Unlink className="h-3 w-3" />
+                  )}
                   Confirmar
                 </button>
                 <button
@@ -530,7 +552,6 @@ export default function TodoistHubPage() {
 
         {/* ——— 3 botões de ação ——— */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-
           {/* IMPORTAR */}
           <motion.div
             custom={0}
@@ -555,7 +576,10 @@ export default function TodoistHubPage() {
                   { label: 'Projetos', v: status.contadores.projetos },
                   { label: 'Tags', v: status.contadores.tags },
                 ].map(({ label, v }) => (
-                  <div key={label} className="rounded-lg border border-border bg-bg-deep p-1.5 text-center">
+                  <div
+                    key={label}
+                    className="rounded-lg border border-border bg-bg-deep p-1.5 text-center"
+                  >
                     <p className="text-sm font-bold text-jade-accent">{v}</p>
                     <p className="text-[10px] text-text-muted">{label}</p>
                   </div>
@@ -597,9 +621,7 @@ export default function TodoistHubPage() {
                 <Skeleton className="mx-auto h-4 w-20" />
               ) : (
                 <>
-                  <p className="text-sm font-bold text-jade-accent">
-                    {localCount.count ?? 0}
-                  </p>
+                  <p className="text-sm font-bold text-jade-accent">{localCount.count ?? 0}</p>
                   <p className="text-[10px] text-text-muted">pendentes</p>
                 </>
               )}
@@ -640,13 +662,23 @@ export default function TodoistHubPage() {
             <div className="mb-4 rounded-lg border border-border bg-bg-deep px-3 py-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-text-muted">Auto-sync</span>
-                <span className={cn('font-semibold', status?.syncHabilitado ? 'text-jade-accent' : 'text-text-muted')}>
+                <span
+                  className={cn(
+                    'font-semibold',
+                    status?.syncHabilitado ? 'text-jade-accent' : 'text-text-muted',
+                  )}
+                >
                   {status?.syncHabilitado ? 'Ativo' : 'Inativo'}
                 </span>
               </div>
               <div className="mt-1 flex items-center justify-between text-xs">
                 <span className="text-text-muted">Write-back</span>
-                <span className={cn('font-semibold', status?.writebackHabilitado ? 'text-jade-accent' : 'text-text-muted')}>
+                <span
+                  className={cn(
+                    'font-semibold',
+                    status?.writebackHabilitado ? 'text-jade-accent' : 'text-text-muted',
+                  )}
+                >
                   {status?.writebackHabilitado ? 'Ativo' : 'Inativo'}
                 </span>
               </div>
@@ -659,7 +691,9 @@ export default function TodoistHubPage() {
             >
               <RefreshCw className="h-4 w-4" />
               Configurar sync
-              <ArrowRight className={cn('h-4 w-4 transition-transform', syncExpanded && 'rotate-90')} />
+              <ArrowRight
+                className={cn('h-4 w-4 transition-transform', syncExpanded && 'rotate-90')}
+              />
             </button>
           </motion.div>
         </div>
