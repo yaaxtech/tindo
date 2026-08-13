@@ -1,6 +1,7 @@
 'use client';
 
 import { Assinaturas } from '@/app/harness/_components/Assinaturas';
+import { Autonomia } from '@/app/harness/_components/Autonomia';
 import { FaixaAlertas } from '@/app/harness/_components/FaixaAlertas';
 import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
 import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
@@ -140,6 +141,18 @@ export default function HarnessPage() {
               janelaDias={janelaDias}
             />
           </Secao>
+
+          {/* Bloco 2.5 — segue o filtro; some quando o coletor ainda não subiu */}
+          {snap.dados.autonomia && (
+            <Secao
+              id="autonomia"
+              titulo="Autonomia — quanto eu te interrompo"
+              info="Quantas vezes o assistente parou o trabalho para te perguntar algo, e o que aconteceu com cada pergunta. Aceite alto = pergunta que não precisava existir. Correção alta = pergunta que valeu. Sai do histórico das sessões, atualizado junto com o resto do painel."
+              escopo={{ tipo: 'filtro', dias: janelaDias }}
+            >
+              <Autonomia autonomia={snap.dados.autonomia} janelaDias={janelaDias} />
+            </Secao>
+          )}
 
           {/* Bloco 3 — segue o filtro */}
           <Secao

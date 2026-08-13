@@ -7,6 +7,7 @@ import {
   History,
   Layers,
   type LucideIcon,
+  MessageCircleQuestion,
   Timer,
   Trophy,
 } from 'lucide-react';
@@ -44,6 +45,7 @@ export const SECOES_PAINEL: SecaoNavGrupo[] = [
     itens: [
       { id: 'visao-geral', rotulo: 'Visão geral', icone: Gauge },
       { id: 'placar', rotulo: 'Placar', icone: Trophy },
+      { id: 'autonomia', rotulo: 'Autonomia', icone: MessageCircleQuestion },
     ],
   },
   {
