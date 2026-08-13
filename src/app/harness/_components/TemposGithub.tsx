@@ -29,7 +29,7 @@ export function TemposGithub({ runs, id }: { runs: GithubRunLinha[] | undefined;
 
   return (
     <Secao
-      titulo="Onde o tempo se perde (GitHub)"
+      titulo="Onde o tempo se perde — do PR ao ar"
       info="Separa a entrega em quatro esperas. Assim fica claro o que depende do GitHub, do repositório ou de uma decisão humana."
       escopo={{ tipo: 'fixo', rotulo: 'semanal' }}
       id={id}

@@ -7,6 +7,7 @@ import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
 import { NavPainel } from '@/app/harness/_components/NavPainel';
 import { PlacarValor } from '@/app/harness/_components/PlacarValor';
+import { TemposDespacho } from '@/app/harness/_components/TemposDespacho';
 import { TemposGithub } from '@/app/harness/_components/TemposGithub';
 import { Terrenos } from '@/app/harness/_components/Terrenos';
 import { Tiles } from '@/app/harness/_components/Tiles';
@@ -156,10 +157,13 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 4 — semanal fixo, independente do filtro */}
-          <TemposGithub id="tempo-perdido" runs={githubRuns} />
+          {/* Bloco 4 — segue o filtro */}
+          <TemposDespacho id="tempo-despacho" linhas={atual} janelaDias={janelaDias} />
 
-          {/* Bloco 5 — semanal fixo, não segue o filtro */}
+          {/* Bloco 5 — semanal fixo, independente do filtro */}
+          <TemposGithub id="tempo-entrega" runs={githubRuns} />
+
+          {/* Bloco 6 — semanal fixo, não segue o filtro */}
           <Secao
             id="fluxo"
             titulo="Fluxo de entrega (GitHub)"
@@ -168,7 +172,7 @@ export default function HarnessPage() {
             <FluxoGithub prs={snap.dados.prs} gerais={gAtual} />
           </Secao>
 
-          {/* Bloco 6 — segue o filtro */}
+          {/* Bloco 7 — segue o filtro */}
           <Secao
             id="assinaturas"
             titulo={`Assinaturas — $${totalMes}/mês`}
@@ -187,7 +191,7 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 7 — segue o filtro */}
+          {/* Bloco 8 — segue o filtro */}
           <Secao
             id="modelos"
             titulo="Chamadas por modelo"
@@ -197,7 +201,7 @@ export default function HarnessPage() {
             <Modelos linhas={atual} />
           </Secao>
 
-          {/* Bloco 8 — fixo */}
+          {/* Bloco 9 — fixo */}
           <Secao
             id="volume"
             titulo="Volume de código — linhas alteradas por semana"
@@ -207,7 +211,7 @@ export default function HarnessPage() {
             <VolumeCodigo volume={snap.dados.volume_codigo} />
           </Secao>
 
-          {/* Bloco 9 — fixo */}
+          {/* Bloco 10 — fixo */}
           <Secao
             id="historico-kpis"
             titulo="Histórico dos KPIs"
