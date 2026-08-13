@@ -1,10 +1,17 @@
-import type { Assinatura, CadeiaTerreno, LedgerLinha } from '@/types/harness';
+import type {
+  Assinatura,
+  AutonomiaBlob,
+  AutonomiaDia,
+  CadeiaTerreno,
+  LedgerLinha,
+} from '@/types/harness';
 import { describe, expect, it } from 'vitest';
 import {
   contarPendentes,
   custoAssinaturas,
   custoMedioTarefa,
   diasComDados,
+  kpisAutonomia,
   kpisGerais,
   kpisTerreno,
   normModelo,
@@ -344,5 +351,118 @@ describe('placar de valor', () => {
 
   it('retorna null no placar geral sem julgáveis', () => {
     expect(valorGeral([], ASSINATURAS_VALOR, 7)).toBeNull();
+  });
+});
+
+// ── Autonomia ────────────────────────────────────────────────────────────────
+const diaAtras = (dias: number) => new Date(AGORA - dias * 864e5).toISOString().slice(0, 10);
+
+function autoDia(parcial: Partial<AutonomiaDia> & Pick<AutonomiaDia, 'data'>): AutonomiaDia {
+  return {
+    perguntas: 0,
+    aceitou: 0,
+    outra: 0,
+    corrigiu: 0,
+    ignorou: 0,
+    esperas_longas: 0,
+    espera_mediana_min: null,
+    espera_p90_min: null,
+    ...parcial,
+  };
+}
+
+function blob(dias: AutonomiaDia[], n2: AutonomiaBlob['n2'] = null): AutonomiaBlob {
+  return { dias: 90, gerado_em: new Date(AGORA).toISOString(), perguntas_por_dia: dias, n2 };
+}
+
+describe('autonomia', () => {
+  it('sem coletor devolve o agregado vazio, sem NaN', () => {
+    const k = kpisAutonomia(null, 7, AGORA);
+    expect(k.perguntas).toBe(0);
+    expect(k.perguntasPorDia).toBeNull();
+    expect(k.aceitePct).toBeNull();
+    expect(k.n2DesfeitasPct).toBeNull();
+    expect(k.veredito.tipo).toBe('ok');
+  });
+
+  it('janela sem dia dentro do período não conta nada', () => {
+    const k = kpisAutonomia(
+      blob([autoDia({ data: diaAtras(30), perguntas: 40, aceitou: 40 })]),
+      7,
+      AGORA,
+    );
+    expect(k.perguntas).toBe(0);
+    expect(k.aceitePct).toBeNull();
+  });
+
+  it('um dia só: soma, média por dia e percentuais', () => {
+    const k = kpisAutonomia(
+      blob([
+        autoDia({
+          data: diaAtras(1),
+          perguntas: 10,
+          aceitou: 5,
+          outra: 2,
+          corrigiu: 2,
+          ignorou: 1,
+          esperas_longas: 3,
+          espera_mediana_min: 8,
+        }),
+      ]),
+      7,
+      AGORA,
+    );
+    expect(k.perguntas).toBe(10);
+    expect(k.perguntasPorDia).toBe(10);
+    expect(k.aceitePct).toBe(0.5);
+    expect(k.correcoesPct).toBeCloseTo(0.2, 10);
+    expect(k.ignorouPct).toBeCloseTo(0.1, 10);
+    expect(k.esperasLongas).toBe(3);
+    expect(k.esperaMedianaMin).toBe(8);
+    expect(k.veredito.tipo).toBe('ok');
+  });
+
+  it('aceite de 80% ou mais acusa pergunta demais', () => {
+    const k = kpisAutonomia(
+      blob([autoDia({ data: diaAtras(1), perguntas: 10, aceitou: 8, corrigiu: 2 })]),
+      7,
+      AGORA,
+    );
+    expect(k.aceitePct).toBeCloseTo(0.8, 10);
+    expect(k.veredito.tipo).toBe('perguntando-demais');
+  });
+
+  it('n2: recorta por janela, calcula o % desfeito e o veredito vence o aceite', () => {
+    const k = kpisAutonomia(
+      blob([autoDia({ data: diaAtras(1), perguntas: 10, aceitou: 9, corrigiu: 1 })], {
+        carimbadas: 14,
+        desfeitas: 4,
+        por_dia: {
+          [diaAtras(1)]: { carimbadas: 10, desfeitas: 2 },
+          [diaAtras(40)]: { carimbadas: 4, desfeitas: 2 }, // fora da janela
+        },
+      }),
+      7,
+      AGORA,
+    );
+    expect(k.n2Carimbadas).toBe(10);
+    expect(k.n2Desfeitas).toBe(2);
+    expect(k.n2DesfeitasPct).toBeCloseTo(0.2, 10);
+    expect(k.veredito.tipo).toBe('decidindo-demais');
+  });
+
+  it('n2 zerado não vira divisão por zero', () => {
+    const k = kpisAutonomia(
+      blob([autoDia({ data: diaAtras(1), perguntas: 4, aceitou: 1, corrigiu: 3 })], {
+        carimbadas: 0,
+        desfeitas: 0,
+        por_dia: {},
+      }),
+      7,
+      AGORA,
+    );
+    expect(k.n2Carimbadas).toBe(0);
+    expect(k.n2DesfeitasPct).toBeNull();
+    expect(k.veredito.tipo).toBe('ok');
   });
 });

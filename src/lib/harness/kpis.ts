@@ -3,7 +3,13 @@
 // (kpisGerais / kpisTerreno / porModelo / assinaturas). Qualquer mudança na
 // governança (limiares do CLAUDE.md global) precisa ser espelhada aqui.
 
-import type { Assinatura, CadeiaTerreno, LedgerLinha } from '@/types/harness';
+import type {
+  Assinatura,
+  AutonomiaBlob,
+  AutonomiaDia,
+  CadeiaTerreno,
+  LedgerLinha,
+} from '@/types/harness';
 
 const DIA_MS = 864e5;
 
@@ -364,6 +370,128 @@ export function placarPorFrente(
       if (b.valor == null) return -1;
       return b.valor - a.valor;
     });
+}
+
+// ── Autonomia ────────────────────────────────────────────────────────────────
+// Espelha o §AUTONOMIA — 3 NÍVEIS do CLAUDE.md do SeuCamarão. Mede quanto o
+// dono foi interrompido e o quanto a interrupção valeu. Coletor:
+// ~/.claude/orquestracao/autonomia.mjs.
+
+/** Aceite acima disso = o assistente pergunta o óbvio; pode decidir mais. */
+const ACEITE_TETO = 0.8;
+/** Decisões carimbadas desfeitas acima disso = está decidindo demais. */
+const DESFEITAS_TETO = 0.15;
+
+export interface AutonomiaKpi {
+  perguntas: number;
+  /** Média de perguntas por dia COM pergunta (dia mudo não dilui a conta). */
+  perguntasPorDia: number | null;
+  aceitouN: number;
+  corrigiuN: number;
+  ignorouN: number;
+  aceitePct: number | null;
+  correcoesPct: number | null;
+  ignorouPct: number | null;
+  esperasLongas: number;
+  /** Mediana das medianas diárias de espera, em minutos. */
+  esperaMedianaMin: number | null;
+  n2Carimbadas: number;
+  n2Desfeitas: number;
+  n2DesfeitasPct: number | null;
+  veredito: { tipo: 'perguntando-demais' | 'decidindo-demais' | 'ok'; texto: string };
+}
+
+const AUTONOMIA_VAZIA: AutonomiaKpi = {
+  perguntas: 0,
+  perguntasPorDia: null,
+  aceitouN: 0,
+  corrigiuN: 0,
+  ignorouN: 0,
+  aceitePct: null,
+  correcoesPct: null,
+  ignorouPct: null,
+  esperasLongas: 0,
+  esperaMedianaMin: null,
+  n2Carimbadas: 0,
+  n2Desfeitas: 0,
+  n2DesfeitasPct: null,
+  veredito: { tipo: 'ok', texto: 'coletando dados' },
+};
+
+const mediana = (xs: number[]): number | null =>
+  xs.length === 0 ? null : ([...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] ?? null);
+
+/**
+ * Agregado da janela. Mesma convenção de `recorte`: os últimos `janelaDias`
+ * contados de `agora` para trás — só que a série de autonomia é diária
+ * (`data` = 'YYYY-MM-DD'), então o corte é por data, não por timestamp.
+ */
+export function kpisAutonomia(
+  autonomia: AutonomiaBlob | null | undefined,
+  janelaDias: number,
+  agora: number = Date.now(),
+): AutonomiaKpi {
+  if (!autonomia) return AUTONOMIA_VAZIA;
+
+  const ini = agora - janelaDias * DIA_MS;
+  const dentro = (d: AutonomiaDia): boolean => {
+    const t = Date.parse(`${d.data}T12:00:00Z`);
+    return Number.isFinite(t) && t >= ini && t < agora + DIA_MS;
+  };
+  const dias = (autonomia.perguntas_por_dia ?? []).filter(dentro);
+
+  const soma = (campo: keyof AutonomiaDia): number =>
+    dias.reduce((s, d) => s + ((d[campo] as number) ?? 0), 0);
+
+  const perguntas = soma('perguntas');
+  const aceitouN = soma('aceitou');
+  const corrigiuN = soma('corrigiu');
+  const ignorouN = soma('ignorou');
+  const pct = (n: number): number | null => (perguntas ? n / perguntas : null);
+
+  // N2 vem indexado por data; recorta pela mesma janela.
+  let n2Carimbadas = 0;
+  let n2Desfeitas = 0;
+  for (const [data, v] of Object.entries(autonomia.n2?.por_dia ?? {})) {
+    const t = Date.parse(`${data}T12:00:00Z`);
+    if (!Number.isFinite(t) || t < ini || t >= agora + DIA_MS) continue;
+    n2Carimbadas += v.carimbadas ?? 0;
+    n2Desfeitas += v.desfeitas ?? 0;
+  }
+  const n2DesfeitasPct = n2Carimbadas ? n2Desfeitas / n2Carimbadas : null;
+
+  const aceitePct = pct(aceitouN);
+  let veredito = AUTONOMIA_VAZIA.veredito;
+  if (n2DesfeitasPct != null && n2DesfeitasPct > DESFEITAS_TETO)
+    veredito = {
+      tipo: 'decidindo-demais',
+      texto: 'Estou decidindo demais — vou voltar a perguntar mais',
+    };
+  else if (aceitePct != null && aceitePct >= ACEITE_TETO)
+    veredito = {
+      tipo: 'perguntando-demais',
+      texto: 'Estou perguntando demais — posso decidir mais sozinho',
+    };
+  else if (perguntas > 0) veredito = { tipo: 'ok', texto: 'Calibragem está boa' };
+
+  return {
+    perguntas,
+    perguntasPorDia: dias.length ? Math.round((perguntas / dias.length) * 10) / 10 : null,
+    aceitouN,
+    corrigiuN,
+    ignorouN,
+    aceitePct,
+    correcoesPct: pct(corrigiuN),
+    ignorouPct: pct(ignorouN),
+    esperasLongas: soma('esperas_longas'),
+    esperaMedianaMin: mediana(
+      dias.map((d) => d.espera_mediana_min).filter((x): x is number => x != null),
+    ),
+    n2Carimbadas,
+    n2Desfeitas,
+    n2DesfeitasPct,
+    veredito,
+  };
 }
 
 /** Placar de valor geral do harness. */
