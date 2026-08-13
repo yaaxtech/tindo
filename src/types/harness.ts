@@ -75,3 +75,43 @@ export interface HarnessSnapshot {
   dados: HarnessBlob;
   geradoEm: string;
 }
+
+// ── Tempos crus do GitHub Actions (tabela harness_github_runs) ──────────────
+// Coletados 1×/dia pelo passo do /api/cron/diario. Timestamps CRUS: os
+// segmentos são derivados em src/lib/harness/github-timings.ts, para a análise
+// poder mudar sem recoletar. Nunca guarda texto livre (título de PR, mensagem
+// de commit) — /harness é pública.
+
+/** Uma linha da tabela harness_github_runs (colunas em snake_case). */
+export interface GithubRunLinha {
+  run_id: number;
+  repo: string;
+  evento: 'pull_request' | 'push';
+  branch: string | null;
+  head_sha: string | null;
+  /** success | failure | cancelled | … — null enquanto o run não terminou. */
+  conclusao: string | null;
+  criado_em: string;
+  iniciado_em: string | null;
+  atualizado_em: string | null;
+  pr_numero: number | null;
+  pr_criado_em: string | null;
+  pr_merged_em: string | null;
+}
+
+export type SegmentoGithub = 'fila_ci' | 'exec_ci' | 'espera_merge' | 'deploy';
+
+/** p50/p90 em segundos + tamanho da amostra. Nunca média, nunca `n` escondido. */
+export interface ResumoSegmento {
+  p50: number | null;
+  p90: number | null;
+  n: number;
+}
+
+export type ResumoGithub = Record<SegmentoGithub, ResumoSegmento>;
+
+export interface SemanaGithub {
+  /** 0 = semana corrente, 1 = anterior, … (mesma convenção de PrSemana). */
+  s: number;
+  segmentos: ResumoGithub;
+}
