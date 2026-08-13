@@ -8,6 +8,7 @@ import type { KpiDiario, KpisAgregados, Limiares } from '@/lib/recalibracao/kpis
 import { agregarKpis, detectarGatilhos } from '@/lib/recalibracao/kpis';
 import type { GatilhoDetectado } from '@/lib/recalibracao/kpis';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
 
 interface ConfigRow {
   peso_urgencia: number;
@@ -218,7 +219,7 @@ export async function registrarCalibracao(resultado: ResultadoRecalibracao): Pro
   const { error } = await admin.from('calibracoes').insert({
     usuario_id: usuarioId,
     tipo: 'pesos',
-    dados: resultado as unknown as Record<string, unknown>,
+    dados: paraJson(resultado),
     aplicada: true,
     aplicada_em: new Date().toISOString(),
   });

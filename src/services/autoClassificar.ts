@@ -5,6 +5,7 @@
 
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
 import type { Configuracoes, Projeto, Tag } from '@/types/domain';
 import type { ClassificacaoMeta } from './ai';
 import { classificarTarefa } from './ai';
@@ -207,18 +208,18 @@ export async function autoClassificarSeHabilitado(params: {
       tarefa_id: tarefaId,
       tipo: 'classificar',
       status: 'aceita',
-      payload: classificacao,
+      payload: paraJson(classificacao),
       resposta_usuario: { auto_aceita: true },
     });
 
-    // 11. INSERT em historico_acoes
-    await admin.from('historico_acoes').insert({
-      usuario_id: usuarioId,
-      tarefa_id: tarefaId,
-      tipo: 'editada',
-      dados: { origem: 'ai_auto_classificacao' },
-    });
-
+    // 11. Log em historico_acoes: PENDENTE DE MIGRATION.
+    // O insert que existia aqui mandava a coluna `tipo`, que não existe na tabela
+    // (a coluna é `acao`) — ou seja, sempre falhou e o erro nunca foi conferido.
+    // Não dá pra só renomear: `acao` tem CHECK fechado e o único valor plausível
+    // ('editada') alimenta `n_editadas`, que é a base da taxaReavaliacao — uma
+    // classificação automática da IA passaria a contar como reavaliação humana e
+    // dispararia recalibração à toa (RN-07). Registrar isso exige um valor novo de
+    // `acao` (migration), fora do escopo deste PR.
     return { pulada: false, classificacao };
   } catch (err) {
     console.error('[autoClassificar] erro ao classificar tarefa', tarefaId, err);

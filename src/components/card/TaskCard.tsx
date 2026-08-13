@@ -106,7 +106,10 @@ export function TaskCard({
             <span
               key={tag.id}
               className="rounded-full border px-2 py-0.5 text-[11px] font-medium"
-              style={{ borderColor: `${tag.cor}55`, color: tag.cor }}
+              style={{
+                borderColor: tag.cor ? `${tag.cor}55` : undefined,
+                color: tag.cor ?? undefined,
+              }}
             >
               {tag.nome}
             </span>

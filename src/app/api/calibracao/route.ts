@@ -1,4 +1,6 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
+import type { TablesUpdate } from '@/types/database';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +20,7 @@ export async function GET() {
 
     return NextResponse.json({
       criteriosSucesso: (data?.criterios_sucesso as Record<string, unknown>) ?? {},
-      concluidaEm:
-        (data as Record<string, unknown> | null)?.calibracao_inicial_concluida_em ?? null,
+      concluidaEm: data?.calibracao_inicial_concluida_em ?? null,
     });
   } catch (err) {
     console.error('/api/calibracao GET error:', err);
@@ -55,11 +56,10 @@ export async function POST(request: Request) {
       .eq('usuario_id', usuarioId)
       .maybeSingle();
 
-    const jaConcluidaEm = (atual as Record<string, unknown> | null)
-      ?.calibracao_inicial_concluida_em;
+    const jaConcluidaEm = atual?.calibracao_inicial_concluida_em;
 
-    const patch: Record<string, unknown> = {
-      criterios_sucesso: body.criteriosSucesso,
+    const patch: TablesUpdate<'configuracoes'> = {
+      criterios_sucesso: paraJson(body.criteriosSucesso),
     };
 
     // Carimba a data apenas se ainda não foi preenchida

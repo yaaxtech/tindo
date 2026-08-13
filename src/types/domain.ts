@@ -6,7 +6,8 @@ export interface Projeto {
   id: string;
   todoistId?: string | null;
   nome: string;
-  cor: string;
+  /** `projetos.cor` é NULL-able no banco. */
+  cor: string | null;
   ordemPrioridade: number;
   multiplicador: number;
   ativo: boolean;
@@ -16,7 +17,8 @@ export interface Tag {
   id: string;
   todoistId?: string | null;
   nome: string;
-  cor: string;
+  /** `tags.cor` é NULL-able no banco. */
+  cor: string | null;
   tipoPeso: TipoPesoTag;
   valorPeso: number;
   ativo: boolean;

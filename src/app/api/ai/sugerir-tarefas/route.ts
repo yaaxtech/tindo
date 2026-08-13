@@ -1,4 +1,5 @@
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
+import { paraJson } from '@/lib/supabase/json';
 import { sugerirTarefas } from '@/services/ai';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -149,7 +150,7 @@ export async function POST(_request: NextRequest) {
       tarefa_id: null,
       tipo: 'sugerir_nova',
       status: 'pendente',
-      payload: s,
+      payload: paraJson(s),
     }));
 
     const { data: gravadas, error: insertErr } = await admin
