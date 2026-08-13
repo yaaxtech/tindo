@@ -134,6 +134,21 @@ describe('calcularActionsKpis', () => {
     expect(kpis.veredito).toContain('cada hora de fila eliminada custaria');
   });
 
+  it('não acusa a main de trabalho abandonado', () => {
+    // A main roda por push depois do merge e nunca tem PR próprio. Medida em
+    // 13/08 ela sozinha respondia por 26% dos minutos — contá-la como branch
+    // sem PR transformaria o trabalho ENTREGUE no maior desperdício do painel.
+    const comMain = blob({
+      branches: [
+        { branch: 'main', runs: 108, min_total: 600, virou_pr: false, mergeado: false },
+        { branch: 'fix/abandonada', runs: 2, min_total: 400, virou_pr: false, mergeado: false },
+      ],
+    });
+    const kpis = calcularActionsKpis(comMain, AGORA);
+    expect(kpis.minutosBranchSemPr).toBe(400);
+    expect(kpis.branchSemPrPct).toEqual({ valor: 0.4, x: 400, y: 1_000 });
+  });
+
   it('precifica a hora de fila mesmo com o disjuntor armado no Mac', () => {
     // O caso REAL de 13/08: nada roda na nuvem, então o faturado é zero. Se o
     // preço da hora saísse do faturado, o painel diria "US$ 0,00" exatamente

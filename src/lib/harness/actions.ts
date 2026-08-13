@@ -2,6 +2,11 @@ import type { ActionsBlob, ActionsBranch } from '@/types/harness';
 
 const SEGUNDOS_POR_HORA = 3600;
 
+// Branches que rodam por `push` depois do merge e nunca têm PR próprio. Sem
+// esta exceção o KPI de desperdício acusa a `main` — 26% dos minutos na medição
+// de 13/08 — como se fosse trabalho abandonado, que é o oposto do que é.
+const BRANCHES_BASE = new Set(['main', 'master']);
+
 export interface JobActions {
   conclusion: string | null;
   runner_name: string | null;
@@ -141,7 +146,8 @@ export function calcularActionsKpis(blob: ActionsBlob, agora = new Date()): Acti
   const branches = [...blob.branches].sort((a, b) => b.min_total - a.min_total);
   const totalBranches = branches.reduce((soma, branch) => soma + branch.min_total, 0);
   const minutosBranchSemPr = branches.reduce(
-    (soma, branch) => soma + (branch.virou_pr ? 0 : branch.min_total),
+    (soma, branch) =>
+      soma + (branch.virou_pr || BRANCHES_BASE.has(branch.branch) ? 0 : branch.min_total),
     0,
   );
   const steps = [...blob.steps].sort((a, b) => b.seg_total - a.seg_total);
