@@ -115,3 +115,46 @@ export interface SemanaGithub {
   s: number;
   segmentos: ResumoGithub;
 }
+
+// ── Revisor de KPIs (tabelas harness_avaliacoes / harness_alertas) ──────────
+// Avaliação roda no /api/cron/diario e só grava quando o calendário manda
+// (14 em 14 dias, ou 3 dias antes de uma renovação de assinatura).
+// Nunca guarda texto livre: o código é de lista fechada e a frase em
+// português vive na tela — /harness é pública.
+
+/** Cada limiar vigiado. Espelha o CHECK de harness_alertas.codigo. */
+export type CodigoAlerta =
+  | 'qualidade_baixa'
+  | 'retrabalho_alto'
+  | 'custo_alto'
+  | 'quota_alta'
+  | 'quota_zerada'
+  | 'valor_baixo'
+  | 'espera_merge_longa'
+  | `segmento_${SegmentoGithub}`;
+
+export type SeveridadeAlerta = 'alerta' | 'critico';
+
+export type MotivoAvaliacao = 'periodico' | 'pre_renovacao';
+
+/** Uma linha de harness_avaliacoes (colunas em snake_case). */
+export interface AvaliacaoLinha {
+  id: string;
+  avaliado_em: string;
+  motivo: MotivoAvaliacao;
+  janela_dias: number;
+  violacoes_n: number;
+}
+
+/** Uma linha de harness_alertas (colunas em snake_case). */
+export interface AlertaLinha {
+  id: string;
+  avaliacao_id: string;
+  avaliado_em: string;
+  codigo: CodigoAlerta;
+  severidade: SeveridadeAlerta;
+  /** Valor observado. Unidade depende do código — ver src/lib/harness/alertas.ts. */
+  valor: number | null;
+  limiar: number;
+  amostra: number;
+}
