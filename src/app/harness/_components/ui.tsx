@@ -51,16 +51,21 @@ export function Secao({
   info,
   subtitulo,
   escopo,
+  id,
   children,
 }: {
   titulo: string;
   info?: string;
   subtitulo?: string;
   escopo?: { tipo: 'filtro'; dias: number } | { tipo: 'fixo'; rotulo: string };
+  /** Âncora da NavPainel. O scroll-mt vem da CSS var --harness-nav-topo,
+   * medida em runtime pela nav (header + nav + respiro); o fallback 8rem
+   * cobre a 1ª pintura antes da medição. */
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section>
+    <section id={id} className={id ? 'scroll-mt-[var(--harness-nav-topo,8rem)]' : undefined}>
       <h2 className="mb-3 flex items-baseline gap-1 border-b border-border pb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
         {titulo}
         {info && <PopoverInfo texto={info} />}

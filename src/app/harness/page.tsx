@@ -4,11 +4,13 @@ import { Assinaturas } from '@/app/harness/_components/Assinaturas';
 import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
 import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
+import { NavPainel } from '@/app/harness/_components/NavPainel';
 import { PlacarValor } from '@/app/harness/_components/PlacarValor';
 import { TemposGithub } from '@/app/harness/_components/TemposGithub';
 import { Terrenos } from '@/app/harness/_components/Terrenos';
 import { Tiles } from '@/app/harness/_components/Tiles';
 import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistorico';
+import { SECOES_PAINEL } from '@/app/harness/_components/secoes';
 import { Secao } from '@/app/harness/_components/ui';
 import { contarPendentes, diasComDados, kpisGerais, recorte } from '@/lib/harness/kpis';
 import { getGithubRuns, getHarnessSnapshot } from '@/services/harness';
@@ -48,23 +50,39 @@ export default function HarnessPage() {
 
   return (
     <main className="min-h-dvh pb-16 safe-top safe-bottom">
-      <header className="sticky top-0 z-10 border-b border-border bg-bg-deep/80 px-6 py-4 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-4">
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold">Painel do Harness</h1>
-            <p className="text-xs text-text-muted">
-              {snap
-                ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''} · atualizado às ${hora}`
-                : carregando
-                  ? 'Carregando…'
-                  : 'KPIs da orquestração multi-LLM'}
-            </p>
+      {/* Cabeçalho e navegação grudam JUNTOS, num único container sticky. A nav
+          já tentou se posicionar medindo a altura do header por JS e ficava
+          presa no valor da 1ª pintura — se a janela mudasse de tamanho depois,
+          a barra flutuava fora do lugar. Com um container só, quem resolve é o
+          CSS, que nunca fica desatualizado. */}
+      {/* O fundo OPACO fica no container, não nas duas barras. Motivo: no
+          Tailwind 3 o modificador de opacidade não funciona sobre cor vinda de
+          `var()` com hex — `bg-bg-deep/80` resolve para rgba(0,0,0,0), ou seja,
+          fundo TRANSPARENTE, e o conteúdo passa por baixo do cabeçalho ao
+          rolar (dava pra ver no mobile). O bug é do app inteiro (16 usos
+          iguais em outras telas) e o conserto de raiz está estacionado; aqui
+          resolvemos a barra desta tela, que é a que ficou com 2 andares. */}
+      <div className="sticky top-0 z-10 bg-bg-deep">
+        <header className="border-b border-border px-6 py-4">
+          <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-4">
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold">Painel do Harness</h1>
+              <p className="text-xs text-text-muted">
+                {snap
+                  ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''} · atualizado às ${hora}`
+                  : carregando
+                    ? 'Carregando…'
+                    : 'KPIs da orquestração multi-LLM'}
+              </p>
+            </div>
+            {snap && (
+              <FiltroPeriodo janelaDias={janelaDias} diasComDados={dias} onChange={setJanelaDias} />
+            )}
           </div>
-          {snap && (
-            <FiltroPeriodo janelaDias={janelaDias} diasComDados={dias} onChange={setJanelaDias} />
-          )}
-        </div>
-      </header>
+        </header>
+
+        {snap && <NavPainel grupos={SECOES_PAINEL} />}
+      </div>
 
       {!carregando && !snap && (
         <section className="mx-auto mt-16 w-full max-w-3xl px-6">
@@ -82,7 +100,11 @@ export default function HarnessPage() {
       {snap && (
         <div className="mx-auto mt-6 flex w-full max-w-3xl flex-col gap-9 px-6">
           {/* Bloco 1 — segue o filtro */}
-          <Secao titulo="Como estamos" escopo={{ tipo: 'filtro', dias: janelaDias }}>
+          <Secao
+            id="visao-geral"
+            titulo="Como estamos"
+            escopo={{ tipo: 'filtro', dias: janelaDias }}
+          >
             <Tiles
               atual={gAtual}
               anterior={gAnterior}
@@ -94,6 +116,7 @@ export default function HarnessPage() {
 
           {/* Bloco 2 — segue o filtro */}
           <Secao
+            id="placar"
             titulo="Placar de Valor"
             info="Um número de 0 a 100 que junta qualidade, economia e disponibilidade das tarefas reais do harness."
             escopo={{ tipo: 'filtro', dias: janelaDias }}
@@ -105,16 +128,9 @@ export default function HarnessPage() {
             />
           </Secao>
 
-          {/* Bloco 3 — semanal fixo, não segue o filtro */}
-          <Secao titulo="Fluxo de entrega (GitHub)" escopo={{ tipo: 'fixo', rotulo: 'semanal' }}>
-            <FluxoGithub prs={snap.dados.prs} gerais={gAtual} />
-          </Secao>
-
-          {/* Bloco 4 — semanal fixo, independente do filtro */}
-          <TemposGithub runs={githubRuns} />
-
-          {/* Bloco 5 — segue o filtro */}
+          {/* Bloco 3 — segue o filtro */}
           <Secao
+            id="terrenos"
             titulo="Por terreno — modelo titular, fallback e sinal"
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
@@ -126,17 +142,21 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 6 — segue o filtro */}
+          {/* Bloco 4 — semanal fixo, independente do filtro */}
+          <TemposGithub id="tempo-perdido" runs={githubRuns} />
+
+          {/* Bloco 5 — semanal fixo, não segue o filtro */}
           <Secao
-            titulo="Chamadas por modelo"
-            info='Quantas vezes cada modelo foi acionado, separado por nível de esforço (ex.: Luna no max, Luna no low, Sonnet no medium). "ok" = quanto ele acertou de primeira. Mostra onde o trabalho está de fato caindo e se o modelo certo está sendo usado para cada peso.'
-            escopo={{ tipo: 'filtro', dias: janelaDias }}
+            id="fluxo"
+            titulo="Fluxo de entrega (GitHub)"
+            escopo={{ tipo: 'fixo', rotulo: 'semanal' }}
           >
-            <Modelos linhas={atual} />
+            <FluxoGithub prs={snap.dados.prs} gerais={gAtual} />
           </Secao>
 
-          {/* Bloco 7 — segue o filtro */}
+          {/* Bloco 6 — segue o filtro */}
           <Secao
+            id="assinaturas"
             titulo={`Assinaturas — $${totalMes}/mês`}
             info="Cada card mostra o custo por tarefa daquela assinatura no período (valor mensal proporcional aos dias, dividido pelas tarefas que ela executou). O veredito traduz isso em decisão: rende bem = manter; sem uso = candidata a cancelar; custo alto = observar; saturada = está batendo no limite, candidata a aumentar. A decisão real sai do histórico na data de renovação, nunca de um dia só."
             escopo={{ tipo: 'filtro', dias: janelaDias }}
@@ -153,8 +173,19 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 8 — fixos */}
+          {/* Bloco 7 — segue o filtro */}
           <Secao
+            id="modelos"
+            titulo="Chamadas por modelo"
+            info='Quantas vezes cada modelo foi acionado, separado por nível de esforço (ex.: Luna no max, Luna no low, Sonnet no medium). "ok" = quanto ele acertou de primeira. Mostra onde o trabalho está de fato caindo e se o modelo certo está sendo usado para cada peso.'
+            escopo={{ tipo: 'filtro', dias: janelaDias }}
+          >
+            <Modelos linhas={atual} />
+          </Secao>
+
+          {/* Bloco 8 — fixo */}
+          <Secao
+            id="volume"
             titulo="Volume de código — linhas alteradas por semana"
             info="Soma das linhas adicionadas e removidas nos commits de cada semana, direto do git (lockfiles e arquivos gerados ficam de fora). Mede o VOLUME de desenvolvimento — lido junto com a Qualidade: volume alto com qualidade alta = harness rendendo."
             escopo={{ tipo: 'fixo', rotulo: '4 semanas' }}
@@ -162,7 +193,9 @@ export default function HarnessPage() {
             <VolumeCodigo volume={snap.dados.volume_codigo} />
           </Secao>
 
+          {/* Bloco 9 — fixo */}
           <Secao
+            id="historico-kpis"
             titulo="Histórico dos KPIs"
             info="Foto semanal dos 5 números de cima. É esta tabela que mostra se o harness está melhorando no tempo — e é dela que saem as decisões de assinatura nas datas de renovação."
             escopo={{ tipo: 'fixo', rotulo: 'snapshots' }}
