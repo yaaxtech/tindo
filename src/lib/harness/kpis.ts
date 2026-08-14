@@ -48,25 +48,18 @@ const OK1_TETO = 0.9; // acima (n>=8, degrau não-mínimo) → candidato a desce
 const QUOTA_ALERTA = 3; // eventos de quota na janela → frente saturada
 const AMBIGUO_MAX = 0.3; // acima disso o balde não mede terreno — sem sinal
 
-// Os run.sh dos workers gravam um terreno DEFAULT quando o despacho não passa
-// LEDGER_TERRENO (`rotina` no codex, `ui` no kimi). Um balde assim mistura o
-// terreno real com tudo que o cérebro esqueceu de classificar, e o ok1 dele
-// deixa de medir o degrau — trocar o default por causa dele é decidir no ruído.
-// Desde 13/08/2026 essas linhas chegam marcadas (`terreno_inferido`); antes
-// disso, despacho automático parado no default é indistinguível de declarado,
-// então também conta como ambíguo.
+// Só conta como CLASSIFICADO o registro que teve o terreno carimbado no
+// despacho (`LEDGER_TERRENO`): automático, com ts depois do corte, e sem a
+// marca `terreno_inferido`. Rótulo digitado à mão depois NÃO vale como
+// classificado — em balde nenhum, default ou não.
 // Espelho de `terrenoAmbiguo` em ~/.claude/orquestracao/ledger.mjs (fonte de
 // verdade) — mudar lá = mudar aqui.
-const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T17:00:00Z');
-const DEFAULT_DO_RUNSH: Record<string, string> = { codex: 'rotina', kimi: 'ui' };
+const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T21:42:23Z');
 
 export function terrenoAmbiguo(r: LedgerLinha): boolean {
-  if (r.terreno_inferido) return true;
-  return (
-    !!r.auto &&
-    DEFAULT_DO_RUNSH[r.frente] === r.terreno &&
-    Date.parse(r.ts) < INSTRUMENTACAO_TERRENO
-  );
+  if (r.terreno_inferido) return true; // o próprio run.sh admitiu o default
+  if (!r.auto) return true; // rótulo digitado à mão ≠ classificação
+  return Date.parse(r.ts) < INSTRUMENTACAO_TERRENO; // antes do carimbo: indistinguível
 }
 
 export interface KpisGerais {

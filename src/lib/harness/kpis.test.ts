@@ -29,6 +29,10 @@ import {
 const AGORA = Date.parse('2026-08-04T12:00:00Z');
 const tsDiasAtras = (dias: number) => new Date(AGORA - dias * 864e5).toISOString();
 
+// Depois do corte de instrumentação (2026-08-13T21:42:23Z) — usado nos testes
+// de balde ambíguo para fabricar um registro CLASSIFICADO (auto + carimbado).
+const TS_CLASSIFICADO = '2026-08-20T10:00:00Z';
+
 function linha(parcial: Partial<LedgerLinha> & Pick<LedgerLinha, 'ts'>): LedgerLinha {
   return {
     frente: 'codex',
@@ -254,7 +258,12 @@ describe('kpisTerreno', () => {
 
   it('sinal subir: ok1 < 70% com 5+ julgáveis', () => {
     const linhas = Array.from({ length: 5 }, (_, i) =>
-      linha({ ts: tsDiasAtras(1), terreno: 'dificil', resultado: i < 3 ? 'ok1' : 'retrabalho' }),
+      linha({
+        ts: TS_CLASSIFICADO,
+        auto: true,
+        terreno: 'dificil',
+        resultado: i < 3 ? 'ok1' : 'retrabalho',
+      }),
     );
     const t = kpisTerreno(linhas, CADEIAS);
     expect(t.dificil?.sinal.tipo).toBe('subir');
@@ -262,7 +271,7 @@ describe('kpisTerreno', () => {
 
   it('sinal baratear: ok1 ≥ 90% com 8+ julgáveis e degrau não-piso', () => {
     const linhas = Array.from({ length: 8 }, () =>
-      linha({ ts: tsDiasAtras(1), terreno: 'dificil', resultado: 'ok1' }),
+      linha({ ts: TS_CLASSIFICADO, auto: true, terreno: 'dificil', resultado: 'ok1' }),
     );
     const t = kpisTerreno(linhas, CADEIAS);
     expect(t.dificil?.sinal.tipo).toBe('baratear');
@@ -299,43 +308,44 @@ describe('kpisTerreno', () => {
   });
 });
 
-// Balde ambíguo: o terreno DEFAULT dos run.sh (`rotina` no codex, `ui` no
-// kimi) vira lixeira do que o cérebro não classificou. Espelha a regra de
-// ~/.claude/orquestracao/ledger.mjs — os dois têm de dar o mesmo veredito.
+// Balde ambíguo: só conta como CLASSIFICADO o registro carimbado no despacho
+// (`LEDGER_TERRENO`) — automático, sem `terreno_inferido`, com ts depois do
+// corte. Rótulo digitado à mão NÃO vale como classificação em balde nenhum,
+// default ou não. Espelha `terrenoAmbiguo` de ~/.claude/orquestracao/
+// ledger.mjs — os dois têm de dar o mesmo veredito.
 describe('terrenoAmbiguo', () => {
   const auto = (parcial: Partial<LedgerLinha> = {}) =>
-    linha({ ts: tsDiasAtras(1), auto: true, ...parcial });
+    linha({ ts: '2026-08-20T10:00:00Z', auto: true, ...parcial });
 
   it('marca linha carimbada com terreno_inferido', () => {
     expect(terrenoAmbiguo(auto({ terreno_inferido: true, terreno: 'sql' }))).toBe(true);
   });
 
-  it('marca despacho automático parado no default do run.sh antes da instrumentação', () => {
-    expect(terrenoAmbiguo(auto({ frente: 'codex', terreno: 'rotina' }))).toBe(true);
-    expect(terrenoAmbiguo(auto({ frente: 'kimi', terreno: 'ui' }))).toBe(true);
+  it('marca qualquer despacho automático anterior ao carimbo, independente do terreno', () => {
+    expect(terrenoAmbiguo(linha({ ts: tsDiasAtras(1), auto: true, terreno: 'rotina' }))).toBe(true);
+    expect(terrenoAmbiguo(linha({ ts: tsDiasAtras(1), auto: true, terreno: 'sql' }))).toBe(true);
   });
 
-  it('não marca terreno declarado nem despacho do cérebro', () => {
+  it('marca rótulo manual (sem `auto`) mesmo com terreno declarado e ts recente — em balde nenhum', () => {
+    expect(terrenoAmbiguo(linha({ ts: tsDiasAtras(1), terreno: 'sql' }))).toBe(true);
+    expect(
+      terrenoAmbiguo(linha({ ts: '2026-08-20T10:00:00Z', terreno: 'dificil', auto: false })),
+    ).toBe(true);
+  });
+
+  it('não marca automático carimbado depois do corte, sem terreno_inferido', () => {
     expect(terrenoAmbiguo(auto({ frente: 'codex', terreno: 'sql' }))).toBe(false);
-    expect(terrenoAmbiguo(auto({ frente: 'kimi', terreno: 'rotina' }))).toBe(false);
-    expect(terrenoAmbiguo(linha({ ts: tsDiasAtras(1), terreno: 'rotina' }))).toBe(false);
-  });
-
-  it('depois da instrumentação, automático sem a marca conta como declarado', () => {
-    const depois = linha({
-      ts: '2026-08-20T10:00:00Z',
-      auto: true,
-      frente: 'codex',
-      terreno: 'rotina',
-    });
-    expect(terrenoAmbiguo(depois)).toBe(false);
+    expect(terrenoAmbiguo(auto({ frente: 'kimi', terreno: 'ui' }))).toBe(false);
+    expect(terrenoAmbiguo(auto({ frente: 'codex', terreno: 'rotina' }))).toBe(false);
   });
 });
 
 describe('baldesPorDegrau', () => {
   it('agrega por degrau × terreno e só marca ambíguo com amostra e >30%', () => {
     const linhas = [
-      // 6 julgáveis no degrau contaminado, 4 delas sem terreno declarado (67%)
+      // 6 julgáveis no degrau contaminado, 4 delas automáticas mas ANTES do
+      // corte (indistinguíveis de default) e 2 com rótulo manual — nenhuma
+      // das 6 tem carimbo válido, então todas contam como não-classificadas.
       ...Array.from({ length: 4 }, () =>
         linha({
           ts: tsDiasAtras(1),
@@ -348,16 +358,22 @@ describe('baldesPorDegrau', () => {
       ...Array.from({ length: 2 }, () =>
         linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', resultado: 'ok1' }),
       ),
-      // degrau limpo, mesmo terreno
+      // degrau limpo, mesmo terreno — mas CARIMBADO (auto + depois do corte)
       ...Array.from({ length: 5 }, () =>
-        linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-luna', effort: 'max', resultado: 'ok1' }),
+        linha({
+          ts: TS_CLASSIFICADO,
+          modelo: 'gpt-5.6-luna',
+          effort: 'max',
+          resultado: 'ok1',
+          auto: true,
+        }),
       ),
     ];
     const por = Object.fromEntries(baldesPorDegrau(linhas).map((b) => [b.degrau, b]));
     expect(por['codex/gpt-5.6-sol/high']).toMatchObject({
       terreno: 'rotina',
       julgaveis: 6,
-      ambiguos: 4,
+      ambiguos: 6,
       ambiguo: true,
     });
     expect(por['codex/gpt-5.6-luna/max']).toMatchObject({ ambiguos: 0, ambiguo: false });
@@ -370,13 +386,36 @@ describe('baldesPorDegrau', () => {
     expect(baldesPorDegrau(linhas)[0]).toMatchObject({ ambiguos: 4, ambiguo: false });
   });
 
+  it('balde NÃO-default com rótulo só manual é suprimido igual ao balde default', () => {
+    // terreno 'dificil' não é default de nenhum run.sh — antes do conserto o
+    // guard só olhava o balde default e deixava este passar sem prova.
+    const linhas = Array.from({ length: 6 }, (_, i) =>
+      linha({
+        ts: tsDiasAtras(1),
+        modelo: 'gpt-5.6-sol',
+        effort: 'xhigh',
+        terreno: 'dificil',
+        resultado: i < 4 ? 'ok1' : 'retrabalho',
+        // sem `auto`: rótulo digitado à mão, nunca classificado
+      }),
+    );
+    const b = baldesPorDegrau(linhas)[0];
+    expect(b).toMatchObject({ terreno: 'dificil', julgaveis: 6, ambiguos: 6, ambiguo: true });
+  });
+
   // Paridade com ledger.mjs (cmdReport): quota e infra saem do julgável E do
   // numerador de ambíguos. Contá-los só no numerador faria a razão passar de 1
   // — o ledger já viu isso (kimi × ui, 14d: 9 ambíguos sobre 7 julgáveis).
   it('deixa infra fora do julgável e do numerador de ambíguos', () => {
     const linhas = [
       ...Array.from({ length: 5 }, () =>
-        linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', resultado: 'ok1' }),
+        linha({
+          ts: TS_CLASSIFICADO,
+          auto: true,
+          modelo: 'gpt-5.6-sol',
+          effort: 'high',
+          resultado: 'ok1',
+        }),
       ),
       ...Array.from({ length: 6 }, () =>
         linha({
@@ -389,15 +428,17 @@ describe('baldesPorDegrau', () => {
       ),
     ];
     const b = baldesPorDegrau(linhas)[0];
-    // as 6 infra são `auto` (viriam do default do run.sh), mas não contaminam:
-    // sem elas o balde é 5 julgáveis, 0 ambíguos → nenhum sinal suspenso.
+    // as 6 infra são `auto` mas ANTES do corte (viriam do default do run.sh);
+    // não contaminam mesmo assim: sem elas o balde é 5 julgáveis, todos
+    // carimbados (auto + depois do corte) → 0 ambíguos, nenhum sinal suspenso.
     expect(b).toMatchObject({ n: 11, julgaveis: 5, infra: 6, ambiguos: 0, ambiguo: false });
   });
 });
 
 describe('kpisTerreno com balde ambíguo', () => {
   // 8 julgáveis: 3 ok1 → 38% de ok de 1ª, o que hoje dispara "subir modelo".
-  // 5 delas entraram sem terreno declarado (62% > 30%) → sinal suspenso.
+  // Nenhuma das 8 tem carimbo válido (5 automáticas mas ANTES do corte, 3 com
+  // rótulo manual) → 100% > 30% → sinal suspenso.
   const contaminadas: LedgerLinha[] = [
     ...Array.from({ length: 5 }, (_, i) =>
       linha({
@@ -423,20 +464,26 @@ describe('kpisTerreno com balde ambíguo', () => {
     expect(t.rotina?.ok1Pct).toBeCloseTo(3 / 8);
     expect(t.rotina?.sinal.tipo).toBe('ambiguo');
     expect(t.rotina?.ambiguo).toBe(true);
-    expect(t.rotina?.ambiguos).toBe(5);
+    expect(t.rotina?.ambiguos).toBe(8);
     expect(t.rotina?.degrausAmbiguos).toEqual([
-      { degrau: 'codex/gpt-5.6-sol/high', ambiguos: 5, julgaveis: 8 },
+      { degrau: 'codex/gpt-5.6-sol/high', ambiguos: 8, julgaveis: 8 },
     ]);
   });
 
   it('degrau limpo no mesmo terreno não dilui o degrau contaminado', () => {
-    // Somar o terreno inteiro daria 5/16 = 31%, à beira do limiar. A
-    // contaminação se mede no degrau, como no ledger: segue suspenso.
+    // Somar o terreno inteiro daria 8/16 = 50%, mas a contaminação se mede
+    // no degrau, como no ledger: o degrau carimbado (luna/max) segue limpo.
     const t = kpisTerreno(
       [
         ...contaminadas,
         ...Array.from({ length: 8 }, () =>
-          linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-luna', effort: 'max', resultado: 'ok1' }),
+          linha({
+            ts: TS_CLASSIFICADO,
+            auto: true,
+            modelo: 'gpt-5.6-luna',
+            effort: 'max',
+            resultado: 'ok1',
+          }),
         ),
       ],
       CADEIAS,
@@ -447,7 +494,7 @@ describe('kpisTerreno com balde ambíguo', () => {
 
   it('terreno todo classificado segue emitindo sinal normalmente', () => {
     const t = kpisTerreno(
-      contaminadas.map((l) => ({ ...l, auto: false })),
+      contaminadas.map((l) => ({ ...l, ts: TS_CLASSIFICADO, auto: true })),
       CADEIAS,
     );
     expect(t.rotina?.ambiguo).toBe(false);
