@@ -4,7 +4,7 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 4.** Histórico das correções:
+> **Revisão 6.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
@@ -19,6 +19,10 @@
 >   convivem (6.3b), e corrige a Vercel: o plano Hobby proíbe uso comercial, e
 >   o Pro é cobrado **por pessoa** (6.3c). Acrescenta o plano em cinco fases
 >   na seção 9.
+> - **v6** → separa **receber** de **enviar** (6.0b): o Cloudflare resolve o
+>   recebimento de graça e é definitivo para o endereço-cofre, mas não envia. O
+>   Gmail removeu a busca por POP3 em jan/2026. Para o e-mail de cliente, o
+>   Cloudflare é ponte e o Google Workspace é o destino.
 
 ---
 
@@ -372,9 +376,39 @@ Com 3 pessoas, migrar agora é uma tarde. Daqui a seis meses é uma semana.
 redirecionar o encaminhamento para outro destino e nenhuma conta é perdida.
 Custa zero, e o nome YaaX não aparece em nenhum lugar que o sócio veja.
 
-> Cloudflare Email Routing só **recebe**. Enviar como `@yaax.com.br` exige
-> configurar "Enviar e-mail como" no Gmail com um SMTP. Para o uso pretendido
-> (recuperação de conta e cadastro de ferramentas) receber já basta.
+### 6.0b RECEBER ≠ ENVIAR — o limite do caminho gratuito
+
+| | Cloudflare Email Routing |
+|---|---|
+| **Receber** em `@seucamarao.com.br` / `@yaax.com.br` | ✅ grátis, até 200 endereços, sem limite de mensagens |
+| **Enviar** com esses endereços | ❌ não faz — o Cloudflare não tem servidor de saída |
+
+**Novidade de janeiro de 2026:** o Gmail **removeu** o "Verificar e-mail de
+outras contas" (busca por POP3). Continuam funcionando o **encaminhamento** (que
+é o que o Cloudflare faz) e o **"Enviar e-mail como" via SMTP**.
+
+Existe caminho gratuito para enviar — Brevo, Resend, ou Zoho Mail free (5
+usuários, sem IMAP/POP no gratuito). **Não é recomendado neste caso:** a
+gambiarra tem custo escondido em SPF/DKIM mal configurado, e e-mail para cliente
+caindo em spam custa muito mais que os ~R$ 110/mês economizados.
+
+| Endereço | Solução | Até quando |
+|---|---|---|
+| `emanuel@yaax.com.br` | **Cloudflare — definitivo** | é o cofre; só recebe, nunca precisará de mais |
+| `@seucamarao.com.br` | **Cloudflare agora → Google Workspace** quando houver conversa real com cliente | aqui o Cloudflare é **ponte, não destino** |
+
+Enquanto isso, responder do próprio Gmail é aceitável: com três pessoas e volume
+baixo, ninguém se importa. O sinal de que chegou a hora do Workspace é responder
+cliente com o endereço errado começar a incomodar.
+
+O ganho da ponte permanece: os endereços **existem hoje, de graça**, e toda conta
+nova nasce com o endereço definitivo. Quando o Workspace entrar, o endereço não
+muda — muda só o destino de entrega.
+
+> **Atalho no caso do Emanuel:** os sites já são hospedados no Cloudflare, logo
+> os domínios **já estão com o DNS lá**. O passo "apontar os servidores DNS do
+> Registro.br para o Cloudflare" da fase 1 já está feito — basta ligar o Email
+> Routing.
 
 ### 6.1 Dá para trocar o e-mail depois, plataforma por plataforma?
 
@@ -460,8 +494,18 @@ código. Site com pagamento ou anúncio também conta.
 
 | Projeto | Plano | Motivo |
 |---|---|---|
-| **SeuCamarão** | 🔴 **Pro obrigatório** | comercial |
-| **TinDo, 3 Turbinas** | 🟢 Hobby serve | ferramentas próprias, sem receita e sem ninguém pago escrevendo |
+| **TinDo, 3 Turbinas** | 🟢 Hobby serve, sem discussão | ferramentas próprias, sem receita, código escrito pelo próprio Emanuel |
+| **Site da SeuCamarão** | ⚠️ zona cinzenta já hoje | o gatilho não é "o site fatura", é ganho financeiro de **qualquer pessoa envolvida na produção** — e o Eduardo é sócio remunerado pela SC |
+
+**Posição do Emanuel — "não uso comercialmente agora, quando começar eu pago" —
+é legítima**, e o upgrade leva um minuto. A ressalva é que o risco não é
+cobrança retroativa: é a **Vercel suspender o projeto sem aviso**, péssimo num
+site de empresa. Recomendação prática: TinDo e 3 Turbinas no Hobby à vontade; o
+site da SeuCamarão, ao sair do Cloudflare, já vai direto ao Pro.
+
+**Sem pressa:** os sites funcionam hoje no Cloudflare. A ida para a Vercel é
+vontade (a experiência de desenvolvimento com Next.js é melhor), não
+necessidade — e nada depende dela.
 
 **O Pro é por pessoa:**
 
@@ -596,7 +640,7 @@ válidas para sempre.
 |---|---|---|
 | 1 | Confirmar os 3 domínios no Registro.br, ativar **pagamento automático**, ciclo de 3 anos | ~R$ 40/ano cada = **R$ 120/ano** |
 | 2 | Criar conta grátis no Cloudflare e adicionar os 3 domínios | R$ 0 |
-| 3 | No Registro.br, apontar os servidores DNS para o Cloudflare | R$ 0 |
+| 3 | Apontar os servidores DNS para o Cloudflare — **já feito**, os sites já são hospedados lá | R$ 0 |
 | 4 | Ligar **Email Routing** e criar os endereços | R$ 0 |
 | 5 | No Gmail: Configurações → Contas → *Enviar e-mail como* | R$ 0 |
 
