@@ -4,7 +4,7 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 6.** Histórico das correções:
+> **Revisão 7.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
@@ -23,6 +23,12 @@
 >   recebimento de graça e é definitivo para o endereço-cofre, mas não envia. O
 >   Gmail removeu a busca por POP3 em jan/2026. Para o e-mail de cliente, o
 >   Cloudflare é ponte e o Google Workspace é o destino.
+> - **v7** → o Emanuel opta por partir dos dois Gmails, com o da SeuCamarão
+>   compartilhado com o Eduardo **de propósito**. A seção 2.1 passa de "risco a
+>   corrigir" para "ponto de partida com salvaguardas", e a recomendação de 2FA
+>   muda: o segredo vai para um **cofre compartilhado**, não só para o celular
+>   do Emanuel, senão o sócio ficaria de fora. Acrescenta a tabela de
+>   referência 6.1b.
 
 ---
 
@@ -55,32 +61,56 @@ paga-se só o lado que precisa.
 
 ---
 
-## 2.1 🔴 RISCO ATIVO — o e-mail compartilhado
+## 2.1 PONTO DE PARTIDA — os dois Gmails, por escolha
 
-**Situação:** Supabase, GitHub e as assinaturas de Claude e ChatGPT foram
-criados com `falecomseucamarao@gmail.com`, **uma caixa compartilhada com outra
-pessoa**.
+**Decisão do Emanuel:** começar com `falecomyaax@gmail.com` (coisas dele) e
+`falecomseucamarao@gmail.com` (coisas da SeuCamarão). O segundo é
+**compartilhado com o Eduardo de propósito** — os dois sócios precisam entrar.
+É escolha deliberada, não descuido, e é defensável numa operação de duas pessoas
+antes do CNPJ.
 
-**Um e-mail compartilhado não é um e-mail — é uma chave-mestra compartilhada.**
-Quem tem acesso a ela consegue redefinir a senha de tudo que foi criado com ela:
-o código no GitHub, o banco com dados reais no Supabase, as assinaturas pagas.
-Não é questão de confiança: o arranjo torna impossível saber quem fez o quê e
-torna os ativos não-atribuíveis — em qualquer desacordo, tudo fica contestado.
+**Correção de recomendação anterior:** a v4 mandava ativar 2FA "no celular do
+Emanuel". Isso trancaria o Eduardo para fora — o oposto do objetivo. O correto
+para este arranjo é **2FA com o segredo guardado num cofre compartilhado**: os
+dois sócios entram, terceiros não.
 
-**A correção mais rápida não é migrar, é 2FA.** Segundo fator com o autenticador
-no celular do Emanuel bloqueia a tomada de conta por redefinição de senha, e
-funciona hoje, antes de qualquer migração.
+### O que sustenta essa escolha
 
-| Conta | Ação imediata | Migra depois? |
+Das doze ferramentas do plano, **onze permitem trocar o e-mail depois** (ver
+6.1b). A estratégia de começar nos Gmails é, portanto, segura — desde que as
+três exceções sejam tratadas agora.
+
+| Não fica fácil depois | Por quê | O que fazer agora |
 |---|---|---|
-| **Supabase** (dados reais) | 🔴 2FA + salvar códigos de backup | ✅ |
-| **GitHub** (código) | 🔴 2FA + salvar códigos | ✅ troca fácil |
-| **ChatGPT** | 2FA + definir senha própria | ✅ (se entrou com Google, criar senha antes) |
-| **Claude / Claude Code** | 2FA + salvar códigos | ❌ **não migrável** — decisão à parte |
+| **Claude** | a Anthropic não permite trocar e-mail | decidir **hoje** em qual conta fica |
+| **Slack Primary Owner** | só transfere para e-mail do **domínio da empresa**, nunca pessoal | pode criar com Gmail; passar o comando ao Eduardo exigirá o domínio antes |
+| **"Entrar com Google"** | vincula à *identidade*, não ao endereço; a migração não leva junto | **sempre e-mail + senha** |
 
-O Claude é o caso doloroso: a Anthropic não permite trocar o e-mail. Opções:
-conviver, com 2FA no celular do Emanuel, ou abrir conta nova no endereço correto
-e perder o histórico.
+> A regra do "e-mail + senha" é ainda mais valiosa nesta estratégia: como a
+> migração está planejada, é ela que garante que migrar seja só trocar um campo.
+
+**Sobre o Claude:** Claude Code é ferramenta de desenvolvimento — trabalho do
+Emanuel, não da sociedade. Deveria viver em `falecomyaax@gmail.com`. Se hoje
+está no compartilhado, mover **agora**, enquanto o histórico é pequeno.
+
+### Segurança adaptada ao arranjo
+
+| # | Ação | Por quê | Custo |
+|---|---|---|---|
+| 1 | Cofre de senhas **compartilhado** entre Emanuel e Eduardo | senhas e códigos num lugar só | Bitwarden tem plano gratuito |
+| 2 | **2FA com o segredo salvo no cofre compartilhado** | preserva o acesso dos dois e bloqueia terceiros | R$ 0 |
+| 3 | Códigos de backup no mesmo cofre | funcionam sem e-mail e sem celular | R$ 0 |
+| 4 | **2FA no próprio Gmail compartilhado** | ele é a chave-mestra de tudo | R$ 0 |
+
+### Sinais de que chegou a hora de sair dos Gmails
+
+| Sinal | O que fazer |
+|---|---|
+| **A Mayane precisar de acesso** | não cabe num Gmail compartilhado entre dois — gatilho mais provável |
+| Os 15 GB do Drive encherem | Google Workspace |
+| Precisarem **revogar** o acesso de alguém | Gmail compartilhado não permite — Workspace |
+| Responder cliente com o endereço errado incomodar | Workspace |
+| A SeuCamarão formalizar o CNPJ | tudo de uma vez |
 
 ---
 
@@ -425,7 +455,26 @@ muda — muda só o destino de entrega.
 
 | ✅ Muda fácil | ⚠️ Muda com dor | ❌ Não muda |
 |---|---|---|
-| GitHub · Vercel · ChatGPT · Cloudflare · e-mail do Instagram | Jira (conta gerenciada, só o admin troca) · Slack (*Primary Owner* exige domínio da empresa) · titularidade `.br` (cartório + Correios) | **Claude** (a Anthropic não permite) · **"Entrar com Google"** (é vínculo de identidade, não campo de texto) |
+| GitHub · Vercel · ChatGPT · Cloudflare · Supabase · e-mail do Instagram | Jira (conta gerenciada, só o admin troca) · Slack (*Primary Owner* exige domínio da empresa) · titularidade `.br` (cartório + Correios) | **Claude** (a Anthropic não permite) · **"Entrar com Google"** (é vínculo de identidade, não campo de texto) |
+
+### 6.1b TABELA DE REFERÊNCIA — criar com quê, e trocar onde
+
+Vale para o ponto de partida da seção 2.1 (os dois Gmails).
+
+| # | Ferramenta | Criar com | Troca depois? | Onde se troca | Cuidado |
+|---|---|---|---|---|---|
+| 1 | **Claude / Claude Code** | decidir agora | ❌ **nunca** | — | única decisão sem volta |
+| 2 | **Slack SeuCamarão** | `falecomseucamarao@` | ✅ | Perfil → e-mail | passar o comando ao Eduardo exigirá e-mail do domínio |
+| 3 | **Slack YaaX** | `falecomyaax@` | ✅ | Perfil → e-mail | — |
+| 4 | **Jira SeuCamarão** | `falecomseucamarao@` | ✅ enquanto o domínio não for verificado | `id.atlassian.com` | trocar **antes** de verificar o domínio |
+| 5 | **Jira YaaX** | `falecomyaax@` | ✅ idem | `id.atlassian.com` | — |
+| 6 | **Vercel** | conforme o projeto | ✅ fácil | Settings → Emails → *Set as Primary* | até 3 e-mails, máx. 2 do mesmo domínio |
+| 7 | **GitHub** | `falecomyaax@` | ✅ fácil | Settings → Emails | — |
+| 8 | **Supabase** | `falecomseucamarao@` | ✅ fácil | Account → *Primary email* | se autenticou **via GitHub**, trocar primeiro no GitHub |
+| 9 | **Cloudflare** | `falecomyaax@` | ✅ fácil | My Profile → Email | atualizar também o e-mail de cobrança |
+| 10 | **ChatGPT** | conforme o uso | ✅ | Settings → Account | se entrou com Google, definir senha antes |
+| 11 | **Registro.br** | `falecomyaax@` | ✅ | conta | titularidade é **CPF**, não e-mail — isso sim é cartório |
+| 12 | **Instagram / Meta** | `falecomseucamarao@` | ✅ | — | o que importa é o **Business Portfolio**, não o e-mail |
 
 ### 6.2 O que realmente custa caro (não é a tela de configurações)
 
@@ -630,9 +679,10 @@ válidas para sempre.
 
 | # | Ação | Onde | Custo |
 |---|---|---|---|
-| 1 | **2FA com autenticador no celular do Emanuel** + salvar códigos de backup | Supabase, GitHub, Claude, ChatGPT | R$ 0 |
-| 2 | Instalar cofre de senhas e guardar os códigos | Bitwarden (plano gratuito) | R$ 0 |
-| 3 | Baixar cópia dos arquivos críticos do Drive compartilhado | Google Takeout | R$ 0 |
+| 1 | Criar o **cofre de senhas compartilhado** com o Eduardo | Bitwarden (plano gratuito) | R$ 0 |
+| 2 | **2FA com o segredo guardado no cofre compartilhado** + códigos de backup no mesmo lugar | Gmail compartilhado, Supabase, GitHub, Claude, ChatGPT | R$ 0 |
+| 3 | Decidir em qual conta fica o **Claude** — é a única sem volta | — | R$ 0 |
+| 4 | Baixar cópia dos arquivos críticos do Drive compartilhado | Google Takeout | R$ 0 |
 
 ### FASE 1 — ESTA SEMANA · R$ 120/ano · e-mails corporativos de graça
 
