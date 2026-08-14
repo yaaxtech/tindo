@@ -4,7 +4,7 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 10.** Histórico das correções:
+> **Revisão 11.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
@@ -43,6 +43,10 @@
 >   Logo o `seucamarao.com.br` tem DNS fora do Cloudflare e **não usa** o Email
 >   Routing. O e-mail dele passa a vir direto do Google Workspace, sem mover o
 >   DNS de um sistema em produção. Só o `yaax.com.br` segue pelo Cloudflare.
+> - **v11** → o DNS do `seucamarao.com.br` está no **Netlify**, que serve a
+>   produção; o Cloudflare é o ambiente de teste. Acrescenta a regra 6.3d: o DNS
+>   não deve morar dentro da hospedagem, senão cada troca de hospedagem arrasta
+>   o e-mail junto. A arrumação vira carona na migração para a Vercel.
 
 ---
 
@@ -624,9 +628,33 @@ desenho correto, mantido.
 | **A** | Trazer o DNS para o Cloudflare (trocar nameservers no Registro.br) e ganhar o Email Routing gratuito | ⚠️ mudança em sistema vivo — o Cloudflare importa os registros, mas um registro faltante derruba algo |
 | **B** ✅ | Deixar o DNS onde está e resolver o e-mail **direto no Google Workspace**, acrescentando os MX do Google no DNS atual | 🟢 baixo — só acrescenta MX, não move nada |
 
+**Onde o DNS está, de fato:** no **Netlify**. O fluxo do Emanuel é desenvolver e
+testar no Cloudflare (Worker `seucamaraov1`) e publicar em produção no Netlify,
+que é quem responde por `seucamarao.com.br`.
+
 **Recomendação: B.** Mover o DNS de um sistema em produção apenas para ter
 e-mail gratuito por alguns meses não compensa o risco. Quando o Workspace
-entrar, bastam os MX do Google no DNS atual.
+entrar, bastam os MX do Google no **DNS do Netlify**.
+
+### 6.3d REGRA — o DNS não deve morar dentro da hospedagem
+
+A hospedagem hoje está espalhada em três lugares: Cloudflare (teste), Netlify
+(produção) e a Vercel pretendida. E o DNS do `seucamarao.com.br` está **preso
+dentro do Netlify**. O custo disso aparece na próxima troca:
+
+| Onde o DNS mora | O que acontece ao trocar de hospedagem |
+|---|---|
+| Dentro da hospedagem (hoje) | refazer **todos** os registros no provedor novo, inclusive os MX do e-mail |
+| Num lugar neutro | trocar de hospedagem é mudar **um CNAME**; o e-mail nem fica sabendo |
+
+É a mesma separação de camadas da seção 6.3b: **registrador → DNS → hospedagem
+→ e-mail**. Quando o DNS vive dentro da hospedagem, trocar de hospedagem
+arrasta o e-mail junto.
+
+**Plano:** não é tarefa nova — é carona na migração para a Vercel, que já está
+prevista. Ao migrar, trazer o DNS do `seucamarao.com.br` para o **Cloudflare**
+de uma vez, em horário de baixo movimento. Depois disso, trocar de hospedagem
+nunca mais afeta o e-mail, e o Email Routing volta a ser opção gratuita.
 
 > 🔴 **Regra de segurança:** há produção rodando nessa conta. Ao mexer em DNS,
 > tocar **somente** em registros MX e no TXT do SPF. Nunca em A, AAAA, CNAME ou
