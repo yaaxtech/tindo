@@ -158,6 +158,69 @@ sociedade. É o tipo de coisa que vira conflito sem ninguém ter agido de má-f�
 | Cloudflare / Supabase do TinDo | `emanuel@yaax.com.br` |
 | Domínio `yaax.com.br` | **CPF do Emanuel, para sempre** |
 
+### 5.0.1b Endereço pessoal ou endereço de papel? Uma pergunta resolve
+
+> **A plataforma aceita mais de um administrador?**
+> **Sim** → endereço pessoal (`emanuel@`), com o Eduardo adicionado como segundo
+> admin. A continuidade vem da plataforma, não do e-mail.
+> **Não** (um login = uma conta) → endereço de papel (`financeiro@`, `contas@`),
+> com a senha num cofre compartilhado.
+
+| Sistema | Aceita 2º admin? | Criar com |
+|---|---|---|
+| Slack, Jira, Vercel, GitHub, Google Workspace, Meta Business | ✅ | `emanuel@seucamarao.com.br` + Eduardo como admin |
+| Registro.br, banco, emissor de nota, contador | ❌ login único | `financeiro@seucamarao.com.br` + cofre de senhas |
+
+**Por que não usar endereço de papel para tudo:** login compartilhado é senha
+compartilhada — ninguém é responsável por nada e o 2FA vira bagunça (quem fica
+com o autenticador?). Onde a plataforma tem papéis, ela resolve continuidade
+melhor que senha passada de mão em mão — e, com sócio, o registro de quem fez o
+quê tem valor.
+
+**Por que não usar endereço pessoal para tudo:** os sistemas de login único
+morreriam junto com o acesso do Emanuel.
+
+### 5.0.1c Risco de travamento por domínio vencido
+
+**O medo:** as empresas param, o domínio não é renovado, e o acesso a tudo se
+perde porque o e-mail de login deixou de existir. O medo é legítimo. A proteção
+tem três camadas.
+
+**A) E-mail nunca pode ser a única forma de recuperar uma conta.**
+Toda conta importante recebe 2FA por aplicativo e, principalmente, **códigos de
+backup salvos** — 8 a 10 códigos que funcionam offline, sem e-mail, sem telefone
+e sem domínio. Com os códigos guardados, domínio vencido não tranca ninguém para
+fora de nada. Esta é a proteção real, e custa zero.
+
+**B) O Gmail vira rede de segurança, não problema.**
+Um Gmail gratuito é, num aspecto específico, mais durável que domínio próprio:
+não depende de pagar ninguém. Portanto `falecomyaax@gmail.com` **não é erro a
+migrar** — é promovido a **e-mail de recuperação de última instância**. Nunca
+cria nada; fica cadastrado como recuperação secundária em tudo.
+
+**C) Perder um `.br` é mais difícil do que parece.**
+
+| Momento | O que acontece |
+|---|---|
+| Vencimento | ~14 dias ainda no ar, marcado como expirado |
+| Em seguida | até **90 dias congelado** — fora do ar, mas ainda do titular e renovável |
+| Só depois | liberação/leilão (~30 dias) |
+
+São cerca de 3 meses e meio de folga. Blindagens: **pagamento automático** no
+Registro.br, ciclo **bianual ou trianual** e o custo baixo (`.com.br` na casa de
+R$ 40/ano — três anos de `yaax.com.br` por volta de R$ 120).
+
+O essencial: a titularidade é do **CPF do Emanuel**. Mesmo que SeuCamarão,
+Maioli e Orka parem todas, `yaax.com.br` continua dele enquanto ele renovar —
+não depende de nenhuma empresa estar viva.
+
+**Hierarquia de recuperação (nesta ordem):**
+
+1. **Códigos de backup**, no cofre de senhas — funcionam sem nada.
+2. `emanuel@yaax.com.br` — recuperação primária; depende só de R$ 40/ano.
+3. `falecomyaax@gmail.com` — última instância; não depende de pagar nada.
+4. Telefone.
+
 ### 5.0.2 O detalhe brasileiro — titularidade `.br` é CPF/CNPJ, não e-mail
 
 No `.br` o dono do domínio é um **CPF ou CNPJ**, não um endereço de e-mail. E
