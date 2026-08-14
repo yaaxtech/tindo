@@ -4,7 +4,7 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 11.** Histórico das correções:
+> **Revisão 12.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
@@ -47,6 +47,11 @@
 >   produção; o Cloudflare é o ambiente de teste. Acrescenta a regra 6.3d: o DNS
 >   não deve morar dentro da hospedagem, senão cada troca de hospedagem arrasta
 >   o e-mail junto. A arrumação vira carona na migração para a Vercel.
+> - **v12** → o Emanuel decide trazer o DNS do `seucamarao.com.br` para o
+>   Cloudflare **hoje**, e usar a Vercel no Hobby enquanto o uso for interno.
+>   Ambas as decisões são dele e estão encerradas. A cautela anterior sobre a
+>   migração de DNS era excessiva: ela é reversível devolvendo os nameservers ao
+>   Netlify. Acrescenta o checklist de migração na seção 9.1.
 
 ---
 
@@ -564,11 +569,12 @@ código. Site com pagamento ou anúncio também conta.
 | **TinDo, 3 Turbinas** | 🟢 Hobby serve, sem discussão | ferramentas próprias, sem receita, código escrito pelo próprio Emanuel |
 | **Site da SeuCamarão** | ⚠️ zona cinzenta já hoje | o gatilho não é "o site fatura", é ganho financeiro de **qualquer pessoa envolvida na produção** — e o Eduardo é sócio remunerado pela SC |
 
-**Posição do Emanuel — "não uso comercialmente agora, quando começar eu pago" —
-é legítima**, e o upgrade leva um minuto. A ressalva é que o risco não é
-cobrança retroativa: é a **Vercel suspender o projeto sem aviso**, péssimo num
-site de empresa. Recomendação prática: TinDo e 3 Turbinas no Hobby à vontade; o
-site da SeuCamarão, ao sair do Cloudflare, já vai direto ao Pro.
+**Decisão do Emanuel:** começar no Hobby enquanto o uso for interno e subir para
+o Pro quando virar cliente final. A posição é legítima, o upgrade leva um
+minuto, e a questão está encerrada — não é ponto a rediscutir.
+
+**Marco a observar:** quando houver cliente final usando ou pagamento na tela,
+subir para o Pro.
 
 **Sem pressa:** os sites funcionam hoje no Cloudflare. A ida para a Vercel é
 vontade (a experiência de desenvolvimento com Next.js é melhor), não
@@ -632,9 +638,15 @@ desenho correto, mantido.
 testar no Cloudflare (Worker `seucamaraov1`) e publicar em produção no Netlify,
 que é quem responde por `seucamarao.com.br`.
 
-**Recomendação: B.** Mover o DNS de um sistema em produção apenas para ter
-e-mail gratuito por alguns meses não compensa o risco. Quando o Workspace
-entrar, bastam os MX do Google no **DNS do Netlify**.
+**Decisão do Emanuel (v12): trazer o DNS para o Cloudflare desde já.** A
+recomendação anterior — adiar — era conservadora demais: a migração de DNS
+**não é porta de mão única**. Se algo quebrar, basta devolver os nameservers ao
+Netlify e tudo retorna em minutos. E fazer agora destrava
+`emanuel@seucamarao.com.br` no mesmo dia, o que faz Jira e Slack da SeuCamarão
+já nascerem com o endereço definitivo e elimina a pendência de trocar depois.
+
+**Ordem segura:** primeiro o `yaax.com.br` (limpo, serve de treino), depois o
+`seucamarao.com.br` com o checklist da seção 9.1, e só então as ferramentas.
 
 ### 6.3d REGRA — o DNS não deve morar dentro da hospedagem
 
@@ -932,6 +944,84 @@ sem trocar a senha de todos; a SeuCamarão formalizar o CNPJ.
 
 Até o fim da fase 2 o gasto total é **R$ 120 no ano inteiro** — com endereços
 corporativos permanentes, contas protegidas e nenhum retrabalho pela frente.
+
+---
+
+## 9.1 CHECKLIST — migrar o DNS do `seucamarao.com.br` para o Cloudflare
+
+Único passo do plano com risco real. É **reversível**: devolver os nameservers
+ao Netlify no Registro.br restaura tudo em minutos. Fazer o `yaax.com.br`
+primeiro, que está limpo e serve de treino.
+
+### Antes — no Netlify (o seguro)
+
+| # | Onde | O que fazer |
+|---|---|---|
+| 1 | `app.netlify.com` → **Domains** → `seucamarao.com.br` | abrir o painel de DNS |
+| 2 | — | **printar TODOS os registros**: tipo, nome, valor, prioridade |
+| 3 | Netlify → o **site** → **Domain management** | copiar as instruções de **DNS externo** — são os registros que mantêm o site no ar quando o DNS sai do Netlify. Não inventar valores; copiar de lá. |
+| 4 | painel de DNS | se possível, baixar o **TTL** para 5 min algumas horas antes |
+
+### Durante — no Cloudflare (conta `falecomseucamarao@gmail.com`)
+
+| # | O que fazer |
+|---|---|
+| 5 | **Domínios → Adicionar domínio** → `seucamarao.com.br` → plano **Free** |
+| 6 | O Cloudflare importa o que consegue automaticamente |
+| 7 | ⚠️ **Comparar linha por linha** com o print do passo 2; acrescentar na mão o que faltar |
+| 8 | Conferir que os registros do passo 3 (site) estão presentes |
+| 9 | Deixar esses registros com o **proxy desligado** — nuvem cinza, "DNS only" |
+| 10 | Copiar os **2 nameservers** que o Cloudflare mostra |
+
+**Por que proxy cinza:** o Cloudflare passa a responder apenas "onde fica o
+site", sem entrar no caminho. O comportamento fica idêntico ao de hoje — menos
+variáveis. Depois, ao criar o `teste.`, liga-se o proxy **apenas naquele
+subdomínio**, que é o que habilita o Cloudflare Access.
+
+**Conferir com lupa no passo 7:**
+
+| Tipo | Serve para | Se faltar |
+|---|---|---|
+| A / AAAA / CNAME | o site | **o site cai** |
+| MX | receber e-mail | e-mail para de chegar |
+| TXT `v=spf1` e DKIM | os disparos | vão para spam |
+| TXT/CNAME de verificação (Google, Meta…) | provar a posse do domínio | perde verificações e refaz |
+
+### Depois — no Registro.br
+
+| # | O que fazer |
+|---|---|
+| 11 | `registro.br` → `seucamarao.com.br` → **Alterar servidores DNS** → colar os 2 |
+| 12 | Aguardar a ativação (o Cloudflare avisa por e-mail) |
+| 13 | Testar: o site abre? formulários funcionam? o Worker responde? |
+
+> 🟢 **Rota de escape:** se algo quebrar, devolver os nameservers ao Netlify no
+> Registro.br. Em minutos tudo retorna. É o que torna aceitável fazer no mesmo
+> dia.
+
+### Em seguida — Email Routing
+
+Mesma sequência do `yaax.com.br`, com dois cuidados:
+
+| Cuidado | O que fazer |
+|---|---|
+| **SPF duplicado** | se já existir um `v=spf1`, **não deixar dois** — juntar numa linha: `v=spf1 include:_spf.mx.cloudflare.net include:PROVEDOR ~all` |
+| **Destino do Eduardo** | para criar `eduardo@seucamarao.com.br`, **ele** precisa clicar no link enviado ao Gmail dele |
+
+### Ordem do dia
+
+| # | Etapa | Risco |
+|---|---|---|
+| 1 | Cofre de senhas compartilhado | 🟢 |
+| 2 | `yaax.com.br` → Email Routing (treino) | 🟢 |
+| 3 | `seucamarao.com.br` → DNS para o Cloudflare | 🟡 |
+| 4 | `seucamarao.com.br` → Email Routing | 🟢 |
+| 5 | Jira e Slack dos dois lados, já com os endereços definitivos | 🟢 |
+
+Com o passo 4 concluído, o Jira e o Slack da SeuCamarão nascem com
+`emanuel@seucamarao.com.br` — some a pendência de trocar o e-mail depois, e o
+Slack já pode ter o comando transferido ao Eduardo, o que exige e-mail do
+domínio.
 
 ---
 
