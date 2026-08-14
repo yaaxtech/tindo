@@ -947,6 +947,46 @@ corporativos permanentes, contas protegidas e nenhum retrabalho pela frente.
 
 ---
 
+## 9.0 ROTEIRO DE EXECUÇÃO — blocos A a E
+
+Ordem: o domínio limpo primeiro, como treino; o que está em produção por último,
+com rota de escape.
+
+| Bloco | O quê | Tempo | Risco |
+|---|---|---|---|
+| **A** | `yaax.com.br` no Cloudflare + `emanuel@yaax.com.br` + teste | 30 min | 🟢 zero |
+| **B** | Bitwarden com `emanuel@yaax.com.br` + organização com o Eduardo | 10 min | 🟢 zero |
+| **C** | `3turbinas.com.br` — mesma sequência do A | 10 min | 🟢 opcional |
+| **D** | `seucamarao.com.br` — migração do DNS + Email Routing | 60 min | 🟡 o único com cuidado |
+| **E** | `teste.seucamarao.com.br` com Cloudflare Access | outro dia | 🟢 |
+
+**Regra de ouro em tudo:** e-mail + senha, **nunca "Entrar com Google"**.
+
+**Nomes definidos:** produção é `app.seucamarao.com.br`; o ambiente de teste
+diário é `teste.seucamarao.com.br`, servido pela branch `develop`.
+
+**Bloco B — Bitwarden:** criar com `emanuel@yaax.com.br`, nunca com o Gmail
+compartilhado — o cofre é justamente o que protege quando um e-mail é
+comprometido. O Eduardo entra com o **e-mail pessoal dele**, não o
+compartilhado, senão perde-se o registro de quem acessou o quê. O plano gratuito
+compartilha com 1 outra pessoa, que é exatamente o necessário. ⚠️ O Bitwarden
+não tem recuperação de senha mestra: escrever num papel e guardar fisicamente.
+
+**Bloco E — o ambiente de teste** precisa de quatro coisas: a branch `develop`,
+**banco de dados próprio** (o Supabase gratuito permite 2 projetos — um de
+produção e um de teste), variáveis próprias, e o **Cloudflare Access** na
+frente (gratuito até 50 pessoas, com login por código enviado ao e-mail).
+
+> ⚠️ **O erro clássico:** apontar o `teste.` para o **mesmo banco** da produção.
+> Aí testar significa mexer em dado real de cliente, e o ambiente de teste vira
+> produção com outro nome.
+
+**Cloudflare Access — pré-requisito:** o subdomínio precisa estar com o **proxy
+ligado** (nuvem laranja) e o SSL/TLS em **Full (strict)**. Ordem: deixar cinza
+até a hospedagem emitir o certificado, e só então ligar o laranja.
+
+---
+
 ## 9.1 CHECKLIST — migrar o DNS do `seucamarao.com.br` para o Cloudflare
 
 Único passo do plano com risco real. É **reversível**: devolver os nameservers
