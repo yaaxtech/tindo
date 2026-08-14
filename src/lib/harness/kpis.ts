@@ -68,7 +68,13 @@ const AMBIGUO_MAX = 0.3; // acima disso o balde não mede terreno — sem sinal
 //
 // Espelho de `terrenoAmbiguo` em ~/.claude/orquestracao/ledger.mjs (fonte de
 // verdade) — mudar lá = mudar aqui.
-const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T17:00:00Z');
+//
+// O instante é o momento REAL em que os dois `run.sh` passaram a carimbar
+// LEDGER_TERRENO, achado nos transcripts da sessão que aplicou os Edits. O
+// valor anterior (17:00Z) era um arredondamento para trás: contava como
+// "classificados" os registros de uma janela de ~4h40 que ainda não tinham
+// carimbo nenhum, e por isso a tela discordava do `ledger.mjs report`.
+const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T21:42:23Z');
 
 export function terrenoAmbiguo(r: LedgerLinha): boolean {
   if (r.terreno_inferido) return true; // o próprio run.sh admitiu o default
