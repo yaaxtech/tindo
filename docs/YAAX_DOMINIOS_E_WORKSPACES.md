@@ -15,6 +15,10 @@
 >   plano gratuito. Corrigido nas seções 5.1 e 5.2 — dois de cada, a custo zero.
 > - **v4** → acrescenta o risco ativo do e-mail compartilhado (seção 2.1), o
 >   passo a passo de criação dos e-mails (6.4) e a tabela de custos (6.5).
+> - **v5** → esclarece que Cloudflare e Vercel são camadas diferentes e
+>   convivem (6.3b), e corrige a Vercel: o plano Hobby proíbe uso comercial, e
+>   o Pro é cobrado **por pessoa** (6.3c). Acrescenta o plano em cinco fases
+>   na seção 9.
 
 ---
 
@@ -136,15 +140,19 @@ física. Ver seção 6 — este ponto é urgente, não teórico.
 
 ## 5. DESENHO CONCRETO
 
-| Ferramenta | Nome na porta | Conta dona |
-|---|---|---|
-| Slack | **SeuCamarão** | `emanuel@yaax.com.br` |
-| Jira (`seucamarao.atlassian.net`) | **SeuCamarão** | `emanuel@yaax.com.br` |
-| Vercel — sites da SC | **Team SeuCamarão** | `emanuel@yaax.com.br` |
-| Google Workspace do time | **`seucamarao.com.br`** | super-admin: Emanuel |
-| GitHub — código da SC | **org `seucamarao`** (criar) | Emanuel como owner |
-| GitHub — TinDo, 3 Turbinas, laboratório | **org `yaaxtech`** (já existe) | Emanuel |
-| Vercel — TinDo, 3 Turbinas | conta pessoal / Hobby por enquanto | Emanuel |
+| Ferramenta | Nome na porta | Criada com | Recuperação |
+|---|---|---|---|
+| Slack SeuCamarão | **SeuCamarão** | `emanuel@seucamarao.com.br` | `emanuel@yaax.com.br` |
+| Slack YaaX | **YaaX** | `emanuel@yaax.com.br` | `falecomyaax@gmail.com` |
+| Jira `seucamarao.atlassian.net` | **SeuCamarão** | `emanuel@seucamarao.com.br` | `emanuel@yaax.com.br` |
+| Jira `yaax.atlassian.net` | **YaaX** | `emanuel@yaax.com.br` | `falecomyaax@gmail.com` |
+| Vercel — sites da SC | **Team SeuCamarão** | `emanuel@seucamarao.com.br` | `emanuel@yaax.com.br` |
+| Vercel — TinDo, 3 Turbinas | conta pessoal (Hobby) | `emanuel@yaax.com.br` | `falecomyaax@gmail.com` |
+| Google Workspace do time | **`seucamarao.com.br`** | super-admin: Emanuel | `emanuel@yaax.com.br` |
+| GitHub — código da SC | **org `seucamarao`** (criar) | conta pessoal do Emanuel | — |
+| GitHub — TinDo, 3 Turbinas | **org `yaaxtech`** (já existe) | conta pessoal do Emanuel | — |
+| Redes sociais da SC | **Business Portfolio da SC** | `social@seucamarao.com.br` | `emanuel@yaax.com.br` |
+| Banco, nota, Registro.br | — | `financeiro@seucamarao.com.br` | `emanuel@yaax.com.br` |
 
 **Regra de titularidade (corrigida na revisão 3):** a conta pertence a quem é
 dono do **ativo**, e o e-mail que cria a conta é quem declara isso. O
@@ -416,6 +424,59 @@ que não pode é continuar criando conta em Gmail pessoal.
 
 ---
 
+## 6.3b AS QUATRO CAMADAS DE UM DOMÍNIO — Cloudflare e Vercel não competem
+
+Confusão comum: "vou usar Vercel, então não preciso do Cloudflare". São camadas
+diferentes.
+
+| Camada | O que faz | Quem | Custo |
+|---|---|---|---|
+| **Registrador** | quem é o **dono** do domínio (CPF/CNPJ) | Registro.br | R$ 40/ano |
+| **DNS** | o catálogo: diz onde cada coisa mora | **Cloudflare** | R$ 0 |
+| **Site** | roda e serve as páginas | **Vercel** | Pro — ver 6.3c |
+| **E-mail** | recebe e envia mensagens | **Cloudflare Email Routing** → Google Workspace depois | R$ 0 |
+
+**A Vercel não oferece e-mail em nenhum plano** — nem caixa, nem encaminhamento.
+O Cloudflare está no plano pelo **e-mail gratuito**, não para hospedar. E o
+Cloudflare não hospeda o site. Os dois convivem: DNS no Cloudflare, site na
+Vercel — o arranjo mais comum que existe.
+
+**Configuração:**
+
+1. No Registro.br, apontar os servidores DNS para o **Cloudflare** (requisito do
+   Email Routing, que só funciona com a zona no DNS do Cloudflare).
+2. No Cloudflare, adicionar os registros A e CNAME que a Vercel pedir.
+3. ⚠️ Deixar esses registros com o **proxy desligado** ("DNS only", nuvem
+   cinza) — com o proxy ligado, o Cloudflare encerra o SSL e a Vercel não
+   consegue emitir o certificado.
+4. O Email Routing usa os registros **MX**, que não conflitam com os da Vercel.
+
+## 6.3c VERCEL NÃO É GRATUITA PARA A SEUCAMARÃO
+
+O plano Hobby **proíbe uso comercial**, e a definição da Vercel é ampla:
+qualquer deploy usado para ganho financeiro de **qualquer pessoa envolvida na
+produção do projeto** — incluindo funcionário ou consultor pago escrevendo o
+código. Site com pagamento ou anúncio também conta.
+
+| Projeto | Plano | Motivo |
+|---|---|---|
+| **SeuCamarão** | 🔴 **Pro obrigatório** | comercial |
+| **TinDo, 3 Turbinas** | 🟢 Hobby serve | ferramentas próprias, sem receita e sem ninguém pago escrevendo |
+
+**O Pro é por pessoa:**
+
+| Quem entra no time | Custo |
+|---|---|
+| Só o Emanuel | US$ 20/mês |
+| Emanuel + Eduardo | **US$ 40/mês** |
+
+Alternativa para adiar o custo: o **Cloudflare Pages** não restringe uso
+comercial no plano gratuito — é onde o TinDo já roda hoje. É decisão separada;
+a escolha pela Vercel está feita, mas ela não deve ser contabilizada como
+gratuita.
+
+---
+
 ## 6.4 ONDE CRIAR CADA E-MAIL
 
 | Domínio | Onde | O que faz | Custo |
@@ -458,7 +519,7 @@ que não pode é continuar criando conta em Gmail pessoal.
 | Item | Plano | Custo |
 |---|---|---|
 | Google Workspace `@seucamarao.com.br` | Business Starter × 3 | **~R$ 100–125/mês** |
-| Vercel — sites da SeuCamarão | Pro (uso comercial exige Pro) | **US$ 20/dev/mês** |
+| Vercel — sites da SeuCamarão | Pro (uso comercial exige Pro) | **US$ 20/pessoa/mês** — Emanuel + Eduardo = US$ 40 |
 | Cloudflare Email Routing | Free | R$ 0 |
 | Slack YaaX + SeuCamarão | Free × 2 | R$ 0 |
 | Jira YaaX + SeuCamarão | Free × 2 (até 10 pessoas) | R$ 0 |
@@ -592,7 +653,7 @@ sem trocar a senha de todos; a SeuCamarão formalizar o CNPJ.
 | 3 | Jira `seucamarao.atlassian.net` | `emanuel@seucamarao.com.br` | Free até 10 |
 | 4 | Jira `yaax.atlassian.net` | `emanuel@yaax.com.br` | Free até 10 |
 | 5 | GitHub org `seucamarao` | conta pessoal do Emanuel | Free |
-| 6 | Vercel Team SeuCamarão | `emanuel@seucamarao.com.br` | US$ 20/mês |
+| 6 | Vercel Team SeuCamarão | `emanuel@seucamarao.com.br` | US$ 20/pessoa/mês |
 | 7 | Migrar o TinDo para a Vercel | — | R$ 0 (trabalho de dev) |
 
 ### FASE 5 — NA FORMALIZAÇÃO DO CNPJ
@@ -612,7 +673,7 @@ sem trocar a senha de todos; a SeuCamarão formalizar o CNPJ.
 | Fase 1 — esta semana | **R$ 120/ano** |
 | Fase 2 — próximas semanas | **R$ 0** |
 | Fase 3 — quando doer | ~R$ 110/mês |
-| Fase 4 — quando precisar | US$ 20/mês |
+| Fase 4 — quando precisar | US$ 20/pessoa/mês na Vercel |
 
 Até o fim da fase 2 o gasto total é **R$ 120 no ano inteiro** — com endereços
 corporativos permanentes, contas protegidas e nenhum retrabalho pela frente.
