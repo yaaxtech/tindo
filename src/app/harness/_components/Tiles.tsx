@@ -74,7 +74,7 @@ export function Tiles({
       meta: `certo de primeira · ${atual.ok1N}/${atual.julg} · meta ≥80%`,
       st:
         atual.ok1 == null ? 'mut' : atual.ok1 >= 0.8 ? 'good' : atual.ok1 >= 0.7 ? 'warn' : 'crit',
-      como: 'De cada 100 tarefas despachadas, quantas foram aceitas na 1ª revisão, sem precisar de correção. Tarefas barradas por quota não entram na conta (não julgam a qualidade do modelo). Meta: 80% ou mais.',
+      como: 'De cada 100 tarefas despachadas, quantas foram aceitas na 1ª revisão, sem precisar de correção. Tarefas barradas por quota e despachos que nunca rodaram (infra) não entram na conta, pois não julgam a qualidade do modelo. Meta: 80% ou mais.',
       delta: diff(atual.ok1, anterior.ok1),
       deltaFmt: ppFmt,
       melhor: 'up',
@@ -118,7 +118,7 @@ export function Tiles({
             : atual.reciclo <= 0.35
               ? 'warn'
               : 'crit',
-      como: '% de tarefas que precisaram de uma rodada extra: correção, escalada para modelo mais forte, ou refeitas. Cada rodada extra custa um ciclo inteiro de despacho + revisão. Meta: 20% ou menos.',
+      como: '% de tarefas que precisaram de uma rodada extra: correção, escalada para modelo mais forte, ou refeitas. Despachos barrados por quota ou que nunca rodaram (infra) ficam fora da conta. Cada rodada extra custa um ciclo inteiro de despacho + revisão. Meta: 20% ou menos.',
       delta: diff(atual.reciclo, anterior.reciclo),
       deltaFmt: ppFmt,
       melhor: 'down',

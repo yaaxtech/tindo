@@ -11,7 +11,8 @@ export interface LedgerLinha {
   terreno: 'ui' | 'rotina' | 'dificil' | 'mecanico' | 'sql';
   // "pendente" = linha provisória gravada pelos run.sh dos workers antes da
   // revisão do cérebro (2026-08-10). Fica FORA de todos os KPIs da tela.
-  resultado: 'ok1' | 'retrabalho' | 'escalado' | 'falhou' | 'quota' | 'pendente';
+  // "infra" = worker nunca rodou por falha do lançador. Fica fora da qualidade.
+  resultado: 'ok1' | 'retrabalho' | 'escalado' | 'falhou' | 'infra' | 'quota' | 'pendente';
   tarefa: string;
   nota: string | null;
   dur: number | null;

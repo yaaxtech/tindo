@@ -8,6 +8,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 import {
   baldesPorDegrau,
+  contarInfra,
   contarPendentes,
   custoAssinaturas,
   custoMedioTarefa,
@@ -211,6 +212,27 @@ describe('kpisGerais', () => {
     expect(kpisTerreno(comPendentes, CADEIAS)).toEqual(kpisTerreno(ATUAL, CADEIAS));
     expect(porModelo(comPendentes)).toEqual(porModelo(ATUAL));
   });
+
+  it('mantém infra em n, mas fora de qualidade e retrabalho', () => {
+    const linhas = [
+      ...Array.from({ length: 4 }, () => linha({ ts: tsDiasAtras(1), resultado: 'ok1' })),
+      linha({ ts: tsDiasAtras(1), resultado: 'infra' }),
+    ];
+    const g = kpisGerais(linhas);
+    expect(g).toMatchObject({ n: 5, julg: 4, ok1N: 4, recN: 0, infraN: 1 });
+    expect(g.ok1).toBe(1);
+    expect(g.reciclo).toBe(0);
+    expect(contarInfra(linhas)).toBe(1);
+  });
+
+  it('conta quota e infra separadamente', () => {
+    const g = kpisGerais([
+      linha({ ts: tsDiasAtras(1), resultado: 'quota' }),
+      linha({ ts: tsDiasAtras(1), resultado: 'infra' }),
+    ]);
+    expect(g).toMatchObject({ n: 2, julg: 0, quotaN: 1, infraN: 1 });
+    expect(g.quotaHit).toBe(0.5);
+  });
 });
 
 describe('kpisTerreno', () => {
@@ -263,6 +285,17 @@ describe('kpisTerreno', () => {
     ];
     const t = kpisTerreno(linhas, CADEIAS);
     expect(t.rotina?.sinal.tipo).toBe('quota');
+  });
+
+  it('conta infra sem transformar em reciclo', () => {
+    const t = kpisTerreno(
+      [
+        linha({ ts: tsDiasAtras(1), terreno: 'rotina', resultado: 'ok1' }),
+        linha({ ts: tsDiasAtras(1), terreno: 'rotina', resultado: 'infra' }),
+      ],
+      CADEIAS,
+    );
+    expect(t.rotina).toMatchObject({ n: 2, julgaveis: 1, ok1: 1, reciclo: 0, infra: 1 });
   });
 });
 
@@ -335,6 +368,30 @@ describe('baldesPorDegrau', () => {
       linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', auto: true }),
     );
     expect(baldesPorDegrau(linhas)[0]).toMatchObject({ ambiguos: 4, ambiguo: false });
+  });
+
+  // Paridade com ledger.mjs (cmdReport): quota e infra saem do julgável E do
+  // numerador de ambíguos. Contá-los só no numerador faria a razão passar de 1
+  // — o ledger já viu isso (kimi × ui, 14d: 9 ambíguos sobre 7 julgáveis).
+  it('deixa infra fora do julgável e do numerador de ambíguos', () => {
+    const linhas = [
+      ...Array.from({ length: 5 }, () =>
+        linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', resultado: 'ok1' }),
+      ),
+      ...Array.from({ length: 6 }, () =>
+        linha({
+          ts: tsDiasAtras(1),
+          modelo: 'gpt-5.6-sol',
+          effort: 'high',
+          resultado: 'infra',
+          auto: true,
+        }),
+      ),
+    ];
+    const b = baldesPorDegrau(linhas)[0];
+    // as 6 infra são `auto` (viriam do default do run.sh), mas não contaminam:
+    // sem elas o balde é 5 julgáveis, 0 ambíguos → nenhum sinal suspenso.
+    expect(b).toMatchObject({ n: 11, julgaveis: 5, infra: 6, ambiguos: 0, ambiguo: false });
   });
 });
 

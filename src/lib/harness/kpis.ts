@@ -24,6 +24,10 @@ const semPendentes = (linhas: LedgerLinha[]): LedgerLinha[] =>
 export const contarPendentes = (linhas: LedgerLinha[]): number =>
   linhas.filter((r) => r.resultado === 'pendente').length;
 
+/** Despachos cujo worker nunca rodou por falha do lançador. */
+export const contarInfra = (linhas: LedgerLinha[]): number =>
+  linhas.filter((r) => r.resultado === 'infra').length;
+
 /** Tarefa ACEITA = entregue de fato (ok1 ou retrabalho) — denominador de custo. */
 const ehAceita = (r: LedgerLinha): boolean => r.resultado === 'ok1' || r.resultado === 'retrabalho';
 
@@ -67,13 +71,15 @@ export function terrenoAmbiguo(r: LedgerLinha): boolean {
 
 export interface KpisGerais {
   n: number;
-  /** Julgáveis (n − quota): denominador de qualidade/retrabalho. */
+  /** Julgáveis (n − quota − infra): denominador de qualidade/retrabalho. */
   julg: number;
   /** Contagens cruas — para mostrar a amostra "x/y" ao lado de cada %. */
   ok1N: number;
   recN: number;
   offN: number;
   quotaN: number;
+  /** Despachos cujo worker nunca rodou (falha de infraestrutura). */
+  infraN: number;
   /** Tarefas aceitas (ok1 + retrabalho) — denominador de custo por tarefa. */
   aceitas: number;
   ok1: number | null;
@@ -97,6 +103,7 @@ export interface TerrenoKpi {
   ok1: number;
   reciclo: number;
   quota: number;
+  infra: number;
   ok1Pct: number | null;
   recicloPct: number | null;
   /** Linhas do terreno que caíram no default do run.sh (sem classificação). */
@@ -119,7 +126,9 @@ export interface BaldeDegrau {
   julgaveis: number;
   ok1: number;
   quota: number;
-  /** Linhas do balde vindas do terreno DEFAULT do run.sh. */
+  /** Despachos do balde cujo worker nunca rodou — fora do julgável. */
+  infra: number;
+  /** Linhas JULGÁVEIS do balde vindas do terreno DEFAULT do run.sh. */
   ambiguos: number;
   /** Amostra suficiente E mais de AMBIGUO_MAX de linhas não classificadas. */
   ambiguo: boolean;
@@ -128,8 +137,9 @@ export interface BaldeDegrau {
 /**
  * Agrega por degrau × terreno, exatamente como `cmdReport` em ledger.mjs: é
  * nesse recorte que a decisão de default é tomada, e é nele que a marca de
- * balde ambíguo vale. Denominador julgável exclui quota (não julga qualidade);
- * `ambiguos` conta todas as linhas do balde, como no ledger.
+ * balde ambíguo vale. Denominador julgável exclui quota e infra (nenhum dos
+ * dois julga qualidade); `ambiguos` conta só o que ENTRA nesse denominador —
+ * contar quota/infra faria a razão passar de 1 e inflar a contaminação.
  */
 export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
   const linhas = semPendentes(entrada);
@@ -146,6 +156,7 @@ export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
         julgaveis: 0,
         ok1: 0,
         quota: 0,
+        infra: 0,
         ambiguos: 0,
         ambiguo: false,
       };
@@ -153,11 +164,12 @@ export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
     }
     b.n++;
     if (r.resultado === 'quota') b.quota++;
+    else if (r.resultado === 'infra') b.infra++;
     else {
       b.julgaveis++;
       if (r.resultado === 'ok1') b.ok1++;
+      if (terrenoAmbiguo(r)) b.ambiguos++;
     }
-    if (terrenoAmbiguo(r)) b.ambiguos++;
   }
   for (const b of mapa.values()) {
     b.ambiguo = b.julgaveis >= MIN_N && b.ambiguos / b.julgaveis > AMBIGUO_MAX;
@@ -230,10 +242,12 @@ export function recorte(
 export function kpisGerais(entrada: LedgerLinha[]): KpisGerais {
   const linhas = semPendentes(entrada);
   const n = linhas.length;
-  const julg = linhas.filter((r) => r.resultado !== 'quota');
+  const julg = linhas.filter((r) => r.resultado !== 'quota' && r.resultado !== 'infra');
   const ok1 = julg.filter((r) => r.resultado === 'ok1').length;
   const off = linhas.filter((r) => r.frente !== 'claude' && r.frente !== 'cerebro').length;
   const rec = julg.filter((r) => r.resultado !== 'ok1').length;
+  const quotaN = linhas.filter((r) => r.resultado === 'quota').length;
+  const infraN = linhas.filter((r) => r.resultado === 'infra').length;
   const durs = julg
     .map((r) => r.dur)
     .filter((d): d is number => typeof d === 'number' && d > 0)
@@ -249,11 +263,12 @@ export function kpisGerais(entrada: LedgerLinha[]): KpisGerais {
     ok1N: ok1,
     recN: rec,
     offN: off,
-    quotaN: n - julg.length,
+    quotaN,
+    infraN,
     aceitas: linhas.filter(ehAceita).length,
     ok1: julg.length ? ok1 / julg.length : null,
     offload: n ? off / n : null,
-    quotaHit: n ? (n - julg.length) / n : null,
+    quotaHit: n ? quotaN / n : null,
     reciclo: julg.length ? rec / julg.length : null,
     durMed: durs.length ? (durs[Math.floor(durs.length / 2)] ?? null) : null,
     // nearest-rank: com n<10 o p90 vira o maior valor — o n exibido avisa
@@ -279,6 +294,7 @@ export function kpisTerreno(
     ok1: 0,
     reciclo: 0,
     quota: 0,
+    infra: 0,
     ok1Pct: null,
     recicloPct: null,
     ambiguos: 0,
@@ -292,12 +308,13 @@ export function kpisTerreno(
     const t = por[r.terreno] as TerrenoKpi;
     t.n++;
     if (r.resultado === 'quota') t.quota++;
+    else if (r.resultado === 'infra') t.infra++;
     else {
       t.julgaveis++;
       if (r.resultado === 'ok1') t.ok1++;
       else t.reciclo++;
+      if (terrenoAmbiguo(r)) t.ambiguos++;
     }
-    if (terrenoAmbiguo(r)) t.ambiguos++;
   }
   // Contaminação se mede no MESMO recorte em que a decisão de default é
   // tomada — degrau × terreno (ledger.mjs). Somar o terreno inteiro diluiria
@@ -375,7 +392,7 @@ export function porModelo(entrada: LedgerLinha[]): ModeloRow[] {
       mapa.set(nome, m);
     }
     m.n++;
-    if (r.resultado !== 'quota') {
+    if (r.resultado !== 'quota' && r.resultado !== 'infra') {
       m.julg++;
       if (r.resultado === 'ok1') m.ok1++;
     }
@@ -451,7 +468,9 @@ export function placarPorFrente(
   return frentes
     .map((frente): FrenteValor => {
       const daFrente = linhas.filter((linha) => linha.frente === frente);
-      const julgaveis = daFrente.filter((linha) => linha.resultado !== 'quota');
+      const julgaveis = daFrente.filter(
+        (linha) => linha.resultado !== 'quota' && linha.resultado !== 'infra',
+      );
       const ok1 = julgaveis.filter((linha) => linha.resultado === 'ok1').length;
       const q = julgaveis.length ? ok1 / julgaveis.length : null;
       const uso = daFrente.length;
