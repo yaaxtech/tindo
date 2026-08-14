@@ -7,6 +7,7 @@ import type {
 } from '@/types/harness';
 import { describe, expect, it } from 'vitest';
 import {
+  baldesPorDegrau,
   contarPendentes,
   custoAssinaturas,
   custoMedioTarefa,
@@ -18,6 +19,7 @@ import {
   placarPorFrente,
   porModelo,
   recorte,
+  terrenoAmbiguo,
   valorGeral,
   valorScore,
 } from './kpis';
@@ -261,6 +263,138 @@ describe('kpisTerreno', () => {
     ];
     const t = kpisTerreno(linhas, CADEIAS);
     expect(t.rotina?.sinal.tipo).toBe('quota');
+  });
+});
+
+// Balde ambíguo: o terreno DEFAULT dos run.sh (`rotina` no codex, `ui` no
+// kimi) vira lixeira do que o cérebro não classificou. Espelha a regra de
+// ~/.claude/orquestracao/ledger.mjs — os dois têm de dar o mesmo veredito.
+describe('terrenoAmbiguo', () => {
+  const auto = (parcial: Partial<LedgerLinha> = {}) =>
+    linha({ ts: tsDiasAtras(1), auto: true, ...parcial });
+
+  it('marca linha carimbada com terreno_inferido', () => {
+    expect(terrenoAmbiguo(auto({ terreno_inferido: true, terreno: 'sql' }))).toBe(true);
+  });
+
+  it('marca despacho automático parado no default do run.sh antes da instrumentação', () => {
+    expect(terrenoAmbiguo(auto({ frente: 'codex', terreno: 'rotina' }))).toBe(true);
+    expect(terrenoAmbiguo(auto({ frente: 'kimi', terreno: 'ui' }))).toBe(true);
+  });
+
+  it('não marca terreno declarado nem despacho do cérebro', () => {
+    expect(terrenoAmbiguo(auto({ frente: 'codex', terreno: 'sql' }))).toBe(false);
+    expect(terrenoAmbiguo(auto({ frente: 'kimi', terreno: 'rotina' }))).toBe(false);
+    expect(terrenoAmbiguo(linha({ ts: tsDiasAtras(1), terreno: 'rotina' }))).toBe(false);
+  });
+
+  it('depois da instrumentação, automático sem a marca conta como declarado', () => {
+    const depois = linha({
+      ts: '2026-08-20T10:00:00Z',
+      auto: true,
+      frente: 'codex',
+      terreno: 'rotina',
+    });
+    expect(terrenoAmbiguo(depois)).toBe(false);
+  });
+});
+
+describe('baldesPorDegrau', () => {
+  it('agrega por degrau × terreno e só marca ambíguo com amostra e >30%', () => {
+    const linhas = [
+      // 6 julgáveis no degrau contaminado, 4 delas sem terreno declarado (67%)
+      ...Array.from({ length: 4 }, () =>
+        linha({
+          ts: tsDiasAtras(1),
+          modelo: 'gpt-5.6-sol',
+          effort: 'high',
+          resultado: 'ok1',
+          auto: true,
+        }),
+      ),
+      ...Array.from({ length: 2 }, () =>
+        linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', resultado: 'ok1' }),
+      ),
+      // degrau limpo, mesmo terreno
+      ...Array.from({ length: 5 }, () =>
+        linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-luna', effort: 'max', resultado: 'ok1' }),
+      ),
+    ];
+    const por = Object.fromEntries(baldesPorDegrau(linhas).map((b) => [b.degrau, b]));
+    expect(por['codex/gpt-5.6-sol/high']).toMatchObject({
+      terreno: 'rotina',
+      julgaveis: 6,
+      ambiguos: 4,
+      ambiguo: true,
+    });
+    expect(por['codex/gpt-5.6-luna/max']).toMatchObject({ ambiguos: 0, ambiguo: false });
+  });
+
+  it('não marca ambíguo com amostra abaixo de 5 julgáveis', () => {
+    const linhas = Array.from({ length: 4 }, () =>
+      linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', auto: true }),
+    );
+    expect(baldesPorDegrau(linhas)[0]).toMatchObject({ ambiguos: 4, ambiguo: false });
+  });
+});
+
+describe('kpisTerreno com balde ambíguo', () => {
+  // 8 julgáveis: 3 ok1 → 38% de ok de 1ª, o que hoje dispara "subir modelo".
+  // 5 delas entraram sem terreno declarado (62% > 30%) → sinal suspenso.
+  const contaminadas: LedgerLinha[] = [
+    ...Array.from({ length: 5 }, (_, i) =>
+      linha({
+        ts: tsDiasAtras(1),
+        modelo: 'gpt-5.6-sol',
+        effort: 'high',
+        resultado: i < 2 ? 'ok1' : 'retrabalho',
+        auto: true,
+      }),
+    ),
+    ...Array.from({ length: 3 }, (_, i) =>
+      linha({
+        ts: tsDiasAtras(1),
+        modelo: 'gpt-5.6-sol',
+        effort: 'high',
+        resultado: i < 1 ? 'ok1' : 'retrabalho',
+      }),
+    ),
+  ];
+
+  it('suprime o sinal de trocar o default e mostra a contagem', () => {
+    const t = kpisTerreno(contaminadas, CADEIAS);
+    expect(t.rotina?.ok1Pct).toBeCloseTo(3 / 8);
+    expect(t.rotina?.sinal.tipo).toBe('ambiguo');
+    expect(t.rotina?.ambiguo).toBe(true);
+    expect(t.rotina?.ambiguos).toBe(5);
+    expect(t.rotina?.degrausAmbiguos).toEqual([
+      { degrau: 'codex/gpt-5.6-sol/high', ambiguos: 5, julgaveis: 8 },
+    ]);
+  });
+
+  it('degrau limpo no mesmo terreno não dilui o degrau contaminado', () => {
+    // Somar o terreno inteiro daria 5/16 = 31%, à beira do limiar. A
+    // contaminação se mede no degrau, como no ledger: segue suspenso.
+    const t = kpisTerreno(
+      [
+        ...contaminadas,
+        ...Array.from({ length: 8 }, () =>
+          linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-luna', effort: 'max', resultado: 'ok1' }),
+        ),
+      ],
+      CADEIAS,
+    );
+    expect(t.rotina?.sinal.tipo).toBe('ambiguo');
+    expect(t.rotina?.degrausAmbiguos.map((d) => d.degrau)).toEqual(['codex/gpt-5.6-sol/high']);
+  });
+
+  it('terreno todo classificado segue emitindo sinal normalmente', () => {
+    const t = kpisTerreno(
+      contaminadas.map((l) => ({ ...l, auto: false })),
+      CADEIAS,
+    );
+    expect(t.rotina?.ambiguo).toBe(false);
+    expect(t.rotina?.sinal.tipo).toBe('subir');
   });
 });
 

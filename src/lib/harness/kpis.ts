@@ -42,6 +42,28 @@ const MIN_N = 5; // amostra mínima p/ sinal
 const OK1_PISO = 0.7; // abaixo → degrau subdimensionado
 const OK1_TETO = 0.9; // acima (n>=8, degrau não-mínimo) → candidato a descer
 const QUOTA_ALERTA = 3; // eventos de quota na janela → frente saturada
+const AMBIGUO_MAX = 0.3; // acima disso o balde não mede terreno — sem sinal
+
+// Os run.sh dos workers gravam um terreno DEFAULT quando o despacho não passa
+// LEDGER_TERRENO (`rotina` no codex, `ui` no kimi). Um balde assim mistura o
+// terreno real com tudo que o cérebro esqueceu de classificar, e o ok1 dele
+// deixa de medir o degrau — trocar o default por causa dele é decidir no ruído.
+// Desde 13/08/2026 essas linhas chegam marcadas (`terreno_inferido`); antes
+// disso, despacho automático parado no default é indistinguível de declarado,
+// então também conta como ambíguo.
+// Espelho de `terrenoAmbiguo` em ~/.claude/orquestracao/ledger.mjs (fonte de
+// verdade) — mudar lá = mudar aqui.
+const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T17:00:00Z');
+const DEFAULT_DO_RUNSH: Record<string, string> = { codex: 'rotina', kimi: 'ui' };
+
+export function terrenoAmbiguo(r: LedgerLinha): boolean {
+  if (r.terreno_inferido) return true;
+  return (
+    !!r.auto &&
+    DEFAULT_DO_RUNSH[r.frente] === r.terreno &&
+    Date.parse(r.ts) < INSTRUMENTACAO_TERRENO
+  );
+}
 
 export interface KpisGerais {
   n: number;
@@ -67,7 +89,7 @@ export interface KpisGerais {
   quotaPorFrente: Record<string, number>;
 }
 
-export type SinalTipo = 'dados' | 'subir' | 'baratear' | 'ok' | 'quota';
+export type SinalTipo = 'dados' | 'subir' | 'baratear' | 'ok' | 'quota' | 'ambiguo';
 
 export interface TerrenoKpi {
   n: number;
@@ -77,7 +99,70 @@ export interface TerrenoKpi {
   quota: number;
   ok1Pct: number | null;
   recicloPct: number | null;
+  /** Linhas do terreno que caíram no default do run.sh (sem classificação). */
+  ambiguos: number;
+  /**
+   * true quando algum degrau com amostra suficiente é balde ambíguo — o
+   * terreno não emite sinal de trocar o default enquanto isso durar.
+   */
+  ambiguo: boolean;
+  /** Degraus ambíguos do terreno, já com a contagem, p/ o aviso na tela. */
+  degrausAmbiguos: { degrau: string; ambiguos: number; julgaveis: number }[];
   sinal: { tipo: SinalTipo; texto: string };
+}
+
+/** Um balde degrau (frente/modelo/effort) × terreno — mesma chave do ledger. */
+export interface BaldeDegrau {
+  degrau: string;
+  terreno: string;
+  n: number;
+  julgaveis: number;
+  ok1: number;
+  quota: number;
+  /** Linhas do balde vindas do terreno DEFAULT do run.sh. */
+  ambiguos: number;
+  /** Amostra suficiente E mais de AMBIGUO_MAX de linhas não classificadas. */
+  ambiguo: boolean;
+}
+
+/**
+ * Agrega por degrau × terreno, exatamente como `cmdReport` em ledger.mjs: é
+ * nesse recorte que a decisão de default é tomada, e é nele que a marca de
+ * balde ambíguo vale. Denominador julgável exclui quota (não julga qualidade);
+ * `ambiguos` conta todas as linhas do balde, como no ledger.
+ */
+export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
+  const linhas = semPendentes(entrada);
+  const mapa = new Map<string, BaldeDegrau>();
+  for (const r of linhas) {
+    const degrau = `${r.frente}/${normModelo(r.modelo)}${r.effort ? `/${r.effort}` : ''}`;
+    const chave = `${degrau} × ${r.terreno}`;
+    let b = mapa.get(chave);
+    if (!b) {
+      b = {
+        degrau,
+        terreno: r.terreno,
+        n: 0,
+        julgaveis: 0,
+        ok1: 0,
+        quota: 0,
+        ambiguos: 0,
+        ambiguo: false,
+      };
+      mapa.set(chave, b);
+    }
+    b.n++;
+    if (r.resultado === 'quota') b.quota++;
+    else {
+      b.julgaveis++;
+      if (r.resultado === 'ok1') b.ok1++;
+    }
+    if (terrenoAmbiguo(r)) b.ambiguos++;
+  }
+  for (const b of mapa.values()) {
+    b.ambiguo = b.julgaveis >= MIN_N && b.ambiguos / b.julgaveis > AMBIGUO_MAX;
+  }
+  return [...mapa.values()].sort((a, b) => b.n - a.n);
 }
 
 export interface ModeloRow {
@@ -196,6 +281,9 @@ export function kpisTerreno(
     quota: 0,
     ok1Pct: null,
     recicloPct: null,
+    ambiguos: 0,
+    ambiguo: false,
+    degrausAmbiguos: [],
     sinal: { tipo: 'dados', texto: 'coletando dados (n=0)' },
   });
   for (const t of Object.keys(cadeias)) por[t] = vazio();
@@ -209,6 +297,18 @@ export function kpisTerreno(
       if (r.resultado === 'ok1') t.ok1++;
       else t.reciclo++;
     }
+    if (terrenoAmbiguo(r)) t.ambiguos++;
+  }
+  // Contaminação se mede no MESMO recorte em que a decisão de default é
+  // tomada — degrau × terreno (ledger.mjs). Somar o terreno inteiro diluiria
+  // um degrau contaminado nas linhas limpas dos outros e deixaria passar o
+  // sinal que o ledger já suprime.
+  for (const b of baldesPorDegrau(linhas)) {
+    if (!b.ambiguo) continue;
+    const t = por[b.terreno];
+    if (!t) continue;
+    t.ambiguo = true;
+    t.degrausAmbiguos.push({ degrau: b.degrau, ambiguos: b.ambiguos, julgaveis: b.julgaveis });
   }
   for (const [nome, t] of Object.entries(por)) {
     t.ok1Pct = t.julgaveis ? t.ok1 / t.julgaveis : null;
@@ -216,6 +316,13 @@ export function kpisTerreno(
     const cad = cadeias[nome];
     if (t.julgaveis < MIN_N)
       t.sinal = { tipo: 'dados', texto: `coletando dados (n=${t.julgaveis})` };
+    else if (t.ambiguo)
+      t.sinal = {
+        tipo: 'ambiguo',
+        texto:
+          'sem recomendação de modelo — despacho sem terreno declarado domina a amostra ' +
+          'deste terreno, então o ok de 1ª mede o registro, não o modelo',
+      };
     else if (t.ok1Pct != null && t.ok1Pct < OK1_PISO)
       t.sinal = {
         tipo: 'subir',

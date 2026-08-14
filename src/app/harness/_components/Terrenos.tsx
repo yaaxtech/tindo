@@ -9,13 +9,16 @@ const SINAL: Record<TerrenoKpi['sinal']['tipo'], { st: Status; ico: string; labe
   baratear: { st: 'good', ico: '▼', label: 'pode baratear' },
   quota: { st: 'warn', ico: '‖', label: 'saturada' },
   dados: { st: 'mut', ico: '…', label: 'pouco dado' },
+  ambiguo: { st: 'mut', ico: '?', label: 'registro incompleto' },
 };
 
 const COMO_TERRENO =
   'O primeiro da fila é o titular; os seguintes assumem quando ele bate quota ou falha. ' +
   'Números no período: despachos = tarefas enviadas · ok de 1ª = aceitas sem correção · ' +
   'retrabalho = precisaram de rodada extra · quota = barradas por limite. ' +
-  'Sinal automático: ok de 1ª <70% com 5+ tarefas → subir modelo · ≥90% com 8+ → testar mais barato · quota 3× → saturada.';
+  'Sinal automático: ok de 1ª <70% com 5+ tarefas → subir modelo · ≥90% com 8+ → testar mais barato · quota 3× → saturada. ' +
+  'Quando mais de 30% das tarefas de um modelo entraram sem o terreno declarado, o número mede o registro e não o modelo: ' +
+  'a recomendação de trocar o modelo fica suspensa até a amostra melhorar.';
 
 export function Terrenos({
   linhas,
@@ -87,6 +90,14 @@ export function Terrenos({
               </span>
             </div>
             <div className="text-[12.5px] text-text-muted">{t?.sinal.texto ?? 'sem despachos'}</div>
+            {t?.ambiguo && (
+              <div className="text-[12.5px] text-warning">
+                ⚠ tarefas sem terreno declarado:{' '}
+                {t.degrausAmbiguos
+                  .map((d) => `${d.degrau} — ${d.ambiguos} de ${d.julgaveis}`)
+                  .join(' · ')}
+              </div>
+            )}
           </Card>
         );
       })}
