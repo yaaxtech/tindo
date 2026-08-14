@@ -17,7 +17,13 @@ import { Tiles } from '@/app/harness/_components/Tiles';
 import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistorico';
 import { SECOES_PAINEL } from '@/app/harness/_components/secoes';
 import { Secao } from '@/app/harness/_components/ui';
-import { contarPendentes, diasComDados, kpisGerais, recorte } from '@/lib/harness/kpis';
+import {
+  contarInfra,
+  contarPendentes,
+  diasComDados,
+  kpisGerais,
+  recorte,
+} from '@/lib/harness/kpis';
 import {
   type HistoricoAlertas,
   getActionsSnapshot,
@@ -63,6 +69,7 @@ export default function HarnessPage() {
   const gAnterior = useMemo(() => kpisGerais(anterior), [anterior]);
   // Provisórios dos run.sh sem revisão: fora de todos os KPIs, só a contagem.
   const pendentes = useMemo(() => contarPendentes(atual), [atual]);
+  const infra = useMemo(() => contarInfra(atual), [atual]);
 
   const hora = snap
     ? new Date(snap.geradoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -88,7 +95,7 @@ export default function HarnessPage() {
               <h1 className="text-lg font-semibold">Painel do Harness</h1>
               <p className="text-xs text-text-muted">
                 {snap
-                  ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''} · atualizado às ${hora}`
+                  ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${infra > 0 ? ` · ${infra} nunca ${infra === 1 ? 'rodou' : 'rodaram'} (infra)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''} · atualizado às ${hora}`
                   : carregando
                     ? 'Carregando…'
                     : 'KPIs da orquestração multi-LLM'}
