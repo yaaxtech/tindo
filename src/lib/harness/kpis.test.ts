@@ -336,6 +336,18 @@ describe('terrenoAmbiguo', () => {
     expect(terrenoAmbiguo(classificada({ frente: 'codex', terreno: 'rotina' }))).toBe(false);
     expect(terrenoAmbiguo(classificada({ frente: 'kimi', terreno: 'sql' }))).toBe(false);
   });
+
+  // O corte tem de ser o instante REAL em que os run.sh passaram a carimbar
+  // (2026-08-13T21:42:23Z). Arredondar para trás — como o 17:00Z anterior —
+  // promove a "classificado" registro que ainda não tinha carimbo nenhum, e a
+  // tela passa a discordar do `ledger.mjs report` sobre o mesmo dado.
+  it('trata a janela entre o corte antigo e o real como AINDA não instrumentada', () => {
+    const naJanela = { auto: true, terreno: 'dificil' as const };
+    expect(terrenoAmbiguo(linha({ ts: '2026-08-13T17:00:01Z', ...naJanela }))).toBe(true);
+    expect(terrenoAmbiguo(linha({ ts: '2026-08-13T21:42:22Z', ...naJanela }))).toBe(true);
+    // a partir do instante real, automático sem a marca passa a valer
+    expect(terrenoAmbiguo(linha({ ts: '2026-08-13T21:42:23Z', ...naJanela }))).toBe(false);
+  });
 });
 
 describe('baldesPorDegrau', () => {
