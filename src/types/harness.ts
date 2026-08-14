@@ -19,6 +19,13 @@ export interface LedgerLinha {
   id?: string;
   /** true quando a linha foi gravada automaticamente pelo run.sh. */
   auto?: boolean;
+  /**
+   * true quando o terreno NÃO foi declarado no despacho e o run.sh caiu no
+   * default dele (`rotina` no codex, `ui` no kimi). Gravado desde 13/08/2026;
+   * `ledger.mjs fechar --terreno <real>` limpa a marca. Ver `terrenoAmbiguo`
+   * em src/lib/harness/kpis.ts.
+   */
+  terreno_inferido?: boolean;
 }
 
 export interface KpiHistoricoLinha {
