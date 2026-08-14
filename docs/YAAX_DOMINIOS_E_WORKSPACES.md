@@ -4,7 +4,7 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 7.** Histórico das correções:
+> **Revisão 8.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
@@ -29,6 +29,11 @@
 >   muda: o segredo vai para um **cofre compartilhado**, não só para o celular
 >   do Emanuel, senão o sócio ficaria de fora. Acrescenta a tabela de
 >   referência 6.1b.
+> - **v8** → acrescenta `eduardo@` e `mayane@seucamarao.com.br`, que faltavam na
+>   lista de endereços, com o aviso de que cada destino é verificado pelo dono
+>   da caixa. Responde em 6.4b por que vale criar os endereços agora mesmo com
+>   tudo sendo fácil de trocar, e fixa o meio-termo: `yaax.com.br` hoje,
+>   `seucamarao.com.br` só depois de conferir os registros MX.
 
 ---
 
@@ -696,15 +701,48 @@ válidas para sempre.
 
 **Endereços a criar — todos entregues no Gmail:**
 
-| Endereço | Entrega em | Para quê |
+| Endereço | Encaminha para | Quando criar |
 |---|---|---|
-| `emanuel@yaax.com.br` | Gmail do Emanuel | 🔑 **cofre** — cria e recupera o que é dele |
-| `emanuel@seucamarao.com.br` | Gmail do Emanuel | endereço de trabalho |
-| `contato@seucamarao.com.br` | Gmail do Emanuel | clientes |
-| `financeiro@seucamarao.com.br` | Gmail do Emanuel | banco, nota, Registro.br |
-| `social@seucamarao.com.br` | Gmail do Emanuel | redes sociais |
-| `eduardo@seucamarao.com.br` | Gmail do Eduardo | ele |
-| `mayane@seucamarao.com.br` | Gmail da Mayane | ela |
+| `emanuel@yaax.com.br` | `falecomyaax@gmail.com` | **hoje** — domínio limpo |
+| `emanuel@seucamarao.com.br` | `falecomseucamarao@gmail.com` | após conferir os MX |
+| `eduardo@seucamarao.com.br` | **Gmail pessoal do Eduardo** | após conferir os MX |
+| `mayane@seucamarao.com.br` | Gmail da Mayane | quando ela entrar |
+| `contato@seucamarao.com.br` | `falecomseucamarao@gmail.com` | após conferir os MX |
+| `financeiro@seucamarao.com.br` | `falecomseucamarao@gmail.com` | após conferir os MX |
+| `social@seucamarao.com.br` | `falecomseucamarao@gmail.com` | após conferir os MX |
+
+> ⚠️ **Cada destino precisa ser verificado pelo dono da caixa.** Para criar
+> `eduardo@seucamarao.com.br`, o Cloudflare envia um link ao Gmail do Eduardo e
+> **ele** precisa clicar. Combine antes.
+
+> 🔴 **Antes de ligar o Email Routing no `seucamarao.com.br`:** o Email Routing
+> **substitui os registros MX** do domínio. Como o domínio já dispara e-mail
+> hoje, conferir primeiro em *DNS → Records → filtrar MX*. Se houver registros,
+> descobrir de que são antes de mexer. O `yaax.com.br` está limpo — comece por
+> ele.
+
+### 6.4b Vale a pena criar os endereços agora, se tudo troca fácil?
+
+Não é obrigatório. Mas a assimetria é grande:
+
+| | Criar agora | Migrar depois |
+|---|---|---|
+| Esforço | 15 minutos, uma vez | cada conta é fácil, mas são 12 ferramentas e ~30 cadastros menores |
+| Risco | zero | as contas esquecidas só aparecem quando são necessárias |
+| Custo | R$ 0 | R$ 0, e uma tarde de tédio |
+
+"Fácil de trocar" é verdade **por conta**, não **no conjunto**. E há duas travas
+concretas que desaparecem ao criar agora:
+
+| Trava | O que acontece se criar com Gmail |
+|---|---|
+| **Slack** | transferir o comando do workspace ao Eduardo **exige** e-mail do domínio da empresa — a opção não existe até haver domínio |
+| **Jira** | a troca de e-mail é livre **só até o domínio ser verificado**; depois vira operação de admin |
+
+**Meio-termo recomendado:** `yaax.com.br` hoje (limpo, risco zero);
+`seucamarao.com.br` só depois de conferir os MX. Se o lado da SeuCamarão nascer
+com Gmail, anotar no cofre: *"trocar o e-mail do Jira da SeuCamarão ANTES de
+verificar o domínio"* — é o único passo que piora se for esquecido.
 
 > ⚠️ **Regra que zera o retrabalho:** daqui em diante, toda conta nova usa esses
 > endereços, com **e-mail e senha — nunca "Entrar com Google"**.
