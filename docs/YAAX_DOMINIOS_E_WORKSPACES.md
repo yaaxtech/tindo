@@ -4,7 +4,7 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 9.** Histórico das correções:
+> **Revisão 10.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
@@ -38,6 +38,11 @@
 >   detalha o passo a passo real: mapear domínio por conta, auditar MX e SPF
 >   antes de ligar, e o cuidado de **não deixar dois registros SPF** no mesmo
 >   domínio, que é o que quebraria os disparos do `seucamarao.com.br`.
+> - **v10** → verificado no painel: a conta Cloudflare da SeuCamarão tem **zero
+>   domínios**; o sistema roda como Worker `seucamaraov1` em `*.workers.dev`.
+>   Logo o `seucamarao.com.br` tem DNS fora do Cloudflare e **não usa** o Email
+>   Routing. O e-mail dele passa a vir direto do Google Workspace, sem mover o
+>   DNS de um sistema em produção. Só o `yaax.com.br` segue pelo Cloudflare.
 
 ---
 
@@ -599,10 +604,33 @@ desenho correto, mantido.
 > quebre nada; a armadilha real é o SPF (passo 4).
 
 **Passo 0 — mapear.** Entrar em cada conta e anotar quais domínios aparecem.
-Esperado: `yaax.com.br` e `3turbinas.com.br` na conta YaaX;
-`seucamarao.com.br` na conta SeuCamarão. Se algum estiver na conta trocada, não
-é urgente — um domínio só existe em uma conta por vez, e mover exige remover e
-readicionar.
+
+> **Resultado real (verificado em 2026-08-14):** a conta
+> `falecomseucamarao@gmail.com` tem **zero domínios** — "Nenhum domínio ou
+> subdomínio foi encontrado". O sistema da SeuCamarão roda ali como **Worker
+> `seucamaraov1`**, com ~3,39 mil requisições/dia, quase certamente publicado
+> num subdomínio `*.workers.dev`.
+>
+> **Consequência:** o `seucamarao.com.br` tem o DNS **fora do Cloudflare**, e o
+> Email Routing — que exige a zona no Cloudflare — **não é o caminho para ele**.
+> Onde conferir o hostname real do Worker: *Computação → Workers e Pages →
+> `seucamaraov1` → Configurações → Domínios e rotas*. Onde conferir o DNS de
+> verdade: **Registro.br**, nos servidores DNS do domínio.
+
+**Como resolver o e-mail do `seucamarao.com.br`, então:**
+
+| | O que é | Risco |
+|---|---|---|
+| **A** | Trazer o DNS para o Cloudflare (trocar nameservers no Registro.br) e ganhar o Email Routing gratuito | ⚠️ mudança em sistema vivo — o Cloudflare importa os registros, mas um registro faltante derruba algo |
+| **B** ✅ | Deixar o DNS onde está e resolver o e-mail **direto no Google Workspace**, acrescentando os MX do Google no DNS atual | 🟢 baixo — só acrescenta MX, não move nada |
+
+**Recomendação: B.** Mover o DNS de um sistema em produção apenas para ter
+e-mail gratuito por alguns meses não compensa o risco. Quando o Workspace
+entrar, bastam os MX do Google no DNS atual.
+
+> 🔴 **Regra de segurança:** há produção rodando nessa conta. Ao mexer em DNS,
+> tocar **somente** em registros MX e no TXT do SPF. Nunca em A, AAAA, CNAME ou
+> rotas de Worker.
 
 **Passo 1 — status.** Abrir o domínio e ver o topo:
 
