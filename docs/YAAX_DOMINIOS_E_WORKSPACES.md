@@ -4,7 +4,7 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 8.** Histórico das correções:
+> **Revisão 9.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
@@ -34,6 +34,10 @@
 >   da caixa. Responde em 6.4b por que vale criar os endereços agora mesmo com
 >   tudo sendo fácil de trocar, e fixa o meio-termo: `yaax.com.br` hoje,
 >   `seucamarao.com.br` só depois de conferir os registros MX.
+> - **v9** → registra que existem **duas contas Cloudflare** (uma por Gmail) e
+>   detalha o passo a passo real: mapear domínio por conta, auditar MX e SPF
+>   antes de ligar, e o cuidado de **não deixar dois registros SPF** no mesmo
+>   domínio, que é o que quebraria os disparos do `seucamarao.com.br`.
 
 ---
 
@@ -582,14 +586,77 @@ gratuita.
 | `@yaax.com.br` | **Cloudflare Email Routing** | só **recebe** e encaminha — suficiente para endereço-cofre | **R$ 0** |
 | `@seucamarao.com.br` | **Google Workspace** | caixa real: envia, recebe, Drive, Agenda, compartilhamento | ~R$ 33–42/pessoa/mês |
 
-**Cloudflare — `@yaax.com.br`:**
+**Cloudflare — passo a passo detalhado**
 
-1. Criar conta grátis em `dash.cloudflare.com` e adicionar `yaax.com.br`.
-2. ⚠️ No **Registro.br**, apontar os servidores DNS para os do Cloudflare — o
-   Email Routing **só funciona com a zona no DNS do Cloudflare**.
-3. No Cloudflare: *Email → Email Routing → Enable*.
-4. Criar `emanuel@yaax.com.br` com destino no Gmail.
-5. Confirmar o e-mail de verificação enviado ao destino.
+Existem **duas contas Cloudflare**: `falecomyaax@gmail.com` e
+`falecomseucamarao@gmail.com`. Cada domínio vive na conta de quem é dono dele —
+desenho correto, mantido.
+
+> **Distinção que resolve o medo:** *disparar* e *receber* usam registros
+> diferentes. **MX** define quem **recebe** — é o que o Email Routing substitui.
+> **SPF/DKIM** (TXT) definem quem pode **enviar** — o Email Routing não mexe
+> neles. Como o `seucamarao.com.br` hoje só dispara, é provável que ligar não
+> quebre nada; a armadilha real é o SPF (passo 4).
+
+**Passo 0 — mapear.** Entrar em cada conta e anotar quais domínios aparecem.
+Esperado: `yaax.com.br` e `3turbinas.com.br` na conta YaaX;
+`seucamarao.com.br` na conta SeuCamarão. Se algum estiver na conta trocada, não
+é urgente — um domínio só existe em uma conta por vez, e mover exige remover e
+readicionar.
+
+**Passo 1 — status.** Abrir o domínio e ver o topo:
+
+| Status | Significa | Ação |
+|---|---|---|
+| **Active** | nameservers já apontam para o Cloudflare | seguir |
+| **Pending Nameserver Update** | falta trocar no Registro.br | copiar os 2 nameservers e colar em *Alterar servidores DNS* |
+
+**Passo 2 — 🔴 auditoria antes de mexer.** *DNS → Records*, filtrar **MX** e
+procurar os **TXT** que começam com `v=spf1`.
+
+| O que aparece | Significa | Pode ligar? |
+|---|---|---|
+| Nenhum MX | ninguém recebe e-mail nesse domínio | ✅ sim |
+| MX para `google.com` / `googlemail.com` | há Gmail ou Workspace ativo | 🔴 parar |
+| MX para `zoho`, `outlook`, `titan`, `locaweb`, `uol`, `hostgator` | outro provedor de e-mail | 🔴 parar |
+| TXT `v=spf1 ...` | é **envio**, não recebimento | ✅ não bloqueia — ver passo 4 |
+
+**Passo 3 — ligar (nada muda no DNS ainda).**
+
+1. Domínio → *Email → Email Routing* → **Get started**.
+2. *Destination addresses* → digitar o Gmail de destino → **Add**.
+3. Abrir o Gmail e **clicar no link de verificação** do Cloudflare. Sem isso,
+   nada funciona.
+4. *Custom addresses → Create address*: nome à esquerda, domínio à direita,
+   *Action* = **Send to an email**, *Destination* = o Gmail verificado.
+
+**Passo 4 — 🔴 o momento em que o DNS muda.** O Cloudflare mostra
+**"Add records and enable"** e cria:
+
+| Tipo | Valor |
+|---|---|
+| MX | `route1.mx.cloudflare.net` |
+| MX | `route2.mx.cloudflare.net` |
+| MX | `route3.mx.cloudflare.net` |
+| TXT | `v=spf1 include:_spf.mx.cloudflare.net ~all` |
+
+⚠️ **Um domínio só pode ter UM registro SPF.** Se já existir um (do sistema de
+disparo) e o Cloudflare adicionar o dele, ficam dois — configuração inválida,
+e os disparos passam a cair em spam. A correção é **juntar numa linha só**:
+
+```
+v=spf1 include:_spf.mx.cloudflare.net include:PROVEDOR_ATUAL ~all
+```
+
+Deixar o Cloudflare criar, depois ir em *DNS → Records*, apagar um dos SPF e
+editar o que sobrou para conter os dois `include:`.
+
+**Passo 5 — testar.** Enviar de outro endereço para `emanuel@yaax.com.br` e
+confirmar a chegada. Se não chegar em ~15 min, é propagação. O painel
+*Email Routing → Overview* mostra status e atividade.
+
+**Passo 6 — opcional.** Ativar o **catch-all** para que erros de digitação no
+endereço ainda cheguem, em vez de sumirem.
 
 **Google Workspace — `@seucamarao.com.br`:**
 
@@ -824,6 +891,7 @@ corporativos permanentes, contas protegidas e nenhum retrabalho pela frente.
 - Vercel — transferir um projeto: <https://vercel.com/docs/projects/transferring-projects>
 - Vercel — transferência sem downtime: <https://vercel.com/blog/transfer-vercel-projects-with-zero-downtime>
 - Cloudflare Email Routing: <https://developers.cloudflare.com/email-routing/>
+- Cloudflare — SPF e Email Routing (postmaster): <https://developers.cloudflare.com/email-routing/postmaster/>
 
 ### Troca de e-mail por plataforma
 
