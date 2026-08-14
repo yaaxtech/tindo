@@ -126,7 +126,9 @@ export interface BaldeDegrau {
   julgaveis: number;
   ok1: number;
   quota: number;
-  /** Linhas do balde vindas do terreno DEFAULT do run.sh. */
+  /** Despachos do balde cujo worker nunca rodou — fora do julgável. */
+  infra: number;
+  /** Linhas JULGÁVEIS do balde vindas do terreno DEFAULT do run.sh. */
   ambiguos: number;
   /** Amostra suficiente E mais de AMBIGUO_MAX de linhas não classificadas. */
   ambiguo: boolean;
@@ -135,8 +137,9 @@ export interface BaldeDegrau {
 /**
  * Agrega por degrau × terreno, exatamente como `cmdReport` em ledger.mjs: é
  * nesse recorte que a decisão de default é tomada, e é nele que a marca de
- * balde ambíguo vale. Denominador julgável exclui quota (não julga qualidade);
- * `ambiguos` conta todas as linhas do balde, como no ledger.
+ * balde ambíguo vale. Denominador julgável exclui quota e infra (nenhum dos
+ * dois julga qualidade); `ambiguos` conta só o que ENTRA nesse denominador —
+ * contar quota/infra faria a razão passar de 1 e inflar a contaminação.
  */
 export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
   const linhas = semPendentes(entrada);
@@ -153,6 +156,7 @@ export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
         julgaveis: 0,
         ok1: 0,
         quota: 0,
+        infra: 0,
         ambiguos: 0,
         ambiguo: false,
       };
@@ -160,11 +164,12 @@ export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
     }
     b.n++;
     if (r.resultado === 'quota') b.quota++;
+    else if (r.resultado === 'infra') b.infra++;
     else {
       b.julgaveis++;
       if (r.resultado === 'ok1') b.ok1++;
+      if (terrenoAmbiguo(r)) b.ambiguos++;
     }
-    if (terrenoAmbiguo(r)) b.ambiguos++;
   }
   for (const b of mapa.values()) {
     b.ambiguo = b.julgaveis >= MIN_N && b.ambiguos / b.julgaveis > AMBIGUO_MAX;
@@ -308,8 +313,8 @@ export function kpisTerreno(
       t.julgaveis++;
       if (r.resultado === 'ok1') t.ok1++;
       else t.reciclo++;
+      if (terrenoAmbiguo(r)) t.ambiguos++;
     }
-    if (terrenoAmbiguo(r)) t.ambiguos++;
   }
   // Contaminação se mede no MESMO recorte em que a decisão de default é
   // tomada — degrau × terreno (ledger.mjs). Somar o terreno inteiro diluiria

@@ -369,6 +369,30 @@ describe('baldesPorDegrau', () => {
     );
     expect(baldesPorDegrau(linhas)[0]).toMatchObject({ ambiguos: 4, ambiguo: false });
   });
+
+  // Paridade com ledger.mjs (cmdReport): quota e infra saem do julgável E do
+  // numerador de ambíguos. Contá-los só no numerador faria a razão passar de 1
+  // — o ledger já viu isso (kimi × ui, 14d: 9 ambíguos sobre 7 julgáveis).
+  it('deixa infra fora do julgável e do numerador de ambíguos', () => {
+    const linhas = [
+      ...Array.from({ length: 5 }, () =>
+        linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', resultado: 'ok1' }),
+      ),
+      ...Array.from({ length: 6 }, () =>
+        linha({
+          ts: tsDiasAtras(1),
+          modelo: 'gpt-5.6-sol',
+          effort: 'high',
+          resultado: 'infra',
+          auto: true,
+        }),
+      ),
+    ];
+    const b = baldesPorDegrau(linhas)[0];
+    // as 6 infra são `auto` (viriam do default do run.sh), mas não contaminam:
+    // sem elas o balde é 5 julgáveis, 0 ambíguos → nenhum sinal suspenso.
+    expect(b).toMatchObject({ n: 11, julgaveis: 5, infra: 6, ambiguos: 0, ambiguo: false });
+  });
 });
 
 describe('kpisTerreno com balde ambíguo', () => {
