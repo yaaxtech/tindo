@@ -22,7 +22,7 @@ import { FileText, Files, Network, Printer, Share2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Editor from './Editor';
-import MenuDocumentos, { type ItemCompartilhado } from './MenuDocumentos';
+import MenuDocumentos, { type ItemCompartilhado, type ZonaDrop } from './MenuDocumentos';
 import Mindmap, { CORES_NIVEL, type MindmapHandle, extrairTexto, RAIZ_ID } from './Mindmap';
 import ModalCompartilhar from './ModalCompartilhar';
 import PerfilMenu from './PerfilMenu';
@@ -664,11 +664,15 @@ export default function RoadMapMind() {
     [editor],
   );
 
-  // mover documento no menu (arrastar sobre outro): vira irmã logo após o alvo,
-  // com ids preservados
+  // mover documento no menu: soltar EM CIMA do alvo faz virar filha dele;
+  // soltar na faixa de baixo faz virar irmã logo após. Ids preservados nos dois.
   const aoMoverDoc = useCallback(
-    (id: string, alvoId: string) => {
+    (id: string, alvoId: string, zona: ZonaDrop) => {
       if (id === alvoId) return;
+      if (zona === 'filha') {
+        aoReplugar(id, alvoId);
+        return;
+      }
       const b = acharBloco(editor.document, id);
       const alvo = acharBloco(editor.document, alvoId);
       if (!b || !alvo) return;
@@ -681,7 +685,7 @@ export default function RoadMapMind() {
       const alvoAtual = acharBloco(editor.document, alvoId);
       if (alvoAtual) editor.insertBlocks([copia], alvoAtual, 'after');
     },
-    [editor],
+    [editor, aoReplugar],
   );
 
   // Alt + arrastar no mapa: cria um ESPELHO da linha sob a nova mãe

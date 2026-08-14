@@ -49,6 +49,21 @@ function listarDocumentos(
 
 type MenuCtx = { id: string; x: number; y: number };
 
+/** Onde a linha arrastada vai cair: dentro do alvo (filha) ou logo abaixo (irmã). */
+export type ZonaDrop = 'filha' | 'irma';
+
+/** Fatia inferior do item reservada para "soltar embaixo" (= virar irmã). */
+const FAIXA_IRMA = 0.35;
+
+/**
+ * Decide a zona pela posição vertical do cursor dentro do item do menu:
+ * miolo/topo = filha, faixa de baixo = irmã logo após o alvo.
+ */
+export function zonaDoDrop(deslocamentoY: number, altura: number): ZonaDrop {
+  if (altura <= 0) return 'filha';
+  return deslocamentoY >= altura * (1 - FAIXA_IRMA) ? 'irma' : 'filha';
+}
+
 export interface MenuDocumentosProps {
   doc: Block[];
   focoId: string | null;
@@ -57,7 +72,8 @@ export interface MenuDocumentosProps {
   aoRenomear: (id: string, texto: string) => void;
   aoDuplicar: (id: string) => void;
   aoExcluir: (id: string) => void;
-  aoMover: (id: string, alvoId: string) => void;
+  /** Solta em cima do alvo = filha dele; solta na faixa de baixo = irmã logo após. */
+  aoMover: (id: string, alvoId: string, zona: ZonaDrop) => void;
   aoRecolher: () => void;
   /** Documentos de outras pessoas compartilhados comigo (Fase 2). */
   compartilhados?: ItemCompartilhado[];
@@ -78,7 +94,7 @@ export default function MenuDocumentos({
   const [recolhidos, setRecolhidos] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<MenuCtx | null>(null);
   const [editando, setEditando] = useState<{ id: string; texto: string } | null>(null);
-  const [dragOver, setDragOver] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<{ id: string; zona: ZonaDrop } | null>(null);
   const dragId = useRef<string | null>(null);
 
   const documentos = listarDocumentos(doc, 0, [], []);
@@ -152,7 +168,13 @@ export default function MenuDocumentos({
               />
             ) : (
               <Link
-                className={`rmm-nav-item ${focoId === d.id ? 'ativo' : ''} ${dragOver === d.id ? 'rmm-nav-drop' : ''}`}
+                className={`rmm-nav-item ${focoId === d.id ? 'ativo' : ''} ${
+                  dragOver?.id === d.id
+                    ? dragOver.zona === 'filha'
+                      ? 'rmm-nav-drop-filha'
+                      : 'rmm-nav-drop-irma'
+                    : ''
+                }`}
                 href={`/docs?doc=${d.id}`}
                 draggable
                 onClick={() => aoFocar(d.id)}
@@ -169,12 +191,18 @@ export default function MenuDocumentos({
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  if (dragId.current && dragId.current !== d.id) setDragOver(d.id);
+                  if (!dragId.current || dragId.current === d.id) return;
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const zona = zonaDoDrop(e.clientY - r.top, r.height);
+                  setDragOver((o) => (o?.id === d.id && o.zona === zona ? o : { id: d.id, zona }));
                 }}
-                onDragLeave={() => setDragOver((o) => (o === d.id ? null : o))}
+                onDragLeave={() => setDragOver((o) => (o?.id === d.id ? null : o))}
                 onDrop={(e) => {
                   e.preventDefault();
-                  if (dragId.current) aoMover(dragId.current, d.id);
+                  if (dragId.current && dragId.current !== d.id) {
+                    const r = e.currentTarget.getBoundingClientRect();
+                    aoMover(dragId.current, d.id, zonaDoDrop(e.clientY - r.top, r.height));
+                  }
                   dragId.current = null;
                   setDragOver(null);
                 }}
