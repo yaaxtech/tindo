@@ -4,12 +4,17 @@
 > repositório `yaaxtech/yaax`; quando ele existir, este arquivo migra para lá.
 >
 > **Data:** 2026-08-14 · **Decisor:** Emanuel
-> **Revisão 3.** Histórico das correções:
+> **Revisão 4.** Histórico das correções:
 > - **v1** → recomendava ferramentas com o nome YaaX. Errado: subestimava o
 >   atrito diário com o sócio. Corrigido na seção 3.
 > - **v2** → recomendava `@yaax.com.br` como *dono* de todas as contas,
 >   inclusive as da SeuCamarão. Errado pelo mesmo motivo, uma camada mais
 >   fundo. Corrigido na seção 5 — o endereço YaaX é **recuperação**, não dono.
+> - **v3** → recomendava um Slack e um Jira só. Errado: o Emanuel vai usar as
+>   duas ferramentas também nos projetos da YaaX, e ambos os lados cabem no
+>   plano gratuito. Corrigido nas seções 5.1 e 5.2 — dois de cada, a custo zero.
+> - **v4** → acrescenta o risco ativo do e-mail compartilhado (seção 2.1), o
+>   passo a passo de criação dos e-mails (6.4) e a tabela de custos (6.5).
 
 ---
 
@@ -23,15 +28,51 @@ isso deve ser registrado: e-mail pessoal, **YaaX**, **3 Turbinas** ou
 
 Duas respostas, porque são duas perguntas diferentes:
 
-- **Identidade e controle → YaaX.** Toda conta de ferramenta tem
-  `emanuel@yaax.com.br` como dono e endereço de recuperação.
-- **Nome nas ferramentas do time → SeuCamarão.** Slack, Jira e Vercel usam o
-  nome e o domínio da SeuCamarão.
+- **Identidade e recuperação → YaaX.** `emanuel@yaax.com.br` é o endereço-cofre
+  e a recuperação de toda conta, inclusive as da SeuCamarão.
+- **Titularidade de cada conta → a entidade dona do ativo.** Ferramentas da
+  SeuCamarão são criadas com `@seucamarao.com.br`; as do laboratório, com
+  `@yaax.com.br`.
+- **Slack e Jira → um de cada, para cada lado.** Dois workspaces Slack e dois
+  sites Jira, YaaX e SeuCamarão, ambos no plano gratuito.
 
-E o corolário que simplifica tudo: **projetos solo não precisam de Slack nem de
-Jira.** TinDo e 3 Turbinas têm uma pessoa só; GitHub Issues resolve. Logo existe
-**um Slack só e um Jira só, ambos SeuCamarão** — e o problema de pagar licença
-dupla por si mesmo desaparece.
+**Correção da v3:** a v3 dizia "um Slack só e um Jira só, ambos SeuCamarão",
+partindo de que projetos solo não precisam dessas ferramentas e de que a
+Atlassian cobra por ambiente. Ambas as premissas caíram: o Emanuel **vai** usar
+Jira e Slack nos projetos da YaaX, e no tamanho atual os dois lados cabem no
+plano gratuito — **Jira Free até 10 pessoas, sem prazo; Slack Free sem
+expiração** (90 dias de histórico). Dois de cada custam **R$ 0**, dão fronteira
+limpa desde o dia 1 e evitam a separação dolorosa lá na frente. Quando doer,
+paga-se só o lado que precisa.
+
+---
+
+## 2.1 🔴 RISCO ATIVO — o e-mail compartilhado
+
+**Situação:** Supabase, GitHub e as assinaturas de Claude e ChatGPT foram
+criados com `falecomseucamarao@gmail.com`, **uma caixa compartilhada com outra
+pessoa**.
+
+**Um e-mail compartilhado não é um e-mail — é uma chave-mestra compartilhada.**
+Quem tem acesso a ela consegue redefinir a senha de tudo que foi criado com ela:
+o código no GitHub, o banco com dados reais no Supabase, as assinaturas pagas.
+Não é questão de confiança: o arranjo torna impossível saber quem fez o quê e
+torna os ativos não-atribuíveis — em qualquer desacordo, tudo fica contestado.
+
+**A correção mais rápida não é migrar, é 2FA.** Segundo fator com o autenticador
+no celular do Emanuel bloqueia a tomada de conta por redefinição de senha, e
+funciona hoje, antes de qualquer migração.
+
+| Conta | Ação imediata | Migra depois? |
+|---|---|---|
+| **Supabase** (dados reais) | 🔴 2FA + salvar códigos de backup | ✅ |
+| **GitHub** (código) | 🔴 2FA + salvar códigos | ✅ troca fácil |
+| **ChatGPT** | 2FA + definir senha própria | ✅ (se entrou com Google, criar senha antes) |
+| **Claude / Claude Code** | 2FA + salvar códigos | ❌ **não migrável** — decisão à parte |
+
+O Claude é o caso doloroso: a Anthropic não permite trocar o e-mail. Opções:
+conviver, com 2FA no celular do Emanuel, ou abrir conta nova no endereço correto
+e perder o histórico.
 
 ---
 
@@ -232,26 +273,39 @@ em cartório** e envio pelos **Correios** ao Registro.br.
   formalização** junto com o CNPJ.
 - Corolário: não registrar mais domínios da SC no CPF do que o necessário.
 
-### 5.1 Slack — um workspace: SeuCamarão
+### 5.1 Slack — dois workspaces, ambos gratuitos
 
-- Canais por frente: `#produto`, `#ops`, `#maioli`, `#orka`, `#geral`.
-- Eduardo e Mayane entram como membros normais.
+| Workspace | Criado com | Quem entra | Plano |
+|---|---|---|---|
+| **SeuCamarão** | `emanuel@seucamarao.com.br` | Emanuel, Eduardo, Mayane | Free |
+| **YaaX** | `emanuel@yaax.com.br` | Emanuel (e freelas eventuais) | Free |
+
+- Canais da SC: `#produto`, `#ops`, `#maioli`, `#orka`, `#geral`.
+- Canais da YaaX: `#tindo`, `#3turbinas`, `#lab`.
 - **Sócios de Maioli e Orka não entram como membros.** Use canal compartilhado
   (*Slack Connect*), disponível inclusive no plano gratuito — eles ficam no
-  ambiente deles. Convidado de canal único dentro do seu workspace exige plano
-  pago.
-- **Disciplina:** assunto societário e financeiro (participações, distribuição,
-  negociação com investidor) fica fora do Slack. Exportar canais privados e DMs
-  exige plano Business+.
+  ambiente deles. Convidado de canal único exige plano pago.
+- O Free não expira; a limitação é **90 dias de histórico** e 10 apps. Quando
+  isso doer, paga-se **só o lado que precisa** (Pro ≈ US$ 7,25/pessoa/mês no
+  anual).
+- **Disciplina:** assunto societário e financeiro fica fora do Slack. Exportar
+  canais privados e DMs exige Business+.
 
-### 5.2 Jira — um site: `seucamarao.atlassian.net`
+### 5.2 Jira — dois sites, ambos gratuitos
 
-- A Atlassian cobra **por pessoa por ambiente** nos planos Standard e Premium,
-  sem agregar licenças entre ambientes. Um site só evita pagar duas vezes.
-- Projetos com chaves `SC`, `MAI`, `ORK`.
+| Site | Criado com | Projetos | Plano |
+|---|---|---|---|
+| `seucamarao.atlassian.net` | `emanuel@seucamarao.com.br` | `SC`, `MAI`, `ORK` | Free |
+| `yaax.atlassian.net` | `emanuel@yaax.com.br` | `TIN`, `TRB`, `YAX` | Free |
+
+- **Jira Free vai até 10 pessoas, sem prazo de validade** — os dois sites cabem
+  no gratuito. O argumento antigo de "um site só, senão paga duas vezes" só vale
+  acima de 10 pessoas por lado.
+- Limites do Free: 2 GB de armazenamento, 100 automações/mês, 100 e-mails/dia.
 - ⚠️ A chave (`SC-123`) entra em links, commits e branches **para sempre**.
   Escolha uma vez e não mude.
-- TinDo e 3 Turbinas **não entram aqui** — usam GitHub Issues.
+- Acima de 10 pessoas num dos lados, só aquele lado migra para o Standard
+  (≈ US$ 6,52–7,91/pessoa/mês).
 
 ### 5.3 Vercel — Team SeuCamarão
 
@@ -362,6 +416,73 @@ que não pode é continuar criando conta em Gmail pessoal.
 
 ---
 
+## 6.4 ONDE CRIAR CADA E-MAIL
+
+| Domínio | Onde | O que faz | Custo |
+|---|---|---|---|
+| `@yaax.com.br` | **Cloudflare Email Routing** | só **recebe** e encaminha — suficiente para endereço-cofre | **R$ 0** |
+| `@seucamarao.com.br` | **Google Workspace** | caixa real: envia, recebe, Drive, Agenda, compartilhamento | ~R$ 33–42/pessoa/mês |
+
+**Cloudflare — `@yaax.com.br`:**
+
+1. Criar conta grátis em `dash.cloudflare.com` e adicionar `yaax.com.br`.
+2. ⚠️ No **Registro.br**, apontar os servidores DNS para os do Cloudflare — o
+   Email Routing **só funciona com a zona no DNS do Cloudflare**.
+3. No Cloudflare: *Email → Email Routing → Enable*.
+4. Criar `emanuel@yaax.com.br` com destino no Gmail.
+5. Confirmar o e-mail de verificação enviado ao destino.
+
+**Google Workspace — `@seucamarao.com.br`:**
+
+1. `workspace.google.com` → começar → informar `seucamarao.com.br`.
+2. Verificar o domínio (registro TXT) e adicionar os registros MX.
+3. Criar `emanuel@`, `eduardo@`, `mayane@`.
+4. Criar os **grupos** `contato@`, `financeiro@`, `social@` — não consomem
+   licença.
+5. Importar o histórico do Gmail com a ferramenta de migração do Google.
+
+**Como tudo chega ao Gmail:**
+
+| Endereço | Acesso | Por quê |
+|---|---|---|
+| `emanuel@seucamarao.com.br` | **é um Gmail** — mesmo app, seletor de conta | caixa de trabalho, merece inbox própria; não encaminhar |
+| `emanuel@yaax.com.br` | **encaminha** para a caixa preferida | endereço-cofre, volume baixo |
+| responder como outro endereço | Gmail → Configurações → Contas → *Enviar e-mail como* | só se quiser responder com outra identidade |
+
+---
+
+## 6.5 CUSTOS — a conta fechada
+
+**Recorrente mensal:**
+
+| Item | Plano | Custo |
+|---|---|---|
+| Google Workspace `@seucamarao.com.br` | Business Starter × 3 | **~R$ 100–125/mês** |
+| Vercel — sites da SeuCamarão | Pro (uso comercial exige Pro) | **US$ 20/dev/mês** |
+| Cloudflare Email Routing | Free | R$ 0 |
+| Slack YaaX + SeuCamarão | Free × 2 | R$ 0 |
+| Jira YaaX + SeuCamarão | Free × 2 (até 10 pessoas) | R$ 0 |
+| GitHub `yaaxtech` + `seucamarao` | Free × 2 | R$ 0 |
+| Vercel — TinDo, 3 Turbinas | Hobby | R$ 0 |
+| Supabase | Free | R$ 0 |
+| Grupos de papel | Google Workspace | R$ 0 |
+| Cofre de senhas | Bitwarden (tem plano gratuito) | R$ 0 |
+
+**Anual:** `yaax.com.br`, `seucamarao.com.br` e `3turbinas.com.br` a R$ 40/ano
+cada no Registro.br — R$ 120/ano no total.
+
+> **Total realista hoje: ~R$ 100–125/mês + ~US$ 20/mês + R$ 120/ano.**
+
+**Quando cada gratuito deixa de servir:**
+
+| Ferramenta | Free aguenta até | Depois |
+|---|---|---|
+| Jira | 10 pessoas, 2 GB | ≈ US$ 6,52–7,91/pessoa/mês |
+| Slack | 90 dias de histórico | Pro ≈ US$ 7,25/pessoa/mês (anual) |
+| Vercel Hobby | uso **não** comercial | Pro US$ 20/dev/mês |
+
+---
+
 ## 7. CUSTO DE DESFAZER — decida na ordem inversa
 
 | # | Decisão | Custo de reverter | Implicação |
@@ -394,22 +515,107 @@ que não pode é continuar criando conta em Gmail pessoal.
 
 ## 9. ORDEM DE EXECUÇÃO
 
-1. Confirmar `yaax.com.br`, `seucamarao.com.br` e `3turbinas.com.br` registrados
-   e sob seu controle.
-2. Ativar **Cloudflare Email Routing** em `yaax.com.br` — grátis, 10 minutos.
-3. Criar o **Google Workspace em `seucamarao.com.br`** com as três contas;
-   importar o histórico do Gmail; deixar o Gmail encaminhando.
-4. Criar os grupos de papel: `contato@`, `financeiro@`, `social@seucamarao.com.br`
-   (grátis, não consomem licença).
-5. Migrar as **redes sociais** do Gmail para um Business Portfolio da SeuCamarão
-   — é o ativo mais exposto hoje.
-6. Criar o **Slack SeuCamarão** com `emanuel@seucamarao.com.br`.
-7. Criar o **Jira `seucamarao.atlassian.net`**, mesmo endereço.
-8. Criar a org **`seucamarao`** no GitHub.
-9. Criar o **Team SeuCamarão na Vercel** e migrar os sites — TinDo por último,
-   já que é o de maior trabalho.
-10. Em todas as contas acima, cadastrar `emanuel@yaax.com.br` como e-mail de
-    recuperação.
+O plano é faseado para minimizar custo **sem** gerar retrabalho. A chave é que o
+Cloudflare Email Routing entrega os endereços corporativos **de graça hoje**, e
+o endereço é permanente: quando o Google Workspace entrar, muda só o destino de
+entrega (registros MX), não o endereço. Contas criadas na fase 1 continuam
+válidas para sempre.
+
+### FASE 0 — HOJE · R$ 0 · parar o perigo
+
+| # | Ação | Onde | Custo |
+|---|---|---|---|
+| 1 | **2FA com autenticador no celular do Emanuel** + salvar códigos de backup | Supabase, GitHub, Claude, ChatGPT | R$ 0 |
+| 2 | Instalar cofre de senhas e guardar os códigos | Bitwarden (plano gratuito) | R$ 0 |
+| 3 | Baixar cópia dos arquivos críticos do Drive compartilhado | Google Takeout | R$ 0 |
+
+### FASE 1 — ESTA SEMANA · R$ 120/ano · e-mails corporativos de graça
+
+| # | Ação | Custo |
+|---|---|---|
+| 1 | Confirmar os 3 domínios no Registro.br, ativar **pagamento automático**, ciclo de 3 anos | ~R$ 40/ano cada = **R$ 120/ano** |
+| 2 | Criar conta grátis no Cloudflare e adicionar os 3 domínios | R$ 0 |
+| 3 | No Registro.br, apontar os servidores DNS para o Cloudflare | R$ 0 |
+| 4 | Ligar **Email Routing** e criar os endereços | R$ 0 |
+| 5 | No Gmail: Configurações → Contas → *Enviar e-mail como* | R$ 0 |
+
+**Endereços a criar — todos entregues no Gmail:**
+
+| Endereço | Entrega em | Para quê |
+|---|---|---|
+| `emanuel@yaax.com.br` | Gmail do Emanuel | 🔑 **cofre** — cria e recupera o que é dele |
+| `emanuel@seucamarao.com.br` | Gmail do Emanuel | endereço de trabalho |
+| `contato@seucamarao.com.br` | Gmail do Emanuel | clientes |
+| `financeiro@seucamarao.com.br` | Gmail do Emanuel | banco, nota, Registro.br |
+| `social@seucamarao.com.br` | Gmail do Emanuel | redes sociais |
+| `eduardo@seucamarao.com.br` | Gmail do Eduardo | ele |
+| `mayane@seucamarao.com.br` | Gmail da Mayane | ela |
+
+> ⚠️ **Regra que zera o retrabalho:** daqui em diante, toda conta nova usa esses
+> endereços, com **e-mail e senha — nunca "Entrar com Google"**.
+
+### FASE 2 — PRÓXIMAS SEMANAS · R$ 0 · migrar o que já existe
+
+| # | Migrar | Para | Dificuldade |
+|---|---|---|---|
+| 1 | **Redes sociais** | Business Portfolio da SC + `social@` | média — ativo mais exposto |
+| 2 | **Supabase** (dados reais) | `emanuel@seucamarao.com.br` | fácil |
+| 3 | **GitHub** | `emanuel@yaax.com.br` | fácil |
+| 4 | **Registro.br** | `financeiro@seucamarao.com.br` | fácil |
+| 5 | **ChatGPT** | endereço correto (criar senha antes, se entrou com Google) | fácil |
+| 6 | **Claude** | ❌ não migra — decidir entre conviver ou recomeçar | decisão |
+
+### FASE 3 — QUANDO DOER · ~R$ 110/mês · Google Workspace
+
+**Gatilhos, qualquer um:** o Drive compartilhado virar problema; Eduardo ou
+Mayane precisarem de caixa própria; ser necessário revogar o acesso de alguém
+sem trocar a senha de todos; a SeuCamarão formalizar o CNPJ.
+
+| # | Ação | Custo |
+|---|---|---|
+| 1 | Criar Workspace em `seucamarao.com.br` | ~R$ 33–42/pessoa/mês × 3 |
+| 2 | Trocar os registros MX do Cloudflare pelos do Google | R$ 0 · ~10 min |
+| 3 | Migrar e-mail, **Drive**, contatos e agenda do Gmail compartilhado | R$ 0 |
+| 4 | Manter `contato@`, `financeiro@`, `social@` como **grupos** | R$ 0 |
+
+> ⚠️ Conta pessoal do Google **não se converte** em conta de empresa — cria-se
+> nova e migra-se. E a migração **não leva** Fotos, senhas salvas, compras nem
+> os logins de "Entrar com Google" em serviços de terceiros. Daí a regra da
+> fase 1.
+
+### FASE 4 — QUANDO PRECISAR · US$ 20/mês · as ferramentas
+
+| # | Criar | Com qual e-mail | Custo |
+|---|---|---|---|
+| 1 | Slack **SeuCamarão** | `emanuel@seucamarao.com.br` | Free |
+| 2 | Slack **YaaX** | `emanuel@yaax.com.br` | Free |
+| 3 | Jira `seucamarao.atlassian.net` | `emanuel@seucamarao.com.br` | Free até 10 |
+| 4 | Jira `yaax.atlassian.net` | `emanuel@yaax.com.br` | Free até 10 |
+| 5 | GitHub org `seucamarao` | conta pessoal do Emanuel | Free |
+| 6 | Vercel Team SeuCamarão | `emanuel@seucamarao.com.br` | US$ 20/mês |
+| 7 | Migrar o TinDo para a Vercel | — | R$ 0 (trabalho de dev) |
+
+### FASE 5 — NA FORMALIZAÇÃO DO CNPJ
+
+| # | Ação | Custo |
+|---|---|---|
+| 1 | Transferir `seucamarao.com.br` do CPF para o CNPJ | cartório + Correios |
+| 2 | Passar as assinaturas para o CNPJ | — |
+| 3 | Revisar admins e endereços de recuperação | R$ 0 |
+| 4 | Formalizar por escrito a relação YaaX → SeuCamarão | contador |
+
+### Resumo do gasto
+
+| Quando | Gasto |
+|---|---|
+| Fase 0 — hoje | **R$ 0** |
+| Fase 1 — esta semana | **R$ 120/ano** |
+| Fase 2 — próximas semanas | **R$ 0** |
+| Fase 3 — quando doer | ~R$ 110/mês |
+| Fase 4 — quando precisar | US$ 20/mês |
+
+Até o fim da fase 2 o gasto total é **R$ 120 no ano inteiro** — com endereços
+corporativos permanentes, contas protegidas e nenhum retrabalho pela frente.
 
 ---
 
@@ -437,3 +643,10 @@ que não pode é continuar criando conta em Gmail pessoal.
 - Atlassian — trocar e-mail da conta: <https://support.atlassian.com/atlassian-cloud/kb/change-atlassian-account-email-addresses/>
 - Atlassian — verificar domínio e contas gerenciadas: <https://support.atlassian.com/user-management/docs/verify-a-domain-to-manage-accounts/>
 - Registro.br — transferência de titularidade: <https://registro.br/ajuda/procedimentos-administrativos/transferencia-de-titularidade/>
+
+### Preços e planos gratuitos
+
+- Jira — plano gratuito até 10 pessoas: <https://www.atlassian.com/software/jira/pricing>
+- Slack — planos e preços: <https://slack.com/pricing>
+- Cloudflare Email Routing — exige DNS no Cloudflare: <https://developers.cloudflare.com/email-routing/get-started/enable-email-routing/>
+- Registro.br — preço do `.com.br`: <https://registro.br/dominio/precos/>
