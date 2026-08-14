@@ -87,6 +87,73 @@ export interface AutonomiaBlob {
   n2: AutonomiaN2 | null;
 }
 
+// ── Janela de contexto das sessões do Claude (bloco "Janela" do painel) ────
+// Sub-blob do harness_snapshot, empurrado de hora em hora pelo coletor do Mac.
+// Qualquer KPI pode vir null (dado insuficiente) e o campo inteiro pode vir
+// ausente ou como { erro } quando a coleta falhou — ver src/lib/harness/janela.ts.
+
+export interface JanelaTotais {
+  sessoes: number;
+  chamadas: number;
+  tokens: number;
+  cache_read: number;
+  output: number;
+}
+
+export interface JanelaKpis {
+  /** Fração do gasto que é releitura da conversa (cache_read / tokens). */
+  pct_prefixo: number | null;
+  /** Fração do gasto depois da chamada 200 de cada sessão. */
+  pct_pos_200: number | null;
+  /** Sessões que passaram do teto de chamadas sem compactar. */
+  sessoes_acima_teto: { n: number; pct: number; teto: number } | null;
+  /** Custo de contexto médio por tarefa entregue, em tokens. */
+  tokens_por_tarefa: number | null;
+  /** Gestos de higiene da janela (subagente, chip, compactar). */
+  gestos: { subagentes: number; chips: number; compacts: number; por_sessao: number } | null;
+}
+
+export interface JanelaModelo {
+  modelo: string;
+  chamadas: number;
+  tokens: number;
+  pct: number;
+}
+
+export interface JanelaFaixa {
+  faixa: string;
+  sessoes: number;
+  tokens: number;
+  /** Fração do consumo total de tokens nesta faixa. */
+  pct: number;
+}
+
+export interface JanelaSessao {
+  id: string;
+  chamadas: number;
+  tokens: number;
+  modelo: string;
+}
+
+export interface JanelaBlob {
+  gerado_em: string;
+  dias: number;
+  totais: JanelaTotais;
+  kpis: JanelaKpis;
+  por_modelo: JanelaModelo[];
+  faixas: JanelaFaixa[];
+  top_sessoes: JanelaSessao[];
+}
+
+/** Forma do campo quando a coleta falhou na máquina local. */
+export interface JanelaErro {
+  erro: string;
+  gerado_em: string;
+}
+
+/** Campo `janela` do blob: blob normal, erro de coleta, ausente ou null. */
+export type JanelaCampo = JanelaBlob | JanelaErro | null;
+
 export interface HarnessBlob {
   gerado_em: string;
   ledger: LedgerLinha[];
@@ -96,6 +163,7 @@ export interface HarnessBlob {
   assinaturas: Assinatura[];
   cadeias: Record<string, CadeiaTerreno>;
   autonomia?: AutonomiaBlob | null;
+  janela?: JanelaCampo;
 }
 
 export interface HarnessSnapshot {

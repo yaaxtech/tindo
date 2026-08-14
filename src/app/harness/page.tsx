@@ -5,6 +5,7 @@ import { Autonomia } from '@/app/harness/_components/Autonomia';
 import { FaixaAlertas } from '@/app/harness/_components/FaixaAlertas';
 import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
 import { FluxoGithub } from '@/app/harness/_components/FluxoGithub';
+import { Janela } from '@/app/harness/_components/Janela';
 import { MinutosGithub } from '@/app/harness/_components/MinutosGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
 import { NavPainel } from '@/app/harness/_components/NavPainel';
@@ -161,6 +162,10 @@ export default function HarnessPage() {
               <Autonomia autonomia={snap.dados.autonomia} janelaDias={janelaDias} />
             </Secao>
           )}
+
+          {/* Bloco 2.6 — snapshot horário fixo, não segue o filtro; mostra
+              estado vazio quando a coleta de contexto ainda não rodou */}
+          <Janela id="janela" campo={snap.dados.janela} />
 
           {/* Bloco 3 — segue o filtro */}
           <Secao

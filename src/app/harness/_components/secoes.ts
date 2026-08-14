@@ -1,4 +1,5 @@
 import {
+  AppWindow,
   CodeXml,
   Cpu,
   CreditCard,
@@ -46,6 +47,7 @@ export const SECOES_PAINEL: SecaoNavGrupo[] = [
       { id: 'visao-geral', rotulo: 'Visão geral', icone: Gauge },
       { id: 'placar', rotulo: 'Placar', icone: Trophy },
       { id: 'autonomia', rotulo: 'Autonomia', icone: MessageCircleQuestion },
+      { id: 'janela', rotulo: 'Janela', icone: AppWindow },
     ],
   },
   {
