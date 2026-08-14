@@ -924,8 +924,13 @@
 .rmm-seta.aberta {
   transform: rotate(90deg);
 }
-.rmm-nav-item.rmm-nav-drop {
+/* soltar EM CIMA: o item inteiro acende — a arrastada vira filha dele */
+.rmm-nav-item.rmm-nav-drop-filha {
   background: rgba(25, 139, 116, 0.28);
+  box-shadow: inset 0 0 0 1px #2caf93;
+}
+/* soltar EMBAIXO: risco na base — a arrastada vira irmã logo depois */
+.rmm-nav-item.rmm-nav-drop-irma {
   box-shadow: inset 0 -2px 0 #2caf93;
 }
 .rmm-nav-input {
