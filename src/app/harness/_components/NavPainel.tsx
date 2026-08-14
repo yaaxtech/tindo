@@ -54,15 +54,97 @@ export function NavPainel({ grupos }: { grupos: SecaoNavGrupo[] }) {
     };
   }, []);
 
-  // Rolagem suave das âncoras. Em prefers-reduced-motion o globals.css já
-  // força `scroll-behavior: auto !important`, que vence este inline — sem
-  // animação para quem pediu menos movimento.
-  useEffect(() => {
-    document.documentElement.style.scrollBehavior = 'smooth';
-    return () => {
-      document.documentElement.style.scrollBehavior = '';
+  // Rolagem das âncoras: nossa, não do navegador.
+  //
+  // A primeira versão só ligava `scroll-behavior: smooth` no <html> e deixava
+  // o salto nativo do link fazer o resto. Isso quebrava calado: a animação
+  // nativa só avança em quadros PINTADOS, então com a aba em segundo plano,
+  // a janela oculta ou o PWA fora de foco o hash mudava, o item acendia e a
+  // página não saía do lugar. Medido em 2026-08-14 na mesma página: com o
+  // smooth global, clicar em "Assinaturas" deixava scrollY em 0; sem ele, ia
+  // para 4422 com o título exatamente abaixo da barra.
+  //
+  // Agora o clique rola por conta própria e CONFERE a chegada: espera a página
+  // parar de se mexer e, se o título do bloco não estiver no lugar certo, faz
+  // o acerto seco. Assim a âncora acerta sempre; a animação é só o enfeite.
+  // Quem pediu menos movimento (prefers-reduced-motion) pula direto.
+  const irPara = (id: string) => {
+    const alvo = document.getElementById(id);
+    if (!alvo) return;
+
+    // Quem posiciona é o `scrollIntoView`: ele já respeita o `scroll-margin-top`
+    // que a nav publica e é o mesmo caminho do salto nativo, inclusive na
+    // ancoragem de rolagem (o navegador reposiciona a página quando um bloco
+    // acima muda de tamanho). Calcular a posição na mão parecia equivalente e
+    // não é: media o destino uma vez só e chegava com o título até 30px atrás
+    // da barra nos blocos mais distantes.
+    // Animação só quando ela pode de fato acontecer: página escondida não
+    // recebe quadros, e animar ali é justamente o que travava a navegação.
+    const semAnimacao =
+      (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false) ||
+      document.visibilityState !== 'visible';
+    const rolar = (behavior: ScrollBehavior) => alvo.scrollIntoView({ behavior, block: 'start' });
+    rolar(semAnimacao ? 'instant' : 'smooth');
+    history.replaceState(null, '', `#${id}`);
+    setAtivo(id);
+
+    // Rede de segurança: se o usuário assumiu a rolagem no meio do caminho,
+    // é ele quem manda — não puxamos a página de volta.
+    let doUsuario = false;
+    const marcar = () => {
+      doUsuario = true;
     };
-  }, []);
+    const eventos = ['wheel', 'touchstart', 'keydown'] as const;
+    for (const e of eventos) window.addEventListener(e, marcar, { once: true, passive: true });
+
+    // Chegou = o topo do bloco está na altura da faixa grudada. No fim da
+    // página não há para onde rolar: ali o bloco parar acima da faixa é o
+    // certo, não um erro a corrigir.
+    const chegou = () => {
+      const margem = Number.parseFloat(getComputedStyle(alvo).scrollMarginTop) || 0;
+      const desvio = alvo.getBoundingClientRect().top - margem;
+      const noFim =
+        window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      return Math.abs(desvio) <= 2 || (noFim && desvio < 0);
+    };
+
+    // Conferência só depois que a página parou DE VERDADE — o evento
+    // `scrollend`, não um cronômetro chutado. Mexer no meio da animação não
+    // adianta e ainda atrapalha: medido em 2026-08-14 no iPhone 14, a rolagem
+    // suave leva ~1400ms; deixada terminar sozinha ela para exatamente na
+    // margem, mas um acerto seco aos 900ms era engolido pela animação em curso
+    // e o título parava 17-21px atrás da barra. O tempo aqui é só rede de
+    // segurança: navegador sem `scrollend`, ou clique que não moveu a página
+    // (nesse caso o evento nunca vem).
+    let feito = false;
+    let acertos = 0;
+    let seguranca = 0;
+
+    function encerrar() {
+      feito = true;
+      window.clearTimeout(seguranca);
+      window.removeEventListener('scrollend', conferir);
+      for (const e of eventos) window.removeEventListener(e, marcar);
+    }
+
+    function conferir() {
+      if (feito) return;
+      // Chegou, o usuário assumiu a rolagem, ou já insistimos o bastante:
+      // duas tentativas cobrem o acerto e a ancoragem de rolagem, que desloca
+      // a página quando um bloco acima muda de tamanho no caminho.
+      if (doUsuario || chegou() || acertos >= 2) {
+        encerrar();
+        return;
+      }
+      acertos += 1;
+      rolar('instant');
+      seguranca = window.setTimeout(conferir, 200);
+    }
+
+    if (!semAnimacao) window.addEventListener('scrollend', conferir);
+    const temScrollEnd = 'onscrollend' in window;
+    seguranca = window.setTimeout(conferir, semAnimacao ? 150 : temScrollEnd ? 2500 : 1500);
+  };
 
   // Item ativo acompanha a rolagem: o bloco atual é o ÚLTIMO cujo topo já
   // passou de uma linha imaginária no terço superior da tela.
@@ -137,6 +219,15 @@ export function NavPainel({ grupos }: { grupos: SecaoNavGrupo[] }) {
                 <a
                   key={item.id}
                   href={`#${item.id}`}
+                  onClick={(e) => {
+                    // Só assumimos o clique simples: ctrl/cmd/meio continuam
+                    // abrindo em nova aba, como em qualquer link.
+                    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+                      return;
+                    }
+                    e.preventDefault();
+                    irPara(item.id);
+                  }}
                   aria-current={estaAtivo ? 'true' : undefined}
                   className={cn(
                     'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-xs transition-colors',
