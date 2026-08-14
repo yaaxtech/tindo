@@ -52,21 +52,28 @@ const AMBIGUO_MAX = 0.3; // acima disso o balde não mede terreno — sem sinal
 // LEDGER_TERRENO (`rotina` no codex, `ui` no kimi). Um balde assim mistura o
 // terreno real com tudo que o cérebro esqueceu de classificar, e o ok1 dele
 // deixa de medir o degrau — trocar o default por causa dele é decidir no ruído.
-// Desde 13/08/2026 essas linhas chegam marcadas (`terreno_inferido`); antes
-// disso, despacho automático parado no default é indistinguível de declarado,
-// então também conta como ambíguo.
+//
+// O terreno só MEDE o degrau quando foi declarado NO DESPACHO. Isso acontece
+// em um caso e só nele: despacho automático DEPOIS da instrumentação e SEM a
+// marca `terreno_inferido` — o run.sh já carimbava, então a ausência da marca
+// prova que a variável veio preenchida. Todo o resto é ambíguo.
+//
+// O log MANUAL do cérebro também não vale (buraco fechado no ledger.mjs em
+// 14/08/2026): terreno digitado à mão DEPOIS do trabalho é rótulo, não
+// classificação — foi por aí que leitura barata ("estado da aba Despescas para
+// prompt", "inventário e reconciliação") entrou no balde `dificil`. A prova de
+// que o sinal era lixo: em 14d o report mandava SUBIR em Sol/xhigh × dificil
+// (67%) e DESCER em Sol/high × dificil (94%) — effort MAIOR performando pior no
+// MESMO terreno é impossível por effort e natural por seleção de amostra.
+//
 // Espelho de `terrenoAmbiguo` em ~/.claude/orquestracao/ledger.mjs (fonte de
 // verdade) — mudar lá = mudar aqui.
 const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T17:00:00Z');
-const DEFAULT_DO_RUNSH: Record<string, string> = { codex: 'rotina', kimi: 'ui' };
 
 export function terrenoAmbiguo(r: LedgerLinha): boolean {
-  if (r.terreno_inferido) return true;
-  return (
-    !!r.auto &&
-    DEFAULT_DO_RUNSH[r.frente] === r.terreno &&
-    Date.parse(r.ts) < INSTRUMENTACAO_TERRENO
-  );
+  if (r.terreno_inferido) return true; // o próprio run.sh admitiu o default
+  if (!r.auto) return true; // rótulo digitado à mão ≠ classificação
+  return Date.parse(r.ts) < INSTRUMENTACAO_TERRENO; // antes do carimbo: indistinguível
 }
 
 export interface KpisGerais {
