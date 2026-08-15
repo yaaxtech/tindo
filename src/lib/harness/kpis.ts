@@ -108,7 +108,25 @@ export interface KpisGerais {
   quotaPorFrente: Record<string, number>;
 }
 
-export type SinalTipo = 'dados' | 'subir' | 'baratear' | 'ok' | 'quota' | 'ambiguo';
+/**
+ * `vazio` = nenhum despacho no período (instrumento sem entrada) — é DIFERENTE
+ * de `dados`, que já tem registro mas ainda não chegou à amostra mínima. Os
+ * dois somem da tela como "sem 🔺/🔻", e confundir um com o outro faz o dono
+ * ler "instrumento quebrado" onde só falta tarefa medida.
+ */
+// `esforco` = ok1 abaixo do piso num terreno cujo modelo já está no teto
+// (piso===teto, ex.: SQL/dinheiro em Opus 5). Aí não há "subir o modelo": a
+// única alavanca que o motor pode puxar é o ESFORÇO (high→max) — e, esgotado
+// esse, reforçar a revisão. Distinto de `subir`, que ainda tem modelo pra cima.
+export type SinalTipo =
+  | 'vazio'
+  | 'dados'
+  | 'subir'
+  | 'esforco'
+  | 'baratear'
+  | 'ok'
+  | 'quota'
+  | 'ambiguo';
 
 export interface TerrenoKpi {
   n: number;
@@ -121,6 +139,8 @@ export interface TerrenoKpi {
   recicloPct: number | null;
   /** Linhas do terreno que caíram no default do run.sh (sem classificação). */
   ambiguos: number;
+  /** Julgáveis com terreno provado no despacho — `julgaveis - ambiguos`. */
+  classificados: number;
   /**
    * true quando algum degrau com amostra suficiente é balde ambíguo — o
    * terreno não emite sinal de trocar o default enquanto isso durar.
@@ -311,9 +331,10 @@ export function kpisTerreno(
     ok1Pct: null,
     recicloPct: null,
     ambiguos: 0,
+    classificados: 0,
     ambiguo: false,
     degrausAmbiguos: [],
-    sinal: { tipo: 'dados', texto: 'coletando dados (n=0)' },
+    sinal: { tipo: 'vazio', texto: 'sem dados — nenhum despacho neste terreno no período' },
   });
   for (const t of Object.keys(cadeias)) por[t] = vazio();
   for (const r of linhas) {
@@ -343,21 +364,50 @@ export function kpisTerreno(
   for (const [nome, t] of Object.entries(por)) {
     t.ok1Pct = t.julgaveis ? t.ok1 / t.julgaveis : null;
     t.recicloPct = t.julgaveis ? t.reciclo / t.julgaveis : null;
+    t.classificados = t.julgaveis - t.ambiguos;
     const cad = cadeias[nome];
-    if (t.julgaveis < MIN_N)
-      t.sinal = { tipo: 'dados', texto: `coletando dados (n=${t.julgaveis})` };
+    // Três estados distintos de "não há 🔺/🔻", e a tela precisa dizer QUAL:
+    // sem nenhum registro (instrumento sem entrada) · registro de menos para
+    // medir · registro suficiente mas sem terreno provado no despacho.
+    if (t.n === 0)
+      t.sinal = { tipo: 'vazio', texto: 'sem dados — nenhum despacho neste terreno no período' };
+    else if (t.julgaveis < MIN_N)
+      t.sinal = {
+        tipo: 'dados',
+        texto:
+          `sem sinal — só ${t.julgaveis} tarefa(s) medível(is) no período, precisa de ${MIN_N} ` +
+          `(${t.classificados}/${t.julgaveis} com o terreno declarado no despacho)`,
+      };
     else if (t.ambiguo)
       t.sinal = {
         tipo: 'ambiguo',
-        texto:
-          'sem recomendação de modelo — despacho sem terreno declarado domina a amostra ' +
-          'deste terreno, então o ok de 1ª mede o registro, não o modelo',
+        texto: `sem sinal — só ${t.classificados}/${t.julgaveis} tarefas entraram com o terreno declarado no despacho, então o ok de 1ª mede o registro e não o modelo`,
       };
-    else if (t.ok1Pct != null && t.ok1Pct < OK1_PISO)
-      t.sinal = {
-        tipo: 'subir',
-        texto: `subir o modelo — ok1 ${Math.round(t.ok1Pct * 100)}% (${t.ok1}/${t.julgaveis}) < 70%`,
-      };
+    else if (t.ok1Pct != null && t.ok1Pct < OK1_PISO) {
+      // Abaixo do piso: normalmente "subir o modelo". Mas se o modelo já está
+      // no teto (piso===teto do terreno, ex.: SQL/dinheiro em Opus 5), NÃO há
+      // modelo pra cima — a alavanca vira o ESFORÇO (high→max) e, esgotado
+      // esse, reforçar a revisão. Espelha o split de painel.mjs.
+      const amostra = `${t.ok1}/${t.julgaveis}`;
+      const pct = Math.round(t.ok1Pct * 100);
+      if (cad?.modelo_no_teto) {
+        if (cad.effort && cad.effort_teto && cad.effort !== cad.effort_teto)
+          t.sinal = {
+            tipo: 'esforco',
+            texto: `subir o esforço (${cad.effort} → ${cad.effort_teto}) — modelo travado no topo · ok1 ${pct}% (${amostra}) < 70%`,
+          };
+        else
+          t.sinal = {
+            tipo: 'esforco',
+            texto: `reforçar a revisão — modelo e esforço no teto · ok1 ${pct}% (${amostra}) < 70%`,
+          };
+      } else {
+        t.sinal = {
+          tipo: 'subir',
+          texto: `subir o modelo — ok1 ${pct}% (${amostra}) < 70%`,
+        };
+      }
+    }
     else if (t.ok1Pct != null && t.ok1Pct >= OK1_TETO && t.julgaveis >= 8 && !cad?.piso)
       t.sinal = {
         tipo: 'baratear',

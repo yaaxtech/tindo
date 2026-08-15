@@ -138,7 +138,17 @@ const CADEIAS: Record<string, CadeiaTerreno> = {
     piso: true,
     revisor: 'Prova',
   },
-  sql: { rotulo: 'SQL', default: 'Fable', fallback: [], piso: false, revisor: 'Verificador' },
+  sql: {
+    rotulo: 'SQL',
+    default: 'Fable',
+    fallback: [],
+    piso: false,
+    revisor: 'Verificador',
+    // modelo já no teto do terreno: esforço high→max é a única alavanca.
+    effort: 'high',
+    effort_teto: 'max',
+    modelo_no_teto: true,
+  },
 };
 
 const ATUAL = recorte(LEDGER, 7, 0, AGORA);
@@ -262,12 +272,61 @@ describe('kpisTerreno', () => {
     expect(t.rotina?.ok1Pct).toBe(1);
   });
 
+  // Os 3 jeitos de não haver ▲/▼ precisam ser distinguíveis na tela: sem
+  // registro nenhum · registro de menos · registro sem terreno declarado.
+  // Iguais, o dono lê "instrumento quebrado" onde só falta tarefa medida.
+  it('terreno sem nenhum despacho no período fica "vazio", não "dados"', () => {
+    const t = kpisTerreno([classificada({ terreno: 'rotina', resultado: 'ok1' })], CADEIAS);
+    expect(t.ui?.n).toBe(0);
+    expect(t.ui?.sinal.tipo).toBe('vazio');
+    expect(t.ui?.sinal.texto).toContain('sem dados');
+  });
+
+  it('amostra insuficiente diz "sem sinal" e mostra classificados/julgáveis', () => {
+    const linhas = [
+      ...Array.from({ length: 2 }, () => classificada({ terreno: 'ui', resultado: 'ok1' })),
+      linha({ ts: tsDiasAtras(1), terreno: 'ui', resultado: 'ok1' }), // manual = ambígua
+    ];
+    const t = kpisTerreno(linhas, CADEIAS);
+    expect(t.ui).toMatchObject({ n: 3, julgaveis: 3, ambiguos: 1, classificados: 2 });
+    expect(t.ui?.sinal.tipo).toBe('dados');
+    expect(t.ui?.sinal.texto).toContain('sem sinal');
+    expect(t.ui?.sinal.texto).toContain('2/3');
+  });
+
   it('sinal subir: ok1 < 70% com 5+ julgáveis', () => {
     const linhas = Array.from({ length: 5 }, (_, i) =>
       classificada({ terreno: 'dificil', resultado: i < 3 ? 'ok1' : 'retrabalho' }),
     );
     const t = kpisTerreno(linhas, CADEIAS);
     expect(t.dificil?.sinal.tipo).toBe('subir');
+  });
+
+  // Terreno com o modelo no teto (SQL/dinheiro em Opus 5): abaixo do piso NÃO
+  // manda "subir modelo" — não há modelo pra cima. Manda subir o ESFORÇO.
+  it('sinal esforco: ok1 < 70% com modelo no teto vira subir esforço, não subir modelo', () => {
+    const linhas = Array.from({ length: 5 }, (_, i) =>
+      classificada({ terreno: 'sql', resultado: i < 3 ? 'ok1' : 'retrabalho' }),
+    );
+    const t = kpisTerreno(linhas, CADEIAS);
+    expect(t.sql?.sinal.tipo).toBe('esforco');
+    expect(t.sql?.sinal.texto).toContain('high → max');
+    expect(t.sql?.sinal.texto).toContain('modelo travado no topo');
+  });
+
+  // Esforço já no teto (high===max) e ainda abaixo do piso: a alavanca acabou,
+  // o sinal vira "reforçar a revisão".
+  it('sinal esforco: esforço esgotado no teto vira reforçar a revisão', () => {
+    const cadeias: Record<string, CadeiaTerreno> = {
+      ...CADEIAS,
+      sql: { ...CADEIAS.sql, effort: 'max', effort_teto: 'max' } as CadeiaTerreno,
+    };
+    const linhas = Array.from({ length: 5 }, (_, i) =>
+      classificada({ terreno: 'sql', resultado: i < 3 ? 'ok1' : 'retrabalho' }),
+    );
+    const t = kpisTerreno(linhas, cadeias);
+    expect(t.sql?.sinal.tipo).toBe('esforco');
+    expect(t.sql?.sinal.texto).toContain('reforçar a revisão');
   });
 
   it('sinal baratear: ok1 ≥ 90% com 8+ julgáveis e degrau não-piso', () => {
@@ -444,6 +503,11 @@ describe('kpisTerreno com balde ambíguo', () => {
     expect(t.rotina?.degrausAmbiguos).toEqual([
       { degrau: 'codex/gpt-5.6-sol/high', ambiguos: 5, julgaveis: 8 },
     ]);
+    // O motivo tem que vir com o tamanho da amostra classificada, no mesmo
+    // padrão x/y do resto da tela — "suspenso" sem número não dá o que fazer.
+    expect(t.rotina?.classificados).toBe(3);
+    expect(t.rotina?.sinal.texto).toContain('3/8');
+    expect(t.rotina?.sinal.texto).toContain('sem sinal');
   });
 
   it('degrau limpo no mesmo terreno não dilui o degrau contaminado', () => {

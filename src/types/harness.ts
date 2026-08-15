@@ -68,6 +68,14 @@ export interface CadeiaTerreno {
   piso: boolean;
   nunca_externo?: boolean;
   revisor: string;
+  // Alavanca de ESFORÇO do terreno (enriquecida em painel.mjs a partir de
+  // defaults-terreno.json e empurrada no mesmo blob). Quando `modelo_no_teto`
+  // é true, o modelo já está no piso===teto (ex.: SQL em Opus 5) e o esforço
+  // vira a ÚNICA alavanca que o motor pode puxar — por isso o sinal de "subir
+  // modelo" abaixo do alvo precisa virar "subir esforço" aqui. Ver kpis.ts.
+  effort?: string;
+  effort_teto?: string;
+  modelo_no_teto?: boolean;
 }
 
 export interface AutonomiaDia {
