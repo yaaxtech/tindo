@@ -14,6 +14,8 @@ const FULLSCREEN_ROUTES = [
   '/nova-senha',
   '/calibracao',
   '/recalibrar',
+  // Vitrine da YaaX: peça fechada, sem sidebar nem barra inferior do TinDo.
+  '/yaax',
 ];
 
 /**

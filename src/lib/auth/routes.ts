@@ -9,6 +9,12 @@ export const ROTAS_PUBLICAS = [
   '/recuperar-senha',
   '/nova-senha',
   '/harness',
+  // Vitrine da YaaX e os dois atalhos que ela anuncia. A vitrine é pública de
+  // propósito; `/tindo` e `/roadmapmind` só redirecionam, e o destino de cada
+  // um (`/cards`, `/docs`) continua exigindo sessão.
+  '/yaax',
+  '/tindo',
+  '/roadmapmind',
   '/manifest.webmanifest',
 ] as const;
 
