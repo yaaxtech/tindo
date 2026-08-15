@@ -17,6 +17,7 @@ import { Tiles } from '@/app/harness/_components/Tiles';
 import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistorico';
 import { SECOES_PAINEL } from '@/app/harness/_components/secoes';
 import { Secao } from '@/app/harness/_components/ui';
+import { avaliarLedger } from '@/lib/harness/alertas';
 import {
   contarInfra,
   contarPendentes,
@@ -70,6 +71,14 @@ export default function HarnessPage() {
   // Provisórios dos run.sh sem revisão: fora de todos os KPIs, só a contagem.
   const pendentes = useMemo(() => contarPendentes(atual), [atual]);
   const infra = useMemo(() => contarInfra(atual), [atual]);
+  // Reconferência da faixa de alerta: o revisor grava o veredicto de 14 em 14
+  // dias, então um alerta pode estar congelado num cálculo que já mudou. Mesma
+  // função que o cron usa — nenhuma fórmula nova aqui. Usa a janela FIXA do
+  // revisor (14 dias), não o filtro de período da tela.
+  const violacoesAgora = useMemo(
+    () => avaliarLedger(ledger, snap?.dados.assinaturas ?? []),
+    [ledger, snap],
+  );
 
   const hora = snap
     ? new Date(snap.geradoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -127,7 +136,7 @@ export default function HarnessPage() {
         <div className="mx-auto mt-6 flex w-full max-w-3xl flex-col gap-9 px-6">
           {/* Faixa de alerta — o que o revisor de KPIs achou na última checagem.
               Fica no topo e só aparece depois da primeira avaliação. */}
-          <FaixaAlertas historico={alertas} />
+          <FaixaAlertas historico={alertas} violacoesAgora={violacoesAgora} />
 
           {/* Bloco 1 — segue o filtro */}
           <Secao

@@ -1,4 +1,4 @@
-import { ROTULO_ALERTA } from '@/lib/harness/alertas';
+import { ROTULO_ALERTA, type Violacao, reconferirLedger } from '@/lib/harness/alertas';
 import { cn } from '@/lib/utils';
 import type { HistoricoAlertas } from '@/services/harness';
 import type { AlertaLinha, CodigoAlerta } from '@/types/harness';
@@ -114,18 +114,32 @@ const amostraDe = (codigo: CodigoAlerta): string => ROTULO_AMOSTRA[codigo] ?? 'e
 const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 const INFO_SECAO =
-  'A cada 14 dias — e três dias antes de cada renovação de assinatura — o painel confere sozinho se algum número passou do limite combinado e registra o que encontrou. É a checagem que roda no servidor todo dia de madrugada; nada depende de o computador estar ligado.';
+  'A cada 14 dias — e três dias antes de cada renovação de assinatura — o painel confere sozinho se algum número passou do limite combinado e registra o que encontrou. É a checagem que roda no servidor todo dia de madrugada; nada depende de o computador estar ligado. Ao abrir a tela, cada aviso é conferido de novo com os números de agora: o que já voltou ao normal some na hora, sem esperar a próxima checagem.';
 
 const INFO_REPETICAO =
   'Quantas das últimas checagens este mesmo ponto apareceu. Um aviso que aparece em toda checagem provavelmente não é novidade: ou a meta está desalinhada, ou é um problema de fundo que ninguém atacou ainda.';
 
-export function FaixaAlertas({ historico }: { historico: HistoricoAlertas | undefined }) {
+export function FaixaAlertas({
+  historico,
+  violacoesAgora,
+}: {
+  historico: HistoricoAlertas | undefined;
+  /**
+   * O que o MESMO cálculo do revisor acha nos dados de agora (`avaliarLedger`).
+   * A avaliação gravada é quinzenal: sem esta reconferência, um número já
+   * corrigido continuaria gritando aqui até a próxima checagem.
+   */
+  violacoesAgora: Violacao[];
+}) {
   const ultima = historico?.avaliacoes[0];
   // Antes da primeira avaliação a faixa simplesmente não existe — nada de
   // caixa vazia ocupando o topo do painel.
   if (!historico || !ultima) return null;
 
-  const vigentes = historico.alertas.filter((a) => a.avaliacao_id === ultima.id);
+  const vigentes = reconferirLedger(
+    historico.alertas.filter((a) => a.avaliacao_id === ultima.id),
+    violacoesAgora,
+  );
   const totalAvaliacoes = historico.avaliacoes.length;
 
   /** Em quantas das últimas avaliações este mesmo limiar apareceu. */
@@ -136,7 +150,7 @@ export function FaixaAlertas({ historico }: { historico: HistoricoAlertas | unde
     <Secao
       titulo="Precisa da sua atenção"
       info={INFO_SECAO}
-      subtitulo={`checado em ${dataBR(ultima.avaliado_em)}`}
+      subtitulo={`checado em ${dataBR(ultima.avaliado_em)} · conferido de novo agora`}
       escopo={{ tipo: 'fixo', rotulo: 'a cada 14 dias' }}
     >
       {vigentes.length === 0 ? (
@@ -147,7 +161,7 @@ export function FaixaAlertas({ historico }: { historico: HistoricoAlertas | unde
             tudo dentro do combinado
           </span>
           <span className="text-sm text-text-primary">
-            Nenhum número passou do limite na última checagem.
+            Nenhum número está passando do limite combinado.
           </span>
         </Card>
       ) : (
