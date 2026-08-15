@@ -267,6 +267,54 @@ export function avaliarKpis({
   return [...avaliarLedger(ledger, assinaturas, agora), ...avaliarGithub(runs, agora)];
 }
 
+/**
+ * Códigos que saem do ledger — os únicos que a tela consegue reconferir com o
+ * snapshot que ela já tem em mãos. Os do GitHub dependem de `harness_github_runs`,
+ * que pode nem ter carregado, então ficam intocados.
+ */
+export const CODIGOS_DO_LEDGER: ReadonlySet<CodigoAlerta> = new Set<CodigoAlerta>([
+  'qualidade_baixa',
+  'retrabalho_alto',
+  'custo_alto',
+  'quota_alta',
+  'quota_zerada',
+  'valor_baixo',
+]);
+
+/**
+ * Confere alertas JÁ gravados contra os KPIs de agora, e devolve só os que
+ * ainda valem — com valor, limiar, severidade e amostra atualizados.
+ *
+ * Existe porque a avaliação é quinzenal e o veredicto fica congelado no banco:
+ * quando o cálculo dos KPIs muda (foi o caso de `infra` sair do denominador em
+ * 14/08/2026), a faixa continuaria gritando um número que a própria tela, logo
+ * abaixo, já mostra corrigido. Aqui não há fórmula nova — `atuais` vem de
+ * `avaliarLedger`, o mesmo caminho que gravou o alerta.
+ */
+export function reconferirLedger<T extends Violacao>(vigentes: T[], atuais: Violacao[]): T[] {
+  const porCodigo = new Map(atuais.map((v) => [v.codigo, v] as const));
+  const sobrevivem: T[] = [];
+
+  for (const alerta of vigentes) {
+    if (!CODIGOS_DO_LEDGER.has(alerta.codigo)) {
+      sobrevivem.push(alerta);
+      continue;
+    }
+    const agora = porCodigo.get(alerta.codigo);
+    // Não viola mais: some da faixa sem esperar a próxima checagem.
+    if (!agora) continue;
+    sobrevivem.push({
+      ...alerta,
+      severidade: agora.severidade,
+      valor: agora.valor,
+      limiar: agora.limiar,
+      amostra: agora.amostra,
+    });
+  }
+
+  return sobrevivem;
+}
+
 export interface DecisaoAvaliacao {
   deve: boolean;
   motivo: MotivoAvaliacao | null;

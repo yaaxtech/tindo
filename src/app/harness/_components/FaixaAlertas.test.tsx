@@ -1,3 +1,4 @@
+import type { Violacao } from '@/lib/harness/alertas';
 import type { HistoricoAlertas } from '@/services/harness';
 import type { AlertaLinha, AvaliacaoLinha, CodigoAlerta } from '@/types/harness';
 import { render, screen } from '@testing-library/react';
@@ -30,12 +31,23 @@ const alerta = (
   ...extra,
 });
 
+/** "Os números de agora continuam iguais aos que foram gravados." */
+const aindaVale = (a: AlertaLinha): Violacao => ({
+  codigo: a.codigo,
+  severidade: a.severidade,
+  valor: a.valor,
+  limiar: a.limiar,
+  amostra: a.amostra,
+});
+
 describe('FaixaAlertas', () => {
   it('não renderiza nada antes da primeira avaliação', () => {
-    const { container } = render(<FaixaAlertas historico={undefined} />);
+    const { container } = render(<FaixaAlertas historico={undefined} violacoesAgora={[]} />);
     expect(container).toBeEmptyDOMElement();
 
-    const vazio = render(<FaixaAlertas historico={{ avaliacoes: [], alertas: [] }} />);
+    const vazio = render(
+      <FaixaAlertas historico={{ avaliacoes: [], alertas: [] }} violacoesAgora={[]} />,
+    );
     expect(vazio.container).toBeEmptyDOMElement();
   });
 
@@ -44,8 +56,8 @@ describe('FaixaAlertas', () => {
       avaliacoes: [avaliacao('av1', '13')],
       alertas: [],
     };
-    render(<FaixaAlertas historico={historico} />);
-    expect(screen.getByText(/Nenhum número passou do limite/)).toBeInTheDocument();
+    render(<FaixaAlertas historico={historico} violacoesAgora={[]} />);
+    expect(screen.getByText(/Nenhum número está passando do limite/)).toBeInTheDocument();
     expect(screen.getByText(/checado em 13\/08/)).toBeInTheDocument();
   });
 
@@ -57,7 +69,9 @@ describe('FaixaAlertas', () => {
         alerta('av1', '30', 'custo_alto', { valor: 7.5, limiar: 5 }),
       ],
     };
-    render(<FaixaAlertas historico={historico} />);
+    render(
+      <FaixaAlertas historico={historico} violacoesAgora={historico.alertas.map(aindaVale)} />,
+    );
 
     expect(screen.getByText('Qualidade abaixo da meta')).toBeInTheDocument();
     expect(screen.getByText(/76% · combinado ≥ 80%/)).toBeInTheDocument();
@@ -73,7 +87,9 @@ describe('FaixaAlertas', () => {
         alerta('av1', '13', 'espera_merge_longa', { valor: 5400, limiar: 3600, amostra: 4 }),
       ],
     };
-    render(<FaixaAlertas historico={historico} />);
+    render(
+      <FaixaAlertas historico={historico} violacoesAgora={historico.alertas.map(aindaVale)} />,
+    );
 
     expect(screen.getByText(/\$7\.50 · combinado ≤ \$5\.00/)).toBeInTheDocument();
     // 5400 s cai na faixa de horas; o limiar de 3600 s ainda é lido em minutos.
@@ -91,7 +107,9 @@ describe('FaixaAlertas', () => {
         alerta('av1', '16', 'qualidade_baixa'),
       ],
     };
-    render(<FaixaAlertas historico={historico} />);
+    render(
+      <FaixaAlertas historico={historico} violacoesAgora={historico.alertas.map(aindaVale)} />,
+    );
 
     expect(screen.getByText(/apareceu em 3 de 3 checagens/)).toBeInTheDocument();
     // Disparar em todas as checagens é barulho, e a tela precisa dizer isso.
@@ -103,7 +121,62 @@ describe('FaixaAlertas', () => {
       avaliacoes: [avaliacao('av1', '13', 1)],
       alertas: [alerta('av1', '13', 'qualidade_baixa', { severidade: 'critico', limiar: 0.7 })],
     };
-    render(<FaixaAlertas historico={historico} />);
+    render(
+      <FaixaAlertas historico={historico} violacoesAgora={historico.alertas.map(aindaVale)} />,
+    );
     expect(screen.getByText('passou muito')).toBeInTheDocument();
+  });
+
+  // ── Reconferência: a checagem é quinzenal, a tela não espera por ela ──────
+
+  it('some com o aviso que já voltou ao normal, sem esperar a próxima checagem', () => {
+    const historico: HistoricoAlertas = {
+      avaliacoes: [avaliacao('av1', '13', 1)],
+      alertas: [alerta('av1', '13', 'qualidade_baixa')],
+    };
+    // Nada viola mais nos números de agora.
+    render(<FaixaAlertas historico={historico} violacoesAgora={[]} />);
+
+    expect(screen.queryByText('Qualidade abaixo da meta')).not.toBeInTheDocument();
+    expect(screen.getByText(/Nenhum número está passando do limite/)).toBeInTheDocument();
+  });
+
+  it('mostra o valor e a amostra de agora, não os que ficaram gravados', () => {
+    const historico: HistoricoAlertas = {
+      avaliacoes: [avaliacao('av1', '13', 1)],
+      alertas: [
+        alerta('av1', '13', 'qualidade_baixa', { severidade: 'critico', valor: 0.63, amostra: 55 }),
+      ],
+    };
+    render(
+      <FaixaAlertas
+        historico={historico}
+        violacoesAgora={[
+          {
+            codigo: 'qualidade_baixa',
+            severidade: 'alerta',
+            valor: 0.73,
+            limiar: 0.8,
+            amostra: 48,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/73% · combinado ≥ 80%/)).toBeInTheDocument();
+    expect(screen.getByText(/calculado sobre 48 despachos julgados/)).toBeInTheDocument();
+    // A severidade também é a de agora: deixou de ser crítico.
+    expect(screen.getByText('passou do limite')).toBeInTheDocument();
+    expect(screen.queryByText('passou muito')).not.toBeInTheDocument();
+  });
+
+  it('não mexe nos avisos do GitHub, que a tela não tem como reconferir', () => {
+    const historico: HistoricoAlertas = {
+      avaliacoes: [avaliacao('av1', '13', 1)],
+      alertas: [alerta('av1', '13', 'segmento_deploy', { valor: 5400, limiar: 3600, amostra: 4 })],
+    };
+    render(<FaixaAlertas historico={historico} violacoesAgora={[]} />);
+
+    expect(screen.getByText(/1\.5 h · combinado ≤ 60 min/)).toBeInTheDocument();
   });
 });

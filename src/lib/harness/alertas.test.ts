@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   LIMIARES,
   ROTULO_ALERTA,
+  type Violacao,
   avaliarGithub,
   avaliarKpis,
   avaliarLedger,
   decidirAvaliacao,
+  reconferirLedger,
 } from './alertas';
 
 const AGORA = Date.parse('2026-08-13T12:00:00Z');
@@ -309,5 +311,48 @@ describe('avaliarKpis', () => {
     expect(avaliarKpis({ ledger: [], assinaturas: ASSINATURAS, runs: [], agora: AGORA })).toEqual(
       [],
     );
+  });
+});
+
+describe('reconferirLedger', () => {
+  const gravado = (parcial: Partial<Violacao> & { codigo: Violacao['codigo'] }): Violacao => ({
+    severidade: 'alerta',
+    valor: 0.71,
+    limiar: 0.8,
+    amostra: 112,
+    ...parcial,
+  });
+
+  it('descarta o alerta do ledger que não viola mais', () => {
+    const vigentes = [gravado({ codigo: 'qualidade_baixa' })];
+    expect(reconferirLedger(vigentes, [])).toEqual([]);
+  });
+
+  it('troca valor, amostra e severidade pelos de agora', () => {
+    const vigentes = [gravado({ codigo: 'qualidade_baixa', severidade: 'critico' })];
+    const atuais: Violacao[] = [
+      { codigo: 'qualidade_baixa', severidade: 'alerta', valor: 0.75, limiar: 0.8, amostra: 103 },
+    ];
+    expect(reconferirLedger(vigentes, atuais)).toEqual(atuais);
+  });
+
+  it('preserva campos extras da linha gravada (id, avaliacao_id)', () => {
+    const vigentes = [{ ...gravado({ codigo: 'retrabalho_alto' }), id: 'a1' }];
+    const atuais: Violacao[] = [
+      { codigo: 'retrabalho_alto', severidade: 'alerta', valor: 0.25, limiar: 0.2, amostra: 103 },
+    ];
+    expect(reconferirLedger(vigentes, atuais)[0]).toMatchObject({ id: 'a1', valor: 0.25 });
+  });
+
+  it('não toca nos alertas do GitHub, que dependem de dado que a tela pode não ter', () => {
+    const github = gravado({ codigo: 'segmento_deploy', valor: 5400, limiar: 3600, amostra: 4 });
+    expect(reconferirLedger([github], [])).toEqual([github]);
+  });
+
+  it('ignora violação de agora que não estava gravada — a faixa só some, nunca inventa', () => {
+    const atuais: Violacao[] = [
+      { codigo: 'custo_alto', severidade: 'alerta', valor: 7.5, limiar: 5, amostra: 12 },
+    ];
+    expect(reconferirLedger([], atuais)).toEqual([]);
   });
 });
