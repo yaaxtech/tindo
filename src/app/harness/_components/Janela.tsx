@@ -3,6 +3,7 @@ import {
   formatarAcimaTeto,
   formatarHoraColeta,
   formatarMedia,
+  formatarMensagensEntreChats,
   formatarNumero,
   formatarPct,
   formatarTokens,
@@ -11,7 +12,7 @@ import type { JanelaBlob, JanelaCampo } from '@/types/harness';
 import { Card, PopoverInfo, Secao } from './ui';
 
 const INFO_BLOCO =
-  'Retrato do consumo de contexto das sessões do Claude: quanto do gasto é reler a conversa, quanto vai embora depois da chamada 200, e se os gestos de higiene (subagente, chip, compactar) estão acontecendo. Snapshot calculado na máquina local e atualizado de hora em hora — não segue o filtro do painel.';
+  'Retrato do consumo de contexto das sessões do Claude: quanto do gasto é reler a conversa, quanto vai embora depois da chamada 200, e se os gestos de higiene (subagente, chip, compactar, mensagem entre chats) estão acontecendo. Snapshot calculado na máquina local e atualizado de hora em hora — não segue o filtro do painel.';
 const COMO_PREFIXO =
   'Toda chamada ao modelo paga para ler a conversa inteira de novo. Este número mede quanto do gasto total foi só reler o que já estava escrito, em vez de trabalho novo. Alto é esperado — mas perto de 100% com sessões longas indica conversa inchada.';
 const COMO_POS_200 =
@@ -21,7 +22,7 @@ const COMO_TETO =
 const COMO_TOKENS_TAREFA =
   'O total de tokens do período dividido pelo que foi entregue. Serve como régua no tempo: se as sessões ficarem mais curtas e os gestos de higiene subirem, este número tem que cair.';
 const COMO_GESTOS =
-  'Os três gestos que mantêm a janela curta: subagente (manda parte do trabalho para um assistente separado, fora da conversa principal), chip e compactação (resumo da conversa antes de estourar o teto). A média por sessão perto de zero quer dizer que ninguém está limpando a janela.';
+  'Os gestos que mantêm a janela curta: subagente (manda parte do trabalho para um assistente separado, fora da conversa principal), chip, compactação (resumo da conversa antes de estourar o teto) e mensagem entre chats (uma janela pergunta para outra em vez de trazer todo o contexto de lá para cá). A média por sessão perto de zero quer dizer que ninguém está limpando a janela. Mensagem entre chats só passou a ser medida em 15/08 — coleta mais antiga aparece como "sem sinal", não como zero.';
 const COMO_FAIXAS =
   'Sessões agrupadas pelo número de chamadas. A última coluna mostra a fatia do consumo total que cada grupo carrega — deixa óbvio que poucas sessões longas custam mais do que muitas curtas.';
 const COMO_TOP =
@@ -45,6 +46,7 @@ function Kpi({
 
 function Corpo({ blob }: { blob: JanelaBlob }) {
   const { totais, kpis } = blob;
+  const mensagens = formatarMensagensEntreChats(kpis.gestos, totais.sessoes);
   return (
     <div className="space-y-2.5">
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -108,6 +110,7 @@ function Corpo({ blob }: { blob: JanelaBlob }) {
                 {formatarNumero(kpis.gestos.subagentes)} subagentes ·{' '}
                 {formatarNumero(kpis.gestos.chips)} chips · {formatarNumero(kpis.gestos.compacts)}{' '}
                 compacts
+                {mensagens && <> · {mensagens.total} mensagens entre chats</>}
               </span>
               <span className="tabular-nums text-text-muted">
                 (média de {formatarMedia(kpis.gestos.por_sessao)} por sessão)
@@ -117,6 +120,17 @@ function Corpo({ blob }: { blob: JanelaBlob }) {
             <span className="tabular-nums text-text-muted">— · dado insuficiente</span>
           )}
         </div>
+        {kpis.gestos && (
+          <div className="mt-1 text-[11.5px] leading-snug text-text-muted">
+            {mensagens ? (
+              <>
+                Mensagens entre chats: <span className="tabular-nums">{mensagens.alcance}</span>
+              </>
+            ) : (
+              <>Mensagens entre chats: sem sinal nesta coleta — o gesto ainda não era medido.</>
+            )}
+          </div>
+        )}
       </Card>
 
       <div className="overflow-x-auto rounded-xl border border-border-strong bg-bg-elevated">
