@@ -117,8 +117,20 @@ export interface JanelaKpis {
   sessoes_acima_teto: { n: number; pct: number; teto: number } | null;
   /** Custo de contexto médio por tarefa entregue, em tokens. */
   tokens_por_tarefa: number | null;
-  /** Gestos de higiene da janela (subagente, chip, compactar). */
-  gestos: { subagentes: number; chips: number; compacts: number; por_sessao: number } | null;
+  /** Gestos de higiene da janela (subagente, chip, compactar, mensagem entre chats). */
+  gestos: {
+    subagentes: number;
+    chips: number;
+    compacts: number;
+    /**
+     * Mensagens entre chats — gesto medido só a partir de 2026-08-15.
+     * Ausente/null em snapshot anterior: é "sem sinal", nunca zero.
+     */
+    mensagens?: number | null;
+    /** Fração das sessões que usaram o gesto. Ausente pelo mesmo motivo. */
+    pct_sessoes_com_mensagem?: number | null;
+    por_sessao: number;
+  } | null;
 }
 
 export interface JanelaModelo {

@@ -6,6 +6,7 @@ import {
   formatarAcimaTeto,
   formatarHoraColeta,
   formatarMedia,
+  formatarMensagensEntreChats,
   formatarNumero,
   formatarPct,
   formatarTokens,
@@ -104,6 +105,31 @@ describe('estadoJanela', () => {
     expect(formatarTokens(nulo.kpis.tokens_por_tarefa)).toBe('—');
     expect(formatarAcimaTeto(nulo.kpis.sessoes_acima_teto, nulo.totais.sessoes)).toBe('—');
     expect(formatarMedia(nulo.kpis.gestos?.por_sessao ?? null)).toBe('—');
+  });
+});
+
+describe('formatarMensagensEntreChats', () => {
+  const base = { subagentes: 210, chips: 12, compacts: 5, por_sessao: 0.33 };
+
+  it('coleta nova: total e percentual sempre com o denominador junto', () => {
+    const linha = formatarMensagensEntreChats(
+      { ...base, mensagens: 124, pct_sessoes_com_mensagem: 0.04 },
+      1074,
+    );
+    expect(linha).toEqual({ total: '124', alcance: '4% de 1.074 sessões usaram o gesto' });
+  });
+
+  it('snapshot antigo sem o campo → null (sem sinal), nunca zero', () => {
+    expect(formatarMensagensEntreChats(base, 1074)).toBeNull();
+    expect(formatarMensagensEntreChats({ ...base, mensagens: null }, 1074)).toBeNull();
+    expect(formatarMensagensEntreChats(null, 1074)).toBeNull();
+  });
+
+  it('zero medido é zero de verdade — só o percentual ausente vira "—"', () => {
+    expect(formatarMensagensEntreChats({ ...base, mensagens: 0 }, 1074)).toEqual({
+      total: '0',
+      alcance: '—',
+    });
   });
 });
 

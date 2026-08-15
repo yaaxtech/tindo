@@ -23,7 +23,14 @@ function blob(over: Partial<JanelaBlob> = {}): JanelaBlob {
       pct_pos_200: 0.466,
       sessoes_acima_teto: { n: 74, pct: 0.069, teto: 200 },
       tokens_por_tarefa: 161000000,
-      gestos: { subagentes: 210, chips: 12, compacts: 5, por_sessao: 0.21 },
+      gestos: {
+        subagentes: 210,
+        chips: 12,
+        compacts: 5,
+        mensagens: 124,
+        pct_sessoes_com_mensagem: 0.04,
+        por_sessao: 0.33,
+      },
     },
     por_modelo: [{ modelo: 'claude-opus-5', chamadas: 20695, tokens: 3627900000, pct: 0.194 }],
     faixas: [{ faixa: '0-50', sessoes: 657, tokens: 700000000, pct: 0.037 }],
@@ -43,10 +50,32 @@ describe('Janela', () => {
     // Percentual nunca solto: o teto traz n de N junto.
     expect(screen.getByText('74 de 1.074 (6,9%)')).toBeInTheDocument();
     expect(screen.getByText('161 M')).toBeInTheDocument();
-    expect(screen.getByText(/210 subagentes · 12 chips · 5 compacts/)).toBeInTheDocument();
-    expect(screen.getByText(/0,21 por sessão/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/210 subagentes · 12 chips · 5 compacts · 124 mensagens entre chats/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/0,33 por sessão/)).toBeInTheDocument();
+    // Percentual do gesto novo nunca aparece sem o denominador junto.
+    expect(screen.getByText(/4% de 1\.074 sessões usaram o gesto/)).toBeInTheDocument();
     expect(screen.getByText('0-50')).toBeInTheDocument();
     expect(screen.getByText('4a4bb799')).toBeInTheDocument();
+  });
+
+  it('snapshot antigo sem "mensagens": diz sem sinal, nunca zero', () => {
+    render(
+      <Janela
+        campo={blob({
+          kpis: {
+            pct_prefixo: 0.96,
+            pct_pos_200: 0.466,
+            sessoes_acima_teto: { n: 74, pct: 0.069, teto: 200 },
+            tokens_por_tarefa: 161000000,
+            gestos: { subagentes: 210, chips: 12, compacts: 5, por_sessao: 0.21 },
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText(/Mensagens entre chats: sem sinal nesta coleta/)).toBeInTheDocument();
+    expect(screen.queryByText(/0 mensagens entre chats/)).not.toBeInTheDocument();
   });
 
   it('campo ausente: explica que a coleta não rodou — nunca zeros', () => {

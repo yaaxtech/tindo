@@ -56,6 +56,25 @@ export function formatarAcimaTeto(
   return `${formatarNumero(acima.n)} de ${formatarNumero(sessoes)} (${formatarPct(acima.pct)})`;
 }
 
+/**
+ * Linha do gesto "mensagem entre chats" (medido só a partir de 2026-08-15).
+ * `null` = coleta antiga sem o campo → a tela diz "sem sinal", nunca "0".
+ */
+export function formatarMensagensEntreChats(
+  gestos: JanelaKpis['gestos'],
+  sessoes: number,
+): { total: string; alcance: string } | null {
+  if (!gestos || gestos.mensagens == null) return null;
+  const pct = gestos.pct_sessoes_com_mensagem;
+  return {
+    total: formatarNumero(gestos.mensagens),
+    alcance:
+      pct == null
+        ? '—'
+        : `${formatarPct(pct)} de ${formatarNumero(sessoes)} sessões usaram o gesto`,
+  };
+}
+
 export type EstadoJanela =
   /** Campo ausente ou null — a coleta nunca rodou (ou ainda não chegou). */
   | { tipo: 'ausente' }
