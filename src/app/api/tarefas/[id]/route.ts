@@ -1,8 +1,9 @@
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { CONFIG_PADRAO_PESOS, calcularNota } from '@/lib/scoring/engine';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { propagarParaTodoist } from '@/services/todoistWriteback';
 import type { Configuracoes, Projeto, Tag, Tarefa } from '@/types/domain';
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,8 +22,9 @@ interface PatchPayload {
   tag_ids?: string[];
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
+export const PATCH = rotaApi(
+  'PATCH /api/tarefas/[id]',
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
     const admin = getAdminClient();
     const usuarioId = await getUsuarioIdMVP();
@@ -66,15 +68,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('/api/tarefas/[id] PATCH error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro' },
-      { status: 500 },
-    );
-  }
-}
+    return respostaOk({ ok: true });
+  },
+);
 
 async function recalcularNotaUnica(
   admin: ReturnType<typeof getAdminClient>,

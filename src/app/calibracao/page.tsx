@@ -260,8 +260,8 @@ export default function CalibracacaoPage() {
       });
 
       if (!res.ok) {
-        const d = (await res.json()) as { error?: string };
-        throw new Error(d.error ?? 'Erro ao salvar');
+        const d = (await res.json()) as { erro?: string };
+        throw new Error(d.erro ?? 'Erro ao salvar');
       }
 
       setPasso(4); // tela de sucesso

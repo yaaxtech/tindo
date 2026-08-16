@@ -21,8 +21,13 @@ export interface CorpoDeErro {
   codigo: string;
 }
 
-export function respostaOk<T>(dados: T, status = 200): NextResponse<T> {
-  return NextResponse.json(dados, { status });
+/**
+ * `init` aceita o status direto (`respostaOk(x, 201)`) ou um `ResponseInit`
+ * completo, para quando a rota precisa de cabeçalho — `Cache-Control`, por
+ * exemplo, em `/api/todoist/previa`.
+ */
+export function respostaOk<T>(dados: T, init: number | ResponseInit = 200): NextResponse<T> {
+  return NextResponse.json(dados, typeof init === 'number' ? { status: init } : init);
 }
 
 /**

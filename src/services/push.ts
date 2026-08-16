@@ -1,3 +1,4 @@
+import { ErroInterno } from '@/lib/api/erros';
 /**
  * Serviço de Web Push — server-only, edge-compatible.
  * Usa Web Crypto API nativa em vez de `web-push` (Node.js only).
@@ -12,9 +13,10 @@ import { getAdminClient } from '@/lib/supabase/admin';
 function getVapidConfig() {
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !VAPID_SUBJECT) {
-    throw new Error(
-      'VAPID keys não configuradas. Defina VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY e VAPID_SUBJECT.',
-    );
+    // Config ausente é falha nossa: mensagem técnica só no log, não na tela.
+    throw new ErroInterno('As notificações não estão configuradas neste ambiente.', {
+      cause: new Error('VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT ausentes'),
+    });
   }
   return { subject: VAPID_SUBJECT, publicKey: VAPID_PUBLIC_KEY, privateKey: VAPID_PRIVATE_KEY };
 }

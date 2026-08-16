@@ -488,8 +488,8 @@ function Passo3({
       clearInterval(logInterval);
 
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? 'Falha no sync');
+        const body = (await res.json()) as { erro?: string };
+        throw new Error(body.erro ?? 'Falha no sync');
       }
 
       const data = (await res.json()) as SyncResultado;

@@ -1,5 +1,5 @@
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,43 +18,36 @@ interface TarefaRow {
   } | null;
 }
 
-export async function GET() {
-  try {
-    const admin = getAdminClient();
-    const usuarioId = await getUsuarioIdMVP();
+export const GET = rotaApi('GET /api/todoist/exportar/previa', async () => {
+  const admin = getAdminClient();
+  const usuarioId = await getUsuarioIdMVP();
 
-    const { data, error } = await admin
-      .from('tarefas')
-      .select(
-        'id, titulo, tipo, projeto_id, data_vencimento, prioridade, todoist_id, projetos(id, nome, todoist_id)',
-      )
-      .eq('usuario_id', usuarioId)
-      .eq('status', 'pendente')
-      .is('deleted_at', null)
-      .is('todoist_id', null)
-      .limit(500);
+  const { data, error } = await admin
+    .from('tarefas')
+    .select(
+      'id, titulo, tipo, projeto_id, data_vencimento, prioridade, todoist_id, projetos(id, nome, todoist_id)',
+    )
+    .eq('usuario_id', usuarioId)
+    .eq('status', 'pendente')
+    .is('deleted_at', null)
+    .is('todoist_id', null)
+    .limit(500);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const tarefas = (data as unknown as TarefaRow[]).map((t) => ({
-      id: t.id,
-      titulo: t.titulo,
-      tipo: (t.tipo ?? 'tarefa') as 'tarefa' | 'lembrete',
-      projetoId: t.projeto_id,
-      projetoNome: t.projetos?.nome ?? null,
-      projetoTemTodoistId: Boolean(t.projetos?.todoist_id),
-      dataVencimento: t.data_vencimento,
-      prioridade: t.prioridade ?? 2,
-    }));
-
-    return NextResponse.json({ tarefas, total: tarefas.length });
-  } catch (err) {
-    console.error('/api/todoist/exportar/previa error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro interno' },
-      { status: 500 },
-    );
+  if (error) {
+    // Erro de banco: o kernel loga o detalhe e devolve mensagem genérica.
+    throw error;
   }
-}
+
+  const tarefas = (data as unknown as TarefaRow[]).map((t) => ({
+    id: t.id,
+    titulo: t.titulo,
+    tipo: (t.tipo ?? 'tarefa') as 'tarefa' | 'lembrete',
+    projetoId: t.projeto_id,
+    projetoNome: t.projetos?.nome ?? null,
+    projetoTemTodoistId: Boolean(t.projetos?.todoist_id),
+    dataVencimento: t.data_vencimento,
+    prioridade: t.prioridade ?? 2,
+  }));
+
+  return respostaOk({ tarefas, total: tarefas.length });
+});

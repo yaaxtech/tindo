@@ -71,7 +71,7 @@ export const useGamificacaoStore = create<GamificacaoState>((set) => ({
         body: JSON.stringify({ acao: 'comprar' }),
       });
       const body = await res.json();
-      if (!res.ok) return { ok: false, erro: body.error as string };
+      if (!res.ok) return { ok: false, erro: body.erro as string };
       set((s) => ({
         xpTotal: body.xpRestante as number,
         freezersDisponiveis: body.freezersDisponiveis as number,

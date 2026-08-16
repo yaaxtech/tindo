@@ -343,7 +343,7 @@ export default function TodoistHubPage() {
         ok: boolean;
         importadas?: number;
         atualizadas?: number;
-        error?: string;
+        erro?: string;
       };
       if (body.ok) {
         toast({
@@ -352,7 +352,7 @@ export default function TodoistHubPage() {
         });
         await carregarStatus();
       } else {
-        toast({ titulo: body.error ?? 'Erro ao sincronizar', icone: 'alerta' });
+        toast({ titulo: body.erro ?? 'Erro ao sincronizar', icone: 'alerta' });
       }
     } catch {
       toast({ titulo: 'Falha ao sincronizar. Tente novamente.', icone: 'alerta' });

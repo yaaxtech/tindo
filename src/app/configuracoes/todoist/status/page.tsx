@@ -199,9 +199,9 @@ export default function StatusTodoistPage() {
         ok?: boolean;
         importadas?: number;
         atualizadas?: number;
-        error?: string;
+        erro?: string;
       };
-      if (!res.ok || !body.ok) throw new Error(body.error ?? 'Falha no sync');
+      if (!res.ok || !body.ok) throw new Error(body.erro ?? 'Falha no sync');
       setMsgSync(`Concluído: ${body.importadas ?? 0} novas, ${body.atualizadas ?? 0} atualizadas`);
       await carregar();
     } catch (err) {

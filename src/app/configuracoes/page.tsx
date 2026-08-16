@@ -110,7 +110,7 @@ export default function ConfiguracoesPage() {
         body: JSON.stringify(cfg),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Erro');
+      if (!res.ok) throw new Error(body.erro ?? 'Erro');
       setMsg('Configurações salvas.');
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Erro');
@@ -195,8 +195,8 @@ export default function ConfiguracoesPage() {
         body: JSON.stringify(patch),
       });
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        console.warn('[IA config] PATCH falhou (migração pode estar pendente):', body.error);
+        const body = (await res.json()) as { erro?: string };
+        console.warn('[IA config] PATCH falhou (migração pode estar pendente):', body.erro);
         toast({ titulo: 'Configurações de IA salvas', icone: 'ok' });
       } else {
         toast({ titulo: 'Configurações de IA salvas', icone: 'ok' });
@@ -217,7 +217,7 @@ export default function ConfiguracoesPage() {
     setTestandoPush(true);
     try {
       const res = await fetch('/api/push/testar', { method: 'POST' });
-      const body = (await res.json()) as { ok?: boolean; enviadas?: number; error?: string };
+      const body = (await res.json()) as { ok?: boolean; enviadas?: number; erro?: string };
       if (body.ok && body.enviadas && body.enviadas > 0) {
         toast({
           titulo: 'Notificacao enviada',
@@ -231,7 +231,7 @@ export default function ConfiguracoesPage() {
           icone: 'alerta',
         });
       } else {
-        toast({ titulo: body.error ?? 'Erro ao testar push', icone: 'alerta' });
+        toast({ titulo: body.erro ?? 'Erro ao testar push', icone: 'alerta' });
       }
     } catch {
       toast({ titulo: 'Erro ao testar notificacao', icone: 'alerta' });

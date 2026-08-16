@@ -14,7 +14,7 @@ export function BotaoSync({ className }: { className?: string }) {
     try {
       const res = await fetch('/api/todoist/sync', { method: 'POST' });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? 'Erro');
+      if (!res.ok) throw new Error(body.erro ?? 'Erro');
       const r = body.resultado;
       setMsg(
         `✓ ${r.tarefasImportadas} novas, ${r.tarefasAtualizadas} atualizadas, ${r.preservadas} preservadas, ${r.ignoradas} ignoradas.`,

@@ -4,10 +4,11 @@ import {
   atualizarEfConclusao,
   calcularProximaAdiada,
 } from '@/lib/adiamento/sm2';
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 
 import { propagarParaTodoist } from '@/services/todoistWriteback';
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,8 +36,9 @@ type HistoricoRow = {
   tarefa_id: string;
 };
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
+export const POST = rotaApi(
+  'POST /api/tarefas/[id]/acao',
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
     const body = (await request.json()) as Acao;
     const admin = getAdminClient();
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           dados: { ef: novoEf },
         });
         void propagarParaTodoist({ usuarioId, tarefaId: id, acao: 'concluir' });
-        return NextResponse.json({ ok: true });
+        return respostaOk({ ok: true });
       }
 
       case 'adiar': {
@@ -166,7 +168,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             patch: { dataVencimento: saida.adiadaAte.slice(0, 10) },
           });
 
-          return NextResponse.json({ ok: true, adiadaAte: saida.adiadaAte });
+          return respostaOk({ ok: true, adiadaAte: saida.adiadaAte });
         }
         // --- branch adiada_manual ---
         // adiada_ate vem do input do usuário
@@ -203,7 +205,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           patch: { dataVencimento: body.ate.slice(0, 10) },
         });
 
-        return NextResponse.json({ ok: true });
+        return respostaOk({ ok: true });
       }
 
       case 'desfazer_adiamento': {
@@ -237,7 +239,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           acao: 'atualizar',
           patch: { dataVencimento: null },
         });
-        return NextResponse.json({ ok: true });
+        return respostaOk({ ok: true });
       }
 
       case 'excluir': {
@@ -256,14 +258,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           acao: 'excluida',
         });
         void propagarParaTodoist({ usuarioId, tarefaId: id, acao: 'excluir' });
-        return NextResponse.json({ ok: true });
+        return respostaOk({ ok: true });
       }
     }
-  } catch (err) {
-    console.error('/api/tarefas/[id]/acao error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro desconhecido' },
-      { status: 500 },
-    );
-  }
-}
+  },
+);

@@ -1,48 +1,40 @@
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { calcularNivelAtual, xpParaNivel } from '@/services/gamificacao';
-import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  try {
-    const admin = getAdminClient();
-    const usuarioId = await getUsuarioIdMVP();
-    const { data, error } = await admin
+export const GET = rotaApi('GET /api/gamificacao', async () => {
+  const admin = getAdminClient();
+  const usuarioId = await getUsuarioIdMVP();
+  const { data, error } = await admin
+    .from('gamificacao')
+    .select('*')
+    .eq('usuario_id', usuarioId)
+    .maybeSingle();
+  if (error) throw error;
+
+  if (!data) {
+    // Cria default
+    const { data: criada, error: errIns } = await admin
       .from('gamificacao')
-      .select('*')
-      .eq('usuario_id', usuarioId)
-      .maybeSingle();
-    if (error) throw error;
-
-    if (!data) {
-      // Cria default
-      const { data: criada, error: errIns } = await admin
-        .from('gamificacao')
-        .insert({ usuario_id: usuarioId })
-        .select()
-        .single();
-      if (errIns) throw errIns;
-      return NextResponse.json({
-        gamificacao: adaptar(criada),
-        progresso: calcularProgresso(0, 1),
-      });
-    }
-
-    const xp = Number(data.xp_total ?? 0);
-    const nivel = Number(data.nivel ?? 1);
-    return NextResponse.json({
-      gamificacao: adaptar(data),
-      progresso: calcularProgresso(xp, nivel),
+      .insert({ usuario_id: usuarioId })
+      .select()
+      .single();
+    if (errIns) throw errIns;
+    return respostaOk({
+      gamificacao: adaptar(criada),
+      progresso: calcularProgresso(0, 1),
     });
-  } catch (err) {
-    console.error('/api/gamificacao GET error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro' },
-      { status: 500 },
-    );
   }
-}
+
+  const xp = Number(data.xp_total ?? 0);
+  const nivel = Number(data.nivel ?? 1);
+  return respostaOk({
+    gamificacao: adaptar(data),
+    progresso: calcularProgresso(xp, nivel),
+  });
+});
 
 function adaptar(r: Record<string, unknown>) {
   return {

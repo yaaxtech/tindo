@@ -212,10 +212,17 @@ Erro de Postgres chegava cru na tela do usuário.
 - [x] Fatia 1 — kernel `src/lib/api/` (erros tipados + envelope único + `rotaApi`),
       services do RoadMapMind lançando erro tipado, 7 rotas migradas
       (`/api/docs/*`, `/api/perfil`) e teste de contrato com allowlist decrescente
-- [ ] Fatia 2 — migrar as 43 rotas legadas restantes (`ROTAS_LEGADAS` em
-      `src/lib/api/contrato-rotas.test.ts`) e trocar as leituras de `body.error`
-      por `body.erro` no cliente
-- [ ] Fatia 3 — apagar `ROTAS_LEGADAS` e o `it` que a acompanha quando a lista zerar
+- [x] Fatia 2 — as 43 rotas legadas migradas, `services/ai.ts` e `services/push.ts`
+      lançando erro tipado, e as 17 leituras de `body.error` trocadas por
+      `body.erro` no cliente
+- [x] Fatia 3 — `ROTAS_LEGADAS` apagada: as 50 rotas passam pelo kernel e o teste
+      de contrato agora vale para todas, sem exceção
+
+**Resultado:** nenhuma rota referencia `NextResponse`; o envelope de erro é
+`{ erro, codigo }` em todas; status HTTP vem do tipo do erro; texto técnico de
+Postgres/rede só existe no log do servidor. Única exceção documentada:
+`/api/ai/testar` devolve `{ ok, detalhe }` com status 200 mesmo em falha, porque
+o corpo é o RESULTADO de um teste de conexão, não um erro da aplicação.
 
 ## Fase 12+ — Futuro
 

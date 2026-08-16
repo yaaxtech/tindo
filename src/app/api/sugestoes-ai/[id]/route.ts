@@ -1,7 +1,9 @@
+import { ErroConflito, ErroNaoEncontrado, ErroValidacao } from '@/lib/api/erros';
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { paraJson } from '@/lib/supabase/json';
 import type { TablesUpdate } from '@/types/database';
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,13 +12,14 @@ interface PatchBody {
   editada?: Record<string, unknown>;
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
+export const PATCH = rotaApi(
+  'PATCH /api/sugestoes-ai/[id]',
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
     const body = (await request.json()) as PatchBody;
 
     if (!body.acao || !['aceitar', 'rejeitar'].includes(body.acao)) {
-      return NextResponse.json({ error: 'acao deve ser aceitar ou rejeitar.' }, { status: 400 });
+      throw new ErroValidacao('acao deve ser aceitar ou rejeitar.');
     }
 
     const admin = getAdminClient();
@@ -31,11 +34,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       .single();
 
     if (sugestaoErr || !sugestao) {
-      return NextResponse.json({ error: 'Sugestão não encontrada.' }, { status: 404 });
+      throw new ErroNaoEncontrado('Sugestão não encontrada.');
     }
 
     if (sugestao.status !== 'pendente') {
-      return NextResponse.json({ error: 'Sugestão já foi resolvida.' }, { status: 409 });
+      throw new ErroConflito('Sugestão já foi resolvida.');
     }
 
     if (body.acao === 'rejeitar') {
@@ -43,7 +46,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         .from('sugestoes_ai')
         .update({ status: 'rejeitada', resolvida_em: new Date().toISOString() })
         .eq('id', id);
-      return NextResponse.json({ ok: true });
+      return respostaOk({ ok: true });
     }
 
     // acao === 'aceitar'
@@ -119,18 +122,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       })
       .eq('id', id);
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('/api/sugestoes-ai/[id] PATCH error:', err);
-    return NextResponse.json({ error: 'Erro interno.' }, { status: 500 });
-  }
-}
+    return respostaOk({ ok: true });
+  },
+);
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
+export const DELETE = rotaApi(
+  'DELETE /api/sugestoes-ai/[id]',
+  async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
     const admin = getAdminClient();
     const usuarioId = await getUsuarioIdMVP();
@@ -141,9 +139,6 @@ export async function DELETE(
       .eq('id', id)
       .eq('usuario_id', usuarioId);
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('/api/sugestoes-ai/[id] DELETE error:', err);
-    return NextResponse.json({ error: 'Erro interno.' }, { status: 500 });
-  }
-}
+    return respostaOk({ ok: true });
+  },
+);

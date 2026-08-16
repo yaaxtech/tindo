@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic';
 
+import { ErroNaoAutenticado } from '@/lib/api/erros';
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { ROTULO_ALERTA } from '@/lib/harness/alertas';
 import { coletarRunsGithub, resumoColeta } from '@/lib/harness/coletor-github';
 import { resumoRevisao, revisarKpis } from '@/lib/harness/revisor';
@@ -7,14 +9,14 @@ import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { marcarRecalibracaoSugerida, verificarGatilhos } from '@/services/calibracao';
 import { enviarPush } from '@/services/push';
 import type { GithubRunLinha, HarnessBlob } from '@/types/harness';
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 async function handler(request: NextRequest) {
-  // Auth via header
+  // Rota técnica: protegida por segredo próprio, não por sessão de usuário.
   const auth = request.headers.get('authorization');
   const expected = `Bearer ${process.env.CRON_SECRET}`;
   if (!process.env.CRON_SECRET || auth !== expected) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    throw new ErroNaoAutenticado('Requisição não autorizada.');
   }
 
   const admin = getAdminClient();
@@ -183,7 +185,7 @@ async function handler(request: NextRequest) {
     resultados.harness_alertas = `erro: ${(e as Error).message}`;
   }
 
-  return NextResponse.json({
+  return respostaOk({
     ok: true,
     usuarioId,
     executadoEm: new Date().toISOString(),
@@ -191,7 +193,7 @@ async function handler(request: NextRequest) {
   });
 }
 
-export const POST = handler;
+export const POST = rotaApi('POST /api/cron/diario', handler);
 
 // Permite GET pra teste (com mesmo auth)
-export const GET = handler;
+export const GET = rotaApi('GET /api/cron/diario', handler);

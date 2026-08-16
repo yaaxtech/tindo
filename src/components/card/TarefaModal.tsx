@@ -110,8 +110,8 @@ export function TarefaModal({
 
       if (!res.ok) {
         // Narrow to error shape
-        const err = data as { error?: string };
-        const msg = err?.error ?? 'Erro ao classificar';
+        const err = data as { erro?: string };
+        const msg = err?.erro ?? 'Erro ao classificar';
         if (msg.toLowerCase().includes('configure') || msg.toLowerCase().includes('chave')) {
           pushToast({
             titulo: 'Chave de IA não configurada',
@@ -178,10 +178,10 @@ export function TarefaModal({
       });
       const data: unknown = await res.json();
       if (!res.ok) {
-        const err = data as { error?: string };
+        const err = data as { erro?: string };
         pushToast({
           titulo: 'Erro ao sugerir quebra',
-          descricao: err?.error ?? '',
+          descricao: err?.erro ?? '',
           icone: 'alerta',
         });
         return;

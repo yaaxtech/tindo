@@ -28,6 +28,16 @@ export const PUT = rotaApi('PUT /api/docs', async (req: Request) => {
 
 ## O check que segura isso
 
-`src/lib/api/contrato-rotas.test.ts` varre todo `src/app/api/**/route.ts`.
-`ROTAS_LEGADAS` lista o que ainda não migrou e **só encolhe** — rota nova nunca
-entra na lista. Ao migrar uma rota, apague a linha dela lá.
+`src/lib/api/contrato-rotas.test.ts` varre todo `src/app/api/**/route.ts` e
+falha se alguma rota montar resposta com `NextResponse`, reimplementar
+`respostaErro`/`mensagemErro`, devolver a chave `error` ou derivar status do
+texto da mensagem. Vale para **todas** as rotas — não existe allowlist.
+
+Duas saídas legítimas fora do envelope JSON, ambas sem `NextResponse`:
+
+- **download de arquivo** — `Response` cru com `Content-Disposition`
+  (ver `/api/todoist/backup`); só o caminho de erro usa o kernel;
+- **resultado de teste de conexão** — `/api/ai/testar` responde
+  `{ ok, detalhe }` com status 200 mesmo quando a chave é inválida, porque o
+  corpo é o resultado do teste, não um erro da aplicação. Se criar outra rota
+  assim, documente o motivo no arquivo, como lá.

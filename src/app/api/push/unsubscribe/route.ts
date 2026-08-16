@@ -1,5 +1,7 @@
+import { ErroValidacao } from '@/lib/api/erros';
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,29 +9,21 @@ interface UnsubscribeBody {
   endpoint: string;
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const admin = getAdminClient();
-    const usuarioId = await getUsuarioIdMVP();
-    const body = (await request.json()) as UnsubscribeBody;
+export const POST = rotaApi('POST /api/push/unsubscribe', async (request: NextRequest) => {
+  const admin = getAdminClient();
+  const usuarioId = await getUsuarioIdMVP();
+  const body = (await request.json()) as UnsubscribeBody;
 
-    if (!body?.endpoint) {
-      return NextResponse.json({ error: 'endpoint é obrigatório.' }, { status: 400 });
-    }
-
-    const { error } = await admin
-      .from('push_subscriptions')
-      .delete()
-      .eq('usuario_id', usuarioId)
-      .eq('endpoint', body.endpoint);
-
-    if (error) throw error;
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('[push/unsubscribe] erro:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro ao remover subscription.' },
-      { status: 500 },
-    );
+  if (!body?.endpoint) {
+    throw new ErroValidacao('endpoint é obrigatório.');
   }
-}
+
+  const { error } = await admin
+    .from('push_subscriptions')
+    .delete()
+    .eq('usuario_id', usuarioId)
+    .eq('endpoint', body.endpoint);
+
+  if (error) throw error;
+  return respostaOk({ ok: true });
+});
