@@ -4,6 +4,13 @@
 // (migration 20260802000001) — NUNCA um SELECT direto em doc_linhas de doc alheio.
 // Ver spec: docs/superpowers/plans/2026-08-02-roadmapmind-fase-2-compartilhamento.md
 
+import {
+  type ErroDeAplicacao,
+  ErroInterno,
+  ErroNaoEncontrado,
+  ErroSemPermissao,
+  ErroValidacao,
+} from '@/lib/api/erros';
 import { ORIGEM_OFICIAL } from '@/lib/app-url';
 import type { ContextoAuth } from '@/lib/auth/server';
 import type {
@@ -131,9 +138,9 @@ export async function salvarDocumentoCompartilhado(
   });
   if (error) {
     if (mensagemDoErro(error).includes('SEM_PERMISSAO')) {
-      throw new Error('Você não tem permissão para editar este documento.');
+      throw new ErroSemPermissao('Você não tem permissão para editar este documento.');
     }
-    throw new Error('Não foi possível salvar suas alterações. Tente novamente.');
+    throw new ErroInterno('Não foi possível salvar suas alterações. Tente novamente.');
   }
 }
 
@@ -179,18 +186,26 @@ function mensagemDoErro(erro: unknown): string {
   return String(erro ?? '');
 }
 
-function erroAmigavel(erro: unknown): Error {
+/**
+ * Traduz o sentinela que a RPC guarded devolve (`SEM_PERMISSAO`, `PAPEL_INVALIDO`…)
+ * para um erro tipado. O sentinela já É a classificação — antes a rota jogava
+ * fora essa informação e tentava readivinhar o status pelo texto traduzido
+ * (`mensagem.includes('Só o dono')`), que quebrava a cada ajuste de copy.
+ */
+function erroAmigavel(erro: unknown): ErroDeAplicacao {
   const mensagem = mensagemDoErro(erro);
   if (mensagem.includes('SEM_PERMISSAO')) {
-    return new Error('Só o dono pode compartilhar este documento.');
+    return new ErroSemPermissao('Só o dono pode compartilhar este documento.');
   }
-  if (mensagem.includes('PAPEL_INVALIDO')) return new Error('Escolha um papel válido.');
-  if (mensagem.includes('EMAIL_INVALIDO')) return new Error('Informe um email válido.');
-  if (mensagem.includes('MODO_LINK_INVALIDO')) return new Error('Escolha um acesso geral válido.');
+  if (mensagem.includes('PAPEL_INVALIDO')) return new ErroValidacao('Escolha um papel válido.');
+  if (mensagem.includes('EMAIL_INVALIDO')) return new ErroValidacao('Informe um email válido.');
+  if (mensagem.includes('MODO_LINK_INVALIDO')) {
+    return new ErroValidacao('Escolha um acesso geral válido.');
+  }
   if (mensagem.includes('ACESSO_NAO_ENCONTRADO')) {
-    return new Error('Este acesso não foi encontrado.');
+    return new ErroNaoEncontrado('Este acesso não foi encontrado.');
   }
-  return new Error('Não foi possível atualizar o compartilhamento. Tente novamente.');
+  return new ErroInterno('Não foi possível atualizar o compartilhamento. Tente novamente.');
 }
 
 async function chamarRpc<T>(
@@ -302,7 +317,7 @@ export async function convidarPorEmail(
     p_papel: papel,
   });
   const resultado = data?.[0];
-  if (!resultado) throw new Error('Não foi possível concluir o convite. Tente novamente.');
+  if (!resultado) throw new ErroInterno('Não foi possível concluir o convite. Tente novamente.');
   const { status } = resultado;
 
   if (status === 'auto') return { status };
@@ -373,7 +388,7 @@ async function configurarLink(
     p_regenerar: regenerar,
   });
   const link = data?.[0];
-  if (!link) throw new Error('Não foi possível carregar o link deste documento.');
+  if (!link) throw new ErroInterno('Não foi possível carregar o link deste documento.');
   return { token: link.link_token, modo: link.modo_link };
 }
 

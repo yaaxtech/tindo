@@ -3,23 +3,25 @@
 // (RPCs anônimas só devolvem doc `publico_leitura`). 404 quando indisponível —
 // nunca expõe o id interno do documento.
 
+import { ErroInterno, ErroNaoEncontrado } from '@/lib/api/erros';
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { documentoPublicoPorToken } from '@/services/publico';
-import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
-  try {
+export const GET = rotaApi(
+  'GET /api/docs/compartilhado/[token]',
+  async (_req: Request, { params }: { params: Promise<{ token: string }> }) => {
     const { token } = await params;
-    const documento = await documentoPublicoPorToken(token);
-    if (!documento) {
-      return NextResponse.json({ erro: 'Documento indisponível.' }, { status: 404 });
+    let documento: Awaited<ReturnType<typeof documentoPublicoPorToken>>;
+    try {
+      documento = await documentoPublicoPorToken(token);
+    } catch (causa) {
+      // Rota anônima: troca a falha técnica por um texto próprio, mas mantém a
+      // causa para o log do servidor (o kernel imprime a cadeia em 5xx).
+      throw new ErroInterno('Não foi possível abrir este documento agora.', { cause: causa });
     }
-    return NextResponse.json(documento);
-  } catch {
-    return NextResponse.json(
-      { erro: 'Não foi possível abrir este documento agora.' },
-      { status: 500 },
-    );
-  }
-}
+    if (!documento) throw new ErroNaoEncontrado('Documento indisponível.');
+    return respostaOk(documento);
+  },
+);

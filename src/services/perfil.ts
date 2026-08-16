@@ -1,3 +1,4 @@
+import { ErroValidacao } from '@/lib/api/erros';
 import type { ContextoAuth } from '@/lib/auth/server';
 import { CORES_PERFIL, type CorPerfil, ehCorPerfil } from '@/lib/perfil/cores';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -62,9 +63,11 @@ export async function atualizarPerfil(
   const nome = entrada.nome.trim();
   const whatsapp = entrada.whatsapp?.trim() || null;
   const cor = entrada.cor.toUpperCase();
-  if (!nome || nome.length > 80) throw new Error('Informe um nome com até 80 caracteres.');
-  if (whatsapp && whatsapp.length > 30) throw new Error('O WhatsApp deve ter até 30 caracteres.');
-  if (!ehCorPerfil(cor)) throw new Error('Escolha uma cor disponível.');
+  if (!nome || nome.length > 80) throw new ErroValidacao('Informe um nome com até 80 caracteres.');
+  if (whatsapp && whatsapp.length > 30) {
+    throw new ErroValidacao('O WhatsApp deve ter até 30 caracteres.');
+  }
+  if (!ehCorPerfil(cor)) throw new ErroValidacao('Escolha uma cor disponível.');
 
   const { error } = await db(contexto)
     .from('perfis_usuario')

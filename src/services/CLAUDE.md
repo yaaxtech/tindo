@@ -15,6 +15,11 @@
   ```
 - **Tipos em `src/types/`** espelham o schema (snake_case nas colunas do
   banco, camelCase nos objetos de domínio).
+- **Erro de negócio sai TIPADO**, de `@/lib/api/erros` (`ErroValidacao`,
+  `ErroSemPermissao`, `ErroNaoEncontrado`…). O status HTTP vem do tipo; a rota
+  não olha mais o texto da mensagem. `throw new Error('...')` solto vira 500
+  genérico e a mensagem NÃO chega ao usuário — o que é o certo para falha de
+  banco, e errado para regra de negócio.
 
 ## NUNCA
 

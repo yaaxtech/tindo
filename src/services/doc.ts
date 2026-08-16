@@ -3,6 +3,7 @@
 // Acesso pelo cliente da sessão: a RLS do banco é a fronteira de segurança.
 // Ver spec: docs/superpowers/plans/2026-07-30-roadmapmind-fase-1-mvp.md
 
+import { ErroNaoEncontrado, ErroValidacao } from '@/lib/api/erros';
 import type { ContextoAuth } from '@/lib/auth/server';
 import type { DocLinha } from '@/types/doc';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -57,7 +58,7 @@ async function checarPosse(contexto: ContextoAuth, linhaId: string): Promise<voi
     .is('deleted_at', null)
     .maybeSingle();
   if (error) throw error;
-  if (!data) throw new Error('Linha não encontrada ou sem permissão.');
+  if (!data) throw new ErroNaoEncontrado('Linha não encontrada ou sem permissão.');
 }
 
 /** Cria a raiz do usuário (pai_id NULL, texto = nome do usuário) se não existir. */
@@ -174,7 +175,9 @@ export async function criarEspelho(
 ): Promise<DocEspelho> {
   await checarPosse(contexto, linhaId);
   await checarPosse(contexto, maeId);
-  if (linhaId === maeId) throw new Error('Não dá para espelhar um item dentro dele mesmo.');
+  if (linhaId === maeId) {
+    throw new ErroValidacao('Não dá para espelhar um item dentro dele mesmo.');
+  }
   // ciclo: a mãe do espelho não pode estar DENTRO da subárvore da linha
   const { data: sub, error: eSub } = await db(contexto)
     .from('doc_linhas')
@@ -192,7 +195,9 @@ export async function criarEspelho(
   const fila = [linhaId];
   while (fila.length) {
     const atual = fila.pop() as string;
-    if (atual === maeId) throw new Error('Não dá para espelhar um item dentro dele mesmo.');
+    if (atual === maeId) {
+      throw new ErroValidacao('Não dá para espelhar um item dentro dele mesmo.');
+    }
     fila.push(...(filhosDe.get(atual) ?? []));
   }
   const { data, error } = await db(contexto)

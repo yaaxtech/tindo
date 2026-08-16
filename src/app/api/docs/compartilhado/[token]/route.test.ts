@@ -42,6 +42,7 @@ describe('GET /api/docs/compartilhado/[token]', () => {
     expect(resposta.status).toBe(500);
     await expect(resposta.json()).resolves.toEqual({
       erro: 'Não foi possível abrir este documento agora.',
+      codigo: 'INTERNO',
     });
   });
 });

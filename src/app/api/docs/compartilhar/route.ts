@@ -1,4 +1,11 @@
-import { UsuarioNaoAutenticadoError, exigirContextoAuth } from '@/lib/auth/server';
+// RoadMapMind — Fase 2: gestão do compartilhamento de um documento.
+// O status HTTP de cada falha vem do tipo lançado por src/services/compartilhar.ts
+// (ErroSemPermissao → 403, ErroNaoEncontrado → 404…). Esta rota não interpreta
+// mais o texto da mensagem para adivinhar o status.
+
+import { ErroValidacao } from '@/lib/api/erros';
+import { corpoJson, respostaOk, rotaApi } from '@/lib/api/resposta';
+import { exigirContextoAuth } from '@/lib/auth/server';
 import {
   convidarPorEmail,
   definirModoLink,
@@ -10,7 +17,6 @@ import {
   trocarPapel,
 } from '@/services/compartilhar';
 import type { ModoLink, Papel } from '@/types/compartilhar';
-import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,122 +28,65 @@ function modoValido(valor: unknown): valor is ModoLink {
   return valor === 'restrito' || valor === 'publico_leitura';
 }
 
-function respostaErro(erro: unknown) {
-  const mensagem =
-    erro instanceof SyntaxError
-      ? 'Não foi possível ler os dados enviados.'
-      : erro instanceof Error
-        ? erro.message
-        : 'Erro inesperado ao compartilhar.';
-  const status =
-    erro instanceof UsuarioNaoAutenticadoError
-      ? 401
-      : erro instanceof SyntaxError
-        ? 400
-        : mensagem.includes('Só o dono')
-          ? 403
-          : mensagem.includes('não foi encontrado')
-            ? 404
-            : 500;
-  return NextResponse.json({ erro: mensagem }, { status });
-}
+export const GET = rotaApi('GET /api/docs/compartilhar', async (req: Request) => {
+  const documentoId = new URL(req.url).searchParams.get('documentoId');
+  if (!documentoId) throw new ErroValidacao('documentoId é obrigatório.');
+  const contexto = await exigirContextoAuth();
+  const [acessos, link, espelhosExternos] = await Promise.all([
+    listarAcesso(contexto, documentoId),
+    linkDoDocumento(contexto, documentoId),
+    espelhosExternosDoDocumento(contexto, documentoId),
+  ]);
+  return respostaOk({ acessos, link, espelhosExternos });
+});
 
-async function corpo(req: Request): Promise<Record<string, unknown>> {
-  return (await req.json()) as Record<string, unknown>;
-}
-
-export async function GET(req: Request) {
-  try {
-    const documentoId = new URL(req.url).searchParams.get('documentoId');
-    if (!documentoId) {
-      return NextResponse.json({ erro: 'documentoId é obrigatório.' }, { status: 400 });
-    }
-    const contexto = await exigirContextoAuth();
-    const [acessos, link, espelhosExternos] = await Promise.all([
-      listarAcesso(contexto, documentoId),
-      linkDoDocumento(contexto, documentoId),
-      espelhosExternosDoDocumento(contexto, documentoId),
-    ]);
-    return NextResponse.json({ acessos, link, espelhosExternos });
-  } catch (erro) {
-    return respostaErro(erro);
+export const POST = rotaApi('POST /api/docs/compartilhar', async (req: Request) => {
+  const dados = await corpoJson(req);
+  if (
+    typeof dados.documentoId !== 'string' ||
+    typeof dados.email !== 'string' ||
+    !dados.email.trim() ||
+    !papelValido(dados.papel)
+  ) {
+    throw new ErroValidacao('Email e papel são obrigatórios.');
   }
-}
+  const contexto = await exigirContextoAuth();
+  return respostaOk(await convidarPorEmail(contexto, dados.documentoId, dados.email, dados.papel));
+});
 
-export async function POST(req: Request) {
-  try {
-    const dados = await corpo(req);
-    if (
-      typeof dados.documentoId !== 'string' ||
-      typeof dados.email !== 'string' ||
-      !dados.email.trim() ||
-      !papelValido(dados.papel)
-    ) {
-      return NextResponse.json({ erro: 'Email e papel são obrigatórios.' }, { status: 400 });
-    }
-    const contexto = await exigirContextoAuth();
-    return NextResponse.json(
-      await convidarPorEmail(contexto, dados.documentoId, dados.email, dados.papel),
-    );
-  } catch (erro) {
-    return respostaErro(erro);
+export const PATCH = rotaApi('PATCH /api/docs/compartilhar', async (req: Request) => {
+  const dados = await corpoJson(req);
+  if (
+    typeof dados.documentoId !== 'string' ||
+    typeof dados.usuarioId !== 'string' ||
+    !papelValido(dados.papel)
+  ) {
+    throw new ErroValidacao('Documento, pessoa e papel são obrigatórios.');
   }
-}
+  const contexto = await exigirContextoAuth();
+  await trocarPapel(contexto, dados.documentoId, dados.usuarioId, dados.papel);
+  return respostaOk({ ok: true });
+});
 
-export async function PATCH(req: Request) {
-  try {
-    const dados = await corpo(req);
-    if (
-      typeof dados.documentoId !== 'string' ||
-      typeof dados.usuarioId !== 'string' ||
-      !papelValido(dados.papel)
-    ) {
-      return NextResponse.json(
-        { erro: 'Documento, pessoa e papel são obrigatórios.' },
-        {
-          status: 400,
-        },
-      );
-    }
-    const contexto = await exigirContextoAuth();
-    await trocarPapel(contexto, dados.documentoId, dados.usuarioId, dados.papel);
-    return NextResponse.json({ ok: true });
-  } catch (erro) {
-    return respostaErro(erro);
+export const DELETE = rotaApi('DELETE /api/docs/compartilhar', async (req: Request) => {
+  const dados = await corpoJson(req);
+  if (typeof dados.documentoId !== 'string' || typeof dados.usuarioId !== 'string') {
+    throw new ErroValidacao('Documento e pessoa são obrigatórios.');
   }
-}
+  const contexto = await exigirContextoAuth();
+  await revogar(contexto, dados.documentoId, dados.usuarioId);
+  return respostaOk({ ok: true });
+});
 
-export async function DELETE(req: Request) {
-  try {
-    const dados = await corpo(req);
-    if (typeof dados.documentoId !== 'string' || typeof dados.usuarioId !== 'string') {
-      return NextResponse.json({ erro: 'Documento e pessoa são obrigatórios.' }, { status: 400 });
-    }
-    const contexto = await exigirContextoAuth();
-    await revogar(contexto, dados.documentoId, dados.usuarioId);
-    return NextResponse.json({ ok: true });
-  } catch (erro) {
-    return respostaErro(erro);
+export const PUT = rotaApi('PUT /api/docs/compartilhar', async (req: Request) => {
+  const dados = await corpoJson(req);
+  if (typeof dados.documentoId !== 'string') {
+    throw new ErroValidacao('documentoId é obrigatório.');
   }
-}
-
-export async function PUT(req: Request) {
-  try {
-    const dados = await corpo(req);
-    if (typeof dados.documentoId !== 'string') {
-      return NextResponse.json({ erro: 'documentoId é obrigatório.' }, { status: 400 });
-    }
-    const contexto = await exigirContextoAuth();
-    if (dados.regenerar === true) {
-      return NextResponse.json({ token: await regenerarToken(contexto, dados.documentoId) });
-    }
-    if (!modoValido(dados.modo)) {
-      return NextResponse.json({ erro: 'Modo do link inválido.' }, { status: 400 });
-    }
-    return NextResponse.json({
-      link: await definirModoLink(contexto, dados.documentoId, dados.modo),
-    });
-  } catch (erro) {
-    return respostaErro(erro);
+  const contexto = await exigirContextoAuth();
+  if (dados.regenerar === true) {
+    return respostaOk({ token: await regenerarToken(contexto, dados.documentoId) });
   }
-}
+  if (!modoValido(dados.modo)) throw new ErroValidacao('Modo do link inválido.');
+  return respostaOk({ link: await definirModoLink(contexto, dados.documentoId, dados.modo) });
+});

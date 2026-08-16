@@ -201,6 +201,22 @@ Substitui a heurística pura por SM-2 adaptado — intervalo cresce com adiament
 - [x] Migration `20260805000001_roadmapmind_reconciliar_convites.sql` aplicada em produção em 2026-08-08 (RPC `reconciliar_convites_pendentes`, `security definer`, identidade de `auth.uid()`). O safety-net do 1º login já está ativo.
 - Configurar Resend (verificar domínio DNS + `RESEND_API_KEY` como secret) e ligar `EMAIL_ENVIO_ATIVO=true` para os emails de convite saírem. Sem isso, o convite pendente grava e materializa, só não dispara email.
 
+## Arquitetura — kernel de resposta das rotas de API
+
+Dívida encontrada em auditoria: as 50 rotas de `src/app/api/` montavam cada uma
+o próprio envelope de erro (41 com a chave `error`, 7 com `erro`, 1 com as
+duas), 5 reimplementavam a mesma função `respostaErro` e o status HTTP era
+adivinhado pelo texto da mensagem (`mensagem.includes('Só o dono') ? 403 : 500`).
+Erro de Postgres chegava cru na tela do usuário.
+
+- [x] Fatia 1 — kernel `src/lib/api/` (erros tipados + envelope único + `rotaApi`),
+      services do RoadMapMind lançando erro tipado, 7 rotas migradas
+      (`/api/docs/*`, `/api/perfil`) e teste de contrato com allowlist decrescente
+- [ ] Fatia 2 — migrar as 43 rotas legadas restantes (`ROTAS_LEGADAS` em
+      `src/lib/api/contrato-rotas.test.ts`) e trocar as leituras de `body.error`
+      por `body.erro` no cliente
+- [ ] Fatia 3 — apagar `ROTAS_LEGADAS` e o `it` que a acompanha quando a lista zerar
+
 ## Fase 12+ — Futuro
 
 - Multi-usuário com convites

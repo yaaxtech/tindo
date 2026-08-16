@@ -14,15 +14,15 @@ const mocks = vi.hoisted(() => ({
   trocarPapel: vi.fn(),
 }));
 
-vi.mock('@/lib/auth/server', () => ({
-  UsuarioNaoAutenticadoError: class UsuarioNaoAutenticadoError extends Error {
-    readonly status = 401;
-    constructor() {
-      super('Entre na sua conta para continuar.');
-    }
-  },
-  exigirContextoAuth: mocks.exigirContextoAuth,
-}));
+// O dublê estende a classe REAL: se o mapeamento de status mudar, o teste
+// acompanha em vez de dar falso verde com um Error solto.
+vi.mock('@/lib/auth/server', async () => {
+  const { ErroNaoAutenticado } = await import('@/lib/api/erros');
+  return {
+    UsuarioNaoAutenticadoError: class UsuarioNaoAutenticadoError extends ErroNaoAutenticado {},
+    exigirContextoAuth: mocks.exigirContextoAuth,
+  };
+});
 
 vi.mock('@/services/compartilhar', () => ({
   convidarPorEmail: mocks.convidarPorEmail,
@@ -148,7 +148,10 @@ describe('/api/docs/compartilhar', () => {
     );
 
     expect(resposta.status).toBe(400);
-    await expect(resposta.json()).resolves.toEqual({ erro: 'Email e papel são obrigatórios.' });
+    await expect(resposta.json()).resolves.toEqual({
+      erro: 'Email e papel são obrigatórios.',
+      codigo: 'VALIDACAO',
+    });
     expect(mocks.convidarPorEmail).not.toHaveBeenCalled();
   });
 });

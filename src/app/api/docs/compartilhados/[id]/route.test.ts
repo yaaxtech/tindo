@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { ErroSemPermissao } from '@/lib/api/erros';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -9,15 +10,15 @@ const mocks = vi.hoisted(() => ({
   salvarDocumentoCompartilhado: vi.fn(),
 }));
 
-vi.mock('@/lib/auth/server', () => ({
-  UsuarioNaoAutenticadoError: class UsuarioNaoAutenticadoError extends Error {
-    readonly status = 401;
-    constructor() {
-      super('Entre na sua conta para continuar.');
-    }
-  },
-  exigirContextoAuth: mocks.exigirContextoAuth,
-}));
+// O dublê estende a classe REAL: se o mapeamento de status mudar, o teste
+// acompanha em vez de dar falso verde com um Error solto.
+vi.mock('@/lib/auth/server', async () => {
+  const { ErroNaoAutenticado } = await import('@/lib/api/erros');
+  return {
+    UsuarioNaoAutenticadoError: class UsuarioNaoAutenticadoError extends ErroNaoAutenticado {},
+    exigirContextoAuth: mocks.exigirContextoAuth,
+  };
+});
 
 vi.mock('@/services/compartilhar', () => ({
   listarCompartilhadosComigo: mocks.listarCompartilhadosComigo,
@@ -125,7 +126,7 @@ describe('PUT /api/docs/compartilhados/[id]', () => {
 
   it('responde 403 quando o guard nega a edição (SEM_PERMISSAO)', async () => {
     mocks.salvarDocumentoCompartilhado.mockRejectedValue(
-      new Error('Você não tem permissão para editar este documento.'),
+      new ErroSemPermissao('Você não tem permissão para editar este documento.'),
     );
     const resposta = await PUT(putReq({ linhas }), { params: Promise.resolve({ id: 'doc-A' }) });
     expect(resposta.status).toBe(403);
