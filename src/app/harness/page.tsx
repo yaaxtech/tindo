@@ -18,6 +18,7 @@ import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistori
 import { SECOES_PAINEL } from '@/app/harness/_components/secoes';
 import { Secao } from '@/app/harness/_components/ui';
 import { avaliarLedger } from '@/lib/harness/alertas';
+import { carimboAtualizacao } from '@/lib/harness/atualizacao';
 import {
   contarInfra,
   contarPendentes,
@@ -80,9 +81,15 @@ export default function HarnessPage() {
     [ledger, snap],
   );
 
-  const hora = snap
-    ? new Date(snap.geradoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    : null;
+  // O painel fica aberto por horas seguidas: sem este tique, o "há 30 min"
+  // congelaria no valor da primeira pintura e mentiria a tarde inteira.
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAgora(Date.now()), 30e3);
+    return () => clearInterval(id);
+  }, []);
+
+  const carimbo = snap ? carimboAtualizacao(snap.geradoEm, agora) : null;
   const totalMes = (snap?.dados.assinaturas ?? []).reduce((s, a) => s + a.valor, 0);
 
   return (
@@ -104,7 +111,7 @@ export default function HarnessPage() {
               <h1 className="text-lg font-semibold">Painel do Harness</h1>
               <p className="text-xs text-text-muted">
                 {snap
-                  ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${infra > 0 ? ` · ${infra} nunca ${infra === 1 ? 'rodou' : 'rodaram'} (infra)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''} · atualizado às ${hora}`
+                  ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${infra > 0 ? ` · ${infra} nunca ${infra === 1 ? 'rodou' : 'rodaram'} (infra)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''}${carimbo ? ` · ${carimbo}` : ''}`
                   : carregando
                     ? 'Carregando…'
                     : 'KPIs da orquestração multi-LLM'}
