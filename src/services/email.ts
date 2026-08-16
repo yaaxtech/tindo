@@ -3,6 +3,8 @@
 // fetch() ao endpoint REST do Resend, nunca SMTP.
 // Ver spec: docs/superpowers/plans/2026-08-02-roadmapmind-fase-2-compartilhamento.md
 
+import { ErroServicoExterno } from '@/lib/api/erros';
+
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
 // Placeholder sender until the dono verifies a custom domain in Resend (DNS,
@@ -82,6 +84,6 @@ export async function enviarEmailConvite(dados: DadosConviteEmail): Promise<void
   });
 
   if (!resposta.ok) {
-    throw new Error('Não foi possível enviar o email de convite.');
+    throw new ErroServicoExterno('Não foi possível enviar o email de convite.');
   }
 }

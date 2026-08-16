@@ -1,3 +1,4 @@
+import { ErroNaoAutenticado } from '@/lib/api/erros';
 import { describe, expect, it, vi } from 'vitest';
 import {
   type ServerSupabaseClient,
@@ -51,6 +52,8 @@ describe('exigirContextoAuth', () => {
     const promise = exigirContextoAuth(clienteComClaims({ data: null, error: null }));
 
     await expect(promise).rejects.toBeInstanceOf(UsuarioNaoAutenticadoError);
-    await expect(promise).rejects.toMatchObject({ code: 'NAO_AUTENTICADO', status: 401 });
+    await expect(promise).rejects.toBeInstanceOf(ErroNaoAutenticado);
+    await expect(promise).rejects.toMatchObject({ codigo: 'NAO_AUTENTICADO', status: 401 });
+    await expect(promise).rejects.toThrow('Entre na sua conta para continuar.');
   });
 });

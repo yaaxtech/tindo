@@ -1,3 +1,4 @@
+import { ErroNaoAutenticado } from '@/lib/api/erros';
 import { createClient } from '@/lib/supabase/server';
 
 export type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>;
@@ -8,15 +9,12 @@ export interface ContextoAuth {
   email: string | null;
 }
 
-export class UsuarioNaoAutenticadoError extends Error {
-  readonly code = 'NAO_AUTENTICADO';
-  readonly status = 401;
-
-  constructor() {
-    super('Entre na sua conta para continuar.');
-    this.name = 'UsuarioNaoAutenticadoError';
-  }
-}
+/**
+ * Mantido pelo nome histórico (importado por várias rotas), mas agora é só uma
+ * especialização de `ErroNaoAutenticado` — quem mapeia para 401 é o kernel em
+ * `src/lib/api/resposta.ts`, não cada rota.
+ */
+export class UsuarioNaoAutenticadoError extends ErroNaoAutenticado {}
 
 /**
  * Resolve a identidade a partir de claims assinadas da sessão.

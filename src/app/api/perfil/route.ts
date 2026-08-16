@@ -1,42 +1,31 @@
-import { UsuarioNaoAutenticadoError, exigirContextoAuth } from '@/lib/auth/server';
+// Perfil da pessoa logada. As validações de campo vivem em src/services/perfil.ts
+// e chegam aqui como ErroValidacao → 400; falha de banco vira 500 genérico em
+// vez do 400 que esta rota devolvia para qualquer erro.
+
+import { ErroValidacao } from '@/lib/api/erros';
+import { corpoJson, respostaOk, rotaApi } from '@/lib/api/resposta';
+import { exigirContextoAuth } from '@/lib/auth/server';
 import { atualizarPerfil, obterPerfil } from '@/services/perfil';
-import { NextResponse } from 'next/server';
 
-function erro(e: unknown) {
-  const status = e instanceof UsuarioNaoAutenticadoError ? 401 : 400;
-  return NextResponse.json(
-    { erro: e instanceof Error ? e.message : 'Não foi possível acessar o perfil.' },
-    { status },
-  );
-}
+export const GET = rotaApi('GET /api/perfil', async () => {
+  return respostaOk({ perfil: await obterPerfil(await exigirContextoAuth()) });
+});
 
-export async function GET() {
-  try {
-    return NextResponse.json({ perfil: await obterPerfil(await exigirContextoAuth()) });
-  } catch (e) {
-    return erro(e);
+export const PATCH = rotaApi('PATCH /api/perfil', async (request: Request) => {
+  const contexto = await exigirContextoAuth();
+  const body = (await corpoJson(request)) as {
+    nome?: string;
+    whatsapp?: string | null;
+    cor?: string;
+  };
+  if (typeof body.nome !== 'string' || typeof body.cor !== 'string') {
+    throw new ErroValidacao('Nome e cor são obrigatórios.');
   }
-}
-
-export async function PATCH(request: Request) {
-  try {
-    const contexto = await exigirContextoAuth();
-    const body = (await request.json()) as {
-      nome?: string;
-      whatsapp?: string | null;
-      cor?: string;
-    };
-    if (typeof body.nome !== 'string' || typeof body.cor !== 'string') {
-      return NextResponse.json({ erro: 'Nome e cor são obrigatórios.' }, { status: 400 });
-    }
-    return NextResponse.json({
-      perfil: await atualizarPerfil(contexto, {
-        nome: body.nome,
-        whatsapp: body.whatsapp,
-        cor: body.cor,
-      }),
-    });
-  } catch (e) {
-    return erro(e);
-  }
-}
+  return respostaOk({
+    perfil: await atualizarPerfil(contexto, {
+      nome: body.nome,
+      whatsapp: body.whatsapp,
+      cor: body.cor,
+    }),
+  });
+});
