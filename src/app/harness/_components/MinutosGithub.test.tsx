@@ -60,7 +60,9 @@ describe('MinutosGithub', () => {
     expect(screen.getByText('Veredito')).toBeInTheDocument();
     // O cenário real: faturado zero, mas o painel precisa precificar a decisão.
     expect(screen.getByText(/Se ligasse a nuvem/)).toBeInTheDocument();
-    expect(screen.getByText(/cada hora de fila eliminada custaria/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/custo de mandar tudo para a nuvem ÷ horas de fila/),
+    ).toBeInTheDocument();
   });
 
   it('avisa quando a coleta veio incompleta, em vez de mostrar número parcial calado', () => {

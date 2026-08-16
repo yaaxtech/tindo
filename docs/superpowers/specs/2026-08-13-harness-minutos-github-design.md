@@ -35,7 +35,7 @@ Cloudflare, nenhum rate limit gasto pelo app, e a coleta fica mais fresca
 (1×/hora) do que o cron diário conseguiria.
 
 Ele empurra um blob **agregado por dia** para a tabela singleton
-`harness_actions_snapshot` (migration `20260813000003`, já escrita). Agregado, e
+`harness_actions_snapshot` (migration `20260813000005`, já escrita). Agregado, e
 não job a job, por dois motivos: o PostgREST trunca em 1000 linhas e 90 dias
 passam de 9.000 jobs; e o valor é comparar mês com mês, não fazer forense.
 O agregado diário é também o histórico que o GitHub descarta em ~90 dias — é o
@@ -142,6 +142,6 @@ ainda não rodou) → estado vazio explicativo, nunca erro.
 
 - **NÃO** mexer em `coletor-github.ts`, `github-timings.ts`, `revisor.ts`,
   `alertas.ts`, `kpis.ts` nem em nenhum bloco existente do painel.
-- **NÃO** alterar a migration `20260813000003` (já escrita e revisada).
+- **NÃO** alterar a migration `20260813000005` (já escrita e revisada).
 - **NÃO** aplicar migration em produção — isso exige OK do dono.
 - **NÃO** adicionar segredo, variável de ambiente ou dependência nova.
