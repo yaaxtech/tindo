@@ -1,27 +1,21 @@
+import { ErroValidacao } from '@/lib/api/erros';
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  try {
-    const admin = getAdminClient();
-    const usuarioId = await getUsuarioIdMVP();
-    const { data, error } = await admin
-      .from('configuracoes')
-      .select('*')
-      .eq('usuario_id', usuarioId)
-      .maybeSingle();
-    if (error) throw error;
-    return NextResponse.json({ configuracoes: data });
-  } catch (err) {
-    console.error('/api/configuracoes GET error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro' },
-      { status: 500 },
-    );
-  }
-}
+export const GET = rotaApi('GET /api/configuracoes', async () => {
+  const admin = getAdminClient();
+  const usuarioId = await getUsuarioIdMVP();
+  const { data, error } = await admin
+    .from('configuracoes')
+    .select('*')
+    .eq('usuario_id', usuarioId)
+    .maybeSingle();
+  if (error) throw error;
+  return respostaOk({ configuracoes: data });
+});
 
 interface PatchPayload {
   peso_urgencia?: number;
@@ -46,35 +40,24 @@ interface PatchPayload {
   push_gatilho_sugestoes_ia?: boolean;
 }
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const admin = getAdminClient();
-    const usuarioId = await getUsuarioIdMVP();
-    const body = (await request.json()) as PatchPayload;
+export const PATCH = rotaApi('PATCH /api/configuracoes', async (request: NextRequest) => {
+  const admin = getAdminClient();
+  const usuarioId = await getUsuarioIdMVP();
+  const body = (await request.json()) as PatchPayload;
 
-    // Valida pesos somam 1 (tolerância 0.01)
-    if (
-      body.peso_urgencia !== undefined &&
-      body.peso_importancia !== undefined &&
-      body.peso_facilidade !== undefined
-    ) {
-      const soma = body.peso_urgencia + body.peso_importancia + body.peso_facilidade;
-      if (Math.abs(soma - 1.0) > 0.01) {
-        return NextResponse.json(
-          { error: `Pesos precisam somar 1.0 (atual: ${soma.toFixed(3)})` },
-          { status: 400 },
-        );
-      }
+  // Valida pesos somam 1 (tolerância 0.01)
+  if (
+    body.peso_urgencia !== undefined &&
+    body.peso_importancia !== undefined &&
+    body.peso_facilidade !== undefined
+  ) {
+    const soma = body.peso_urgencia + body.peso_importancia + body.peso_facilidade;
+    if (Math.abs(soma - 1.0) > 0.01) {
+      throw new ErroValidacao(`Pesos precisam somar 1.0 (atual: ${soma.toFixed(3)})`);
     }
-
-    const { error } = await admin.from('configuracoes').update(body).eq('usuario_id', usuarioId);
-    if (error) throw error;
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error('/api/configuracoes PATCH error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro' },
-      { status: 500 },
-    );
   }
-}
+
+  const { error } = await admin.from('configuracoes').update(body).eq('usuario_id', usuarioId);
+  if (error) throw error;
+  return respostaOk({ ok: true });
+});

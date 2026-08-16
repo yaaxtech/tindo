@@ -90,8 +90,8 @@ export function usePushSubscription() {
       });
 
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? 'Erro ao salvar subscription.');
+        const body = (await res.json()) as { erro?: string };
+        throw new Error(body.erro ?? 'Erro ao salvar subscription.');
       }
 
       setStatus('granted');

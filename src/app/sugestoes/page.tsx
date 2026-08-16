@@ -399,9 +399,9 @@ export default function SugestoesPage() {
           facilidade: number;
           razao: string;
         }>;
-        error?: string;
+        erro?: string;
       };
-      if (!res.ok) throw new Error(body.error ?? 'Erro ao gerar.');
+      if (!res.ok) throw new Error(body.erro ?? 'Erro ao gerar.');
       const novas: SugestaoItem[] = (body.sugestoes ?? []).map((s) => ({
         id: s.id,
         titulo: s.titulo,
@@ -434,8 +434,8 @@ export default function SugestoesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ acao, editada }),
       });
-      const body = (await res.json()) as { ok?: boolean; tarefaId?: string; error?: string };
-      if (!res.ok) throw new Error(body.error ?? 'Erro');
+      const body = (await res.json()) as { ok?: boolean; tarefaId?: string; erro?: string };
+      if (!res.ok) throw new Error(body.erro ?? 'Erro');
 
       setSugestoes((prev) => prev.filter((s) => s.id !== id));
 

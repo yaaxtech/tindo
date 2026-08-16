@@ -1,5 +1,7 @@
+import { ErroConflito, ErroNaoEncontrado } from '@/lib/api/erros';
+import { respostaOk, rotaApi } from '@/lib/api/resposta';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,8 +17,9 @@ interface RespostaBody {
   };
 }
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
+export const POST = rotaApi(
+  'POST /api/ai/sugerir-tarefas/[id]/resposta',
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
     const body = (await request.json()) as RespostaBody;
     const admin = getAdminClient();
@@ -33,10 +36,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (fetchErr) throw fetchErr;
     if (!sugestao) {
-      return NextResponse.json({ error: 'Sugestão não encontrada.' }, { status: 404 });
+      throw new ErroNaoEncontrado('Sugestão não encontrada.');
     }
     if (sugestao.status !== 'pendente') {
-      return NextResponse.json({ error: 'Sugestão já foi respondida.' }, { status: 409 });
+      throw new ErroConflito('Sugestão já foi respondida.');
     }
 
     if (body.acao === 'rejeitar') {
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         .eq('id', id);
 
       if (rejErr) throw rejErr;
-      return NextResponse.json({ ok: true });
+      return respostaOk({ ok: true });
     }
 
     // acao === 'aceitar'
@@ -88,12 +91,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (updErr) throw updErr;
 
-    return NextResponse.json({ ok: true, tarefaId: tarefa.id as string });
-  } catch (err) {
-    console.error('POST /api/ai/sugerir-tarefas/[id]/resposta error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erro ao responder sugestão.' },
-      { status: 500 },
-    );
-  }
-}
+    return respostaOk({ ok: true, tarefaId: tarefa.id as string });
+  },
+);

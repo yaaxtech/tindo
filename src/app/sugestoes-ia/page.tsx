@@ -333,9 +333,9 @@ export default function SugestoesIaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      const body = (await res.json()) as { processadas: number; error?: string };
+      const body = (await res.json()) as { processadas: number; erro?: string };
       if (!res.ok) {
-        pushToast({ titulo: body.error ?? 'Erro ao analisar', icone: 'alerta' });
+        pushToast({ titulo: body.erro ?? 'Erro ao analisar', icone: 'alerta' });
         return;
       }
       pushToast({

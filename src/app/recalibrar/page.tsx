@@ -633,8 +633,8 @@ export default function RecalibrarPage() {
         body: JSON.stringify({ amostras }),
       });
       if (!res.ok) {
-        const body = (await res.json()) as { error: string };
-        throw new Error(body.error ?? 'Erro ao aplicar');
+        const body = (await res.json()) as { erro: string };
+        throw new Error(body.erro ?? 'Erro ao aplicar');
       }
       const r = (await res.json()) as ResultadoAplicar;
       setResultado(r);

@@ -362,8 +362,8 @@ function Passo2({
         });
         if (cancelled) return;
         if (!res.ok) {
-          const err = (await res.json()) as { error?: string };
-          setLogs((prev) => [...prev, `Erro: ${err.error ?? res.status}`]);
+          const err = (await res.json()) as { erro?: string };
+          setLogs((prev) => [...prev, `Erro: ${err.erro ?? res.status}`]);
           return;
         }
         const body = (await res.json()) as ExportResult;

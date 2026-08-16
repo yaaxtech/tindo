@@ -8,6 +8,7 @@ import {
   montarPromptQuebra,
   montarPromptSugestoes,
 } from '@/lib/ai/prompts';
+import { ErroServicoExterno, ErroValidacao } from '@/lib/api/erros';
 import type { Projeto, Tag } from '@/types/domain';
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -73,7 +74,9 @@ export interface QuebrarTarefaInput {
 export async function quebrarTarefa(input: QuebrarTarefaInput): Promise<QuebraTarefaResult> {
   const resolvedKey = input.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
-    throw new Error('Configure sua chave Claude em /configuracoes para usar a quebra por IA.');
+    throw new ErroValidacao(
+      'Configure sua chave Claude em /configuracoes para usar a quebra por IA.',
+    );
   }
 
   const anthropic = new Anthropic({ apiKey: resolvedKey });
@@ -99,7 +102,7 @@ export async function quebrarTarefa(input: QuebrarTarefaInput): Promise<QuebraTa
 
   const toolBlock = response.content.find((b) => b.type === 'tool_use');
   if (!toolBlock || toolBlock.type !== 'tool_use') {
-    throw new Error('IA não retornou resposta de quebra. Tente novamente.');
+    throw new ErroServicoExterno('IA não retornou resposta de quebra. Tente novamente.');
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: tool input is dynamic JSON
@@ -187,7 +190,9 @@ export interface SugerirTarefasResult {
 export async function sugerirTarefas(input: SugerirTarefasInput): Promise<SugerirTarefasResult> {
   const resolvedKey = input.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
-    throw new Error('Configure sua chave Claude em /configuracoes para usar sugestões por IA.');
+    throw new ErroValidacao(
+      'Configure sua chave Claude em /configuracoes para usar sugestões por IA.',
+    );
   }
 
   const anthropic = new Anthropic({ apiKey: resolvedKey });
@@ -213,7 +218,7 @@ export async function sugerirTarefas(input: SugerirTarefasInput): Promise<Sugeri
 
   const toolBlock = response.content.find((b) => b.type === 'tool_use');
   if (!toolBlock || toolBlock.type !== 'tool_use') {
-    throw new Error('IA não retornou sugestões. Tente novamente.');
+    throw new ErroServicoExterno('IA não retornou sugestões. Tente novamente.');
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: tool input is dynamic JSON
@@ -264,7 +269,7 @@ export interface ClassificarTarefaInput {
 export async function classificarTarefa(input: ClassificarTarefaInput): Promise<ClassificacaoMeta> {
   const resolvedKey = input.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
-    throw new Error(
+    throw new ErroValidacao(
       'Configure sua chave Claude em /configuracoes para usar a classificação por IA.',
     );
   }
@@ -297,7 +302,7 @@ export async function classificarTarefa(input: ClassificarTarefaInput): Promise<
 
   const toolBlock = response.content.find((b) => b.type === 'tool_use');
   if (!toolBlock || toolBlock.type !== 'tool_use') {
-    throw new Error('IA não retornou classificação. Tente novamente.');
+    throw new ErroServicoExterno('IA não retornou classificação. Tente novamente.');
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: tool input is dynamic JSON
@@ -307,7 +312,7 @@ export async function classificarTarefa(input: ClassificarTarefaInput): Promise<
   const facilidade = Number(raw.facilidade);
 
   if (Number.isNaN(importancia) || Number.isNaN(urgencia) || Number.isNaN(facilidade)) {
-    throw new Error('Resposta da IA com valores inválidos. Tente novamente.');
+    throw new ErroServicoExterno('Resposta da IA com valores inválidos. Tente novamente.');
   }
 
   return {
