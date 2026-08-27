@@ -30,6 +30,7 @@ function linha(parcial: Partial<LedgerLinha> = {}): LedgerLinha {
     effort: 'max',
     terreno: 'rotina',
     resultado: 'ok1',
+    papel: 'construtor',
     tarefa: 'x',
     nota: null,
     dur: null,
@@ -46,48 +47,48 @@ const ledgerCom = (n: number, ok: number, extra: Partial<LedgerLinha> = {}): Led
 const codigos = (vs: { codigo: string }[]) => vs.map((v) => v.codigo);
 
 describe('avaliarLedger', () => {
-  it('não dispara nada com amostra menor que 5, mesmo com tudo errado', () => {
-    const violacoes = avaliarLedger(ledgerCom(4, 0), ASSINATURAS, AGORA);
+  it('não dispara qualidade com amostra menor que 20, mesmo com tudo errado', () => {
+    const violacoes = avaliarLedger(ledgerCom(19, 0), ASSINATURAS, AGORA);
     expect(codigos(violacoes)).not.toContain('qualidade_baixa');
     expect(codigos(violacoes)).not.toContain('retrabalho_alto');
   });
 
   it('marca qualidade como alerta entre 70% e 80%', () => {
-    // 10 despachos, 7 ok1 → 70% (>= crítico, < alerta)
-    const violacoes = avaliarLedger(ledgerCom(10, 7), ASSINATURAS, AGORA);
+    // 20 despachos, 14 ok1 → 70% (>= crítico, < alerta)
+    const violacoes = avaliarLedger(ledgerCom(20, 14), ASSINATURAS, AGORA);
     const q = violacoes.find((v) => v.codigo === 'qualidade_baixa');
     expect(q).toMatchObject({ severidade: 'alerta', valor: 0.7, limiar: LIMIARES.qualidadeAlerta });
-    expect(q?.amostra).toBe(10);
+    expect(q?.amostra).toBe(20);
   });
 
   it('marca qualidade como crítica abaixo de 70%', () => {
-    const violacoes = avaliarLedger(ledgerCom(10, 6), ASSINATURAS, AGORA);
+    const violacoes = avaliarLedger(ledgerCom(20, 12), ASSINATURAS, AGORA);
     expect(violacoes.find((v) => v.codigo === 'qualidade_baixa')?.severidade).toBe('critico');
   });
 
   it('não reclama de qualidade em 80% cravado', () => {
-    const violacoes = avaliarLedger(ledgerCom(10, 8), ASSINATURAS, AGORA);
+    const violacoes = avaliarLedger(ledgerCom(20, 16), ASSINATURAS, AGORA);
     expect(codigos(violacoes)).not.toContain('qualidade_baixa');
   });
 
   it('marca retrabalho crítico acima de 35% e alerta acima de 20%', () => {
-    const critico = avaliarLedger(ledgerCom(10, 6), ASSINATURAS, AGORA); // 40% retrabalho
+    const critico = avaliarLedger(ledgerCom(20, 12), ASSINATURAS, AGORA); // 40% retrabalho
     expect(critico.find((v) => v.codigo === 'retrabalho_alto')?.severidade).toBe('critico');
 
-    const alerta = avaliarLedger(ledgerCom(10, 7), ASSINATURAS, AGORA); // 30% retrabalho
+    const alerta = avaliarLedger(ledgerCom(20, 14), ASSINATURAS, AGORA); // 30% retrabalho
     expect(alerta.find((v) => v.codigo === 'retrabalho_alto')?.severidade).toBe('alerta');
 
-    const limpo = avaliarLedger(ledgerCom(10, 8), ASSINATURAS, AGORA); // 20% cravado
+    const limpo = avaliarLedger(ledgerCom(20, 16), ASSINATURAS, AGORA); // 20% cravado
     expect(codigos(limpo)).not.toContain('retrabalho_alto');
   });
 
   it('dispara custo por tarefa acima de $5 e cita a amostra de aceitas', () => {
-    // $320/mês em 14 dias ≈ $149,33; com 10 aceitas dá ~$14,93 por tarefa.
-    const violacoes = avaliarLedger(ledgerCom(10, 10), ASSINATURAS, AGORA);
+    // $320/mês em 14 dias ≈ $149,33; com 20 aceitas dá ~$7,47 por tarefa.
+    const violacoes = avaliarLedger(ledgerCom(20, 20), ASSINATURAS, AGORA);
     const custo = violacoes.find((v) => v.codigo === 'custo_alto');
     expect(custo?.severidade).toBe('alerta');
     expect(custo?.valor).toBeGreaterThan(5);
-    expect(custo?.amostra).toBe(10);
+    expect(custo?.amostra).toBe(20);
   });
 
   it('não dispara custo quando o volume dilui a assinatura', () => {
@@ -97,24 +98,23 @@ describe('avaliarLedger', () => {
 
   it('dispara quota alta acima de 15%', () => {
     const linhas = [
-      ...ledgerCom(6, 6),
-      linha({ resultado: 'quota' }),
-      linha({ resultado: 'quota' }),
+      ...ledgerCom(16, 16),
+      ...Array.from({ length: 4 }, () => linha({ resultado: 'quota' })),
     ];
     const violacoes = avaliarLedger(linhas, ASSINATURAS, AGORA);
     const quota = violacoes.find((v) => v.codigo === 'quota_alta');
-    expect(quota?.valor).toBeCloseTo(0.25, 5);
+    expect(quota?.valor).toBeCloseTo(0.2, 5);
     expect(codigos(violacoes)).not.toContain('quota_zerada');
   });
 
   it('dispara quota zerada quando ninguém bateu no limite na janela inteira', () => {
-    const violacoes = avaliarLedger(ledgerCom(10, 10), ASSINATURAS, AGORA);
+    const violacoes = avaliarLedger(ledgerCom(20, 20), ASSINATURAS, AGORA);
     expect(codigos(violacoes)).toContain('quota_zerada');
   });
 
   it('dispara placar de valor abaixo de 55', () => {
     // Qualidade 50% + custo alto → placar bem abaixo de 55.
-    const violacoes = avaliarLedger(ledgerCom(10, 5), ASSINATURAS, AGORA);
+    const violacoes = avaliarLedger(ledgerCom(20, 10), ASSINATURAS, AGORA);
     const valor = violacoes.find((v) => v.codigo === 'valor_baixo');
     expect(valor?.limiar).toBe(55);
     expect(valor?.valor).toBeLessThan(55);
@@ -127,7 +127,7 @@ describe('avaliarLedger', () => {
   });
 
   it('ignora pendentes — eles não são julgáveis', () => {
-    const linhas = [...ledgerCom(5, 5), ...ledgerCom(20, 0, { resultado: 'pendente' })];
+    const linhas = [...ledgerCom(19, 19), ...ledgerCom(20, 0, { resultado: 'pendente' })];
     const violacoes = avaliarLedger(linhas, ASSINATURAS, AGORA);
     expect(codigos(violacoes)).not.toContain('qualidade_baixa');
   });
@@ -297,7 +297,7 @@ describe('avaliarKpis', () => {
     const anteriores = [8, 9, 15, 16, 22, 23, 29, 30].map((d) => runExec(d, 100));
     const corrente = [1, 2, 3].map((d) => runExec(d, 400));
     const violacoes = avaliarKpis({
-      ledger: ledgerCom(10, 6),
+      ledger: ledgerCom(20, 12),
       assinaturas: ASSINATURAS,
       runs: [...anteriores, ...corrente],
       agora: AGORA,

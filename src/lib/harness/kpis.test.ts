@@ -3,6 +3,7 @@ import type {
   AutonomiaBlob,
   AutonomiaDia,
   CadeiaTerreno,
+  HarnessBlob,
   LedgerLinha,
 } from '@/types/harness';
 import { describe, expect, it } from 'vitest';
@@ -10,11 +11,14 @@ import {
   baldesPorDegrau,
   contarInfra,
   contarPendentes,
+  contratoMetricasValido,
   custoAssinaturas,
   custoMedioTarefa,
   diasComDados,
+  filtrarHistoricoCompativel,
   kpisAutonomia,
   kpisGerais,
+  kpisRevisao,
   kpisTerreno,
   normModelo,
   placarPorFrente,
@@ -36,6 +40,7 @@ function linha(parcial: Partial<LedgerLinha> & Pick<LedgerLinha, 'ts'>): LedgerL
     effort: null,
     terreno: 'rotina',
     resultado: 'ok1',
+    papel: 'construtor',
     tarefa: 'tarefa de teste',
     nota: null,
     dur: null,
@@ -160,6 +165,141 @@ const ASSINATURAS_VALOR: Assinatura[] = [
   { nome: 'Gemini', frente: 'gemini', valor: 10, renova: '2026-09-01', papel: 'teste' },
 ];
 
+function blobV2Valido(): HarnessBlob {
+  const asOf = '2026-08-27T15:00:00.000Z';
+  const construcao = {
+    total: 0,
+    julgados: 0,
+    ok1: 0,
+    retrabalho: 0,
+    aceitas: 0,
+    pendente: 0,
+    quota: 0,
+    infra: 0,
+    descartado: 0,
+    qualidade: null,
+    retrabalho_pct: null,
+    qualidade_ic95: null,
+    offload: 0,
+    offload_pct: null,
+    quota_pct: null,
+    duracao: { n: 0, p50_min: null, p90_min: null },
+    por_frente: {},
+    quota_por_frente: {},
+  };
+  const revisao = {
+    total: 0,
+    julgados: 0,
+    problemas_encontrados: 0,
+    deteccao_pct: null,
+    deteccao_ic95: null,
+  };
+  const metricas_periodos = Object.fromEntries(
+    [1, 7, 14, 15, 30].map((dias) => [
+      String(dias),
+      {
+        dias,
+        atual: { eventos: 0, construcao: { ...construcao }, revisao: { ...revisao } },
+        anterior: { eventos: 0, construcao: { ...construcao }, revisao: { ...revisao } },
+        inicio_atual: new Date(Date.parse(asOf) - dias * 864e5).toISOString(),
+        fim_atual: asOf,
+      },
+    ]),
+  );
+  return {
+    schema_version: 2,
+    metric_version: 'construction-v2-2026-08-27',
+    gerado_em: asOf,
+    as_of: asOf,
+    ledger: [],
+    metricas_periodos,
+    saude_dados: {
+      schema_version: 2,
+      metric_version: 'construction-v2-2026-08-27',
+      gerado_em: asOf,
+      source_max_ts: null,
+      atraso_fonte_seg: null,
+      eventos_recebidos: 0,
+      eventos_publicados: 0,
+      eventos_rejeitados: 0,
+      papel_explicito: 0,
+      papel_explicito_pct: null,
+      duracao_preenchida: 0,
+      duracao_preenchida_pct: null,
+    },
+    history: [],
+    volume_codigo: [],
+    prs: [],
+    assinaturas: [],
+    cadeias: {},
+  };
+}
+
+describe('contratoMetricasValido', () => {
+  it('aceita apenas o contrato v2 completo e aritmeticamente coerente', () => {
+    expect(contratoMetricasValido(blobV2Valido())).toBe(true);
+  });
+
+  it('suspende versão divergente, período ausente ou soma incoerente', () => {
+    const versao = blobV2Valido();
+    versao.metric_version = 'construction-v1';
+    expect(contratoMetricasValido(versao)).toBe(false);
+
+    const incompleto = blobV2Valido();
+    incompleto.metricas_periodos = Object.fromEntries(
+      Object.entries(incompleto.metricas_periodos ?? {}).filter(([chave]) => chave !== '14'),
+    );
+    expect(contratoMetricasValido(incompleto)).toBe(false);
+
+    const incoerente = blobV2Valido();
+    const construcao = incoerente.metricas_periodos?.['7']?.atual.construcao;
+    if (construcao) construcao.total = 1;
+    expect(contratoMetricasValido(incoerente)).toBe(false);
+  });
+
+  it('rejeita percentuais de offload e quota que não fecham com as contagens', () => {
+    const incoerente = blobV2Valido();
+    const recorte = incoerente.metricas_periodos?.['7']?.atual;
+    if (!recorte) throw new Error('fixture sem período 7d');
+    recorte.eventos = 20;
+    Object.assign(recorte.construcao, {
+      total: 20,
+      julgados: 20,
+      ok1: 16,
+      retrabalho: 4,
+      aceitas: 20,
+      qualidade: 0.8,
+      retrabalho_pct: 0.2,
+      offload: 20,
+      offload_pct: 0,
+      quota_pct: 1,
+    });
+    expect(contratoMetricasValido(incoerente)).toBe(false);
+  });
+
+  it('mantém a série v1 em quarentena mesmo quando ela chega dentro de um blob v2', () => {
+    const atual = {
+      schema_version: 2,
+      metric_version: 'construction-v2-2026-08-27',
+      ts: '2026-08-27T15:00:00.000Z',
+      janela_dias: 7,
+      n: 20,
+      ok1_pct: 0.8,
+      offload_pct: 0.5,
+      quota_hit_pct: 0,
+      reciclo_pct: 0.2,
+      dur_mediana_min: 10,
+      por_frente: {},
+    };
+    expect(
+      filtrarHistoricoCompativel([
+        { ...atual, schema_version: undefined, metric_version: undefined },
+        atual,
+      ]),
+    ).toEqual([atual]);
+  });
+});
+
 const LINHAS_VALOR: LedgerLinha[] = [
   linha({ ts: tsDiasAtras(1), frente: 'codex', resultado: 'ok1' }),
   linha({ ts: tsDiasAtras(1), frente: 'kimi', resultado: 'retrabalho' }),
@@ -253,6 +393,37 @@ describe('kpisGerais', () => {
     expect(g).toMatchObject({ n: 2, julg: 0, quotaN: 1, infraN: 1 });
     expect(g.quotaHit).toBe(0.5);
   });
+
+  it('separa revisão, papel inferido e descarte da qualidade de construção', () => {
+    const linhas = [
+      linha({ ts: tsDiasAtras(1), resultado: 'ok1' }),
+      linha({ ts: tsDiasAtras(1), resultado: 'descartado' }),
+      linha({ ts: tsDiasAtras(1), papel: 'revisor', resultado: 'retrabalho' }),
+      linha({ ts: tsDiasAtras(1), papel_inferido: true, resultado: 'retrabalho' }),
+      linha({ ts: tsDiasAtras(1), papel: undefined, resultado: 'retrabalho' }),
+    ];
+    expect(kpisGerais(linhas)).toMatchObject({ n: 2, julg: 1, ok1N: 1, descartadoN: 1 });
+    expect(kpisGerais(linhas).ok1).toBe(1);
+    expect(kpisRevisao(linhas)).toMatchObject({ total: 1, julg: 1, problemasN: 1, deteccao: 1 });
+  });
+
+  it('reproduz o fixture auditado sem misturar construção e revisão', () => {
+    const fixture = [
+      ...Array.from({ length: 34 }, () => linha({ ts: tsDiasAtras(1), resultado: 'ok1' })),
+      ...Array.from({ length: 8 }, () => linha({ ts: tsDiasAtras(1), resultado: 'retrabalho' })),
+      ...Array.from({ length: 23 }, () =>
+        linha({ ts: tsDiasAtras(1), papel: 'revisor', resultado: 'retrabalho' }),
+      ),
+      ...Array.from({ length: 29 }, () =>
+        linha({ ts: tsDiasAtras(1), papel: 'revisor', resultado: 'ok1' }),
+      ),
+    ];
+    const construcao = kpisGerais(fixture);
+    const revisao = kpisRevisao(fixture);
+    expect(construcao.ok1).toBeCloseTo(34 / 42, 10);
+    expect(construcao.reciclo).toBeCloseTo(8 / 42, 10);
+    expect(revisao.deteccao).toBeCloseTo(23 / 52, 10);
+  });
 });
 
 describe('kpisTerreno', () => {
@@ -294,9 +465,9 @@ describe('kpisTerreno', () => {
     expect(t.ui?.sinal.texto).toContain('2/3');
   });
 
-  it('sinal subir: ok1 < 70% com 5+ julgáveis', () => {
-    const linhas = Array.from({ length: 5 }, (_, i) =>
-      classificada({ terreno: 'dificil', resultado: i < 3 ? 'ok1' : 'retrabalho' }),
+  it('sinal subir: ok1 < 70% com 20+ julgáveis', () => {
+    const linhas = Array.from({ length: 20 }, (_, i) =>
+      classificada({ terreno: 'dificil', resultado: i < 13 ? 'ok1' : 'retrabalho' }),
     );
     const t = kpisTerreno(linhas, CADEIAS);
     expect(t.dificil?.sinal.tipo).toBe('subir');
@@ -305,8 +476,8 @@ describe('kpisTerreno', () => {
   // Terreno com o modelo no teto (SQL/dinheiro em Opus 5): abaixo do piso NÃO
   // manda "subir modelo" — não há modelo pra cima. Manda subir o ESFORÇO.
   it('sinal esforco: ok1 < 70% com modelo no teto vira subir esforço, não subir modelo', () => {
-    const linhas = Array.from({ length: 5 }, (_, i) =>
-      classificada({ terreno: 'sql', resultado: i < 3 ? 'ok1' : 'retrabalho' }),
+    const linhas = Array.from({ length: 20 }, (_, i) =>
+      classificada({ terreno: 'sql', resultado: i < 13 ? 'ok1' : 'retrabalho' }),
     );
     const t = kpisTerreno(linhas, CADEIAS);
     expect(t.sql?.sinal.tipo).toBe('esforco');
@@ -321,16 +492,16 @@ describe('kpisTerreno', () => {
       ...CADEIAS,
       sql: { ...CADEIAS.sql, effort: 'max', effort_teto: 'max' } as CadeiaTerreno,
     };
-    const linhas = Array.from({ length: 5 }, (_, i) =>
-      classificada({ terreno: 'sql', resultado: i < 3 ? 'ok1' : 'retrabalho' }),
+    const linhas = Array.from({ length: 20 }, (_, i) =>
+      classificada({ terreno: 'sql', resultado: i < 13 ? 'ok1' : 'retrabalho' }),
     );
     const t = kpisTerreno(linhas, cadeias);
     expect(t.sql?.sinal.tipo).toBe('esforco');
     expect(t.sql?.sinal.texto).toContain('reforçar a revisão');
   });
 
-  it('sinal baratear: ok1 ≥ 90% com 8+ julgáveis e degrau não-piso', () => {
-    const linhas = Array.from({ length: 8 }, () =>
+  it('sinal baratear: ok1 ≥ 90% com 20+ julgáveis e degrau não-piso', () => {
+    const linhas = Array.from({ length: 20 }, () =>
       classificada({ terreno: 'dificil', resultado: 'ok1' }),
     );
     const t = kpisTerreno(linhas, CADEIAS);
@@ -412,8 +583,8 @@ describe('terrenoAmbiguo', () => {
 describe('baldesPorDegrau', () => {
   it('agrega por degrau × terreno e só marca ambíguo com amostra e >30%', () => {
     const linhas = [
-      // 6 julgáveis no degrau contaminado, 4 delas sem terreno declarado (67%)
-      ...Array.from({ length: 4 }, () =>
+      // 20 julgáveis no degrau contaminado, 14 sem terreno declarado (70%)
+      ...Array.from({ length: 14 }, () =>
         linha({
           ts: tsDiasAtras(1),
           modelo: 'gpt-5.6-sol',
@@ -422,29 +593,29 @@ describe('baldesPorDegrau', () => {
           auto: true,
         }),
       ),
-      ...Array.from({ length: 2 }, () =>
+      ...Array.from({ length: 6 }, () =>
         classificada({ modelo: 'gpt-5.6-sol', effort: 'high', resultado: 'ok1' }),
       ),
       // degrau limpo, mesmo terreno
-      ...Array.from({ length: 5 }, () =>
+      ...Array.from({ length: 20 }, () =>
         classificada({ modelo: 'gpt-5.6-luna', effort: 'max', resultado: 'ok1' }),
       ),
     ];
     const por = Object.fromEntries(baldesPorDegrau(linhas).map((b) => [b.degrau, b]));
     expect(por['codex/gpt-5.6-sol/high']).toMatchObject({
       terreno: 'rotina',
-      julgaveis: 6,
-      ambiguos: 4,
+      julgaveis: 20,
+      ambiguos: 14,
       ambiguo: true,
     });
     expect(por['codex/gpt-5.6-luna/max']).toMatchObject({ ambiguos: 0, ambiguo: false });
   });
 
-  it('não marca ambíguo com amostra abaixo de 5 julgáveis', () => {
-    const linhas = Array.from({ length: 4 }, () =>
+  it('não marca ambíguo com amostra abaixo de 20 julgáveis', () => {
+    const linhas = Array.from({ length: 19 }, () =>
       linha({ ts: tsDiasAtras(1), modelo: 'gpt-5.6-sol', effort: 'high', auto: true }),
     );
-    expect(baldesPorDegrau(linhas)[0]).toMatchObject({ ambiguos: 4, ambiguo: false });
+    expect(baldesPorDegrau(linhas)[0]).toMatchObject({ ambiguos: 19, ambiguo: false });
   });
 
   // Paridade com ledger.mjs (cmdReport): quota e infra saem do julgável E do
@@ -452,7 +623,7 @@ describe('baldesPorDegrau', () => {
   // — o ledger já viu isso (kimi × ui, 14d: 9 ambíguos sobre 7 julgáveis).
   it('deixa infra fora do julgável e do numerador de ambíguos', () => {
     const linhas = [
-      ...Array.from({ length: 5 }, () =>
+      ...Array.from({ length: 19 }, () =>
         classificada({ modelo: 'gpt-5.6-sol', effort: 'high', resultado: 'ok1' }),
       ),
       ...Array.from({ length: 6 }, () =>
@@ -467,46 +638,46 @@ describe('baldesPorDegrau', () => {
     ];
     const b = baldesPorDegrau(linhas)[0];
     // as 6 infra são `auto` (viriam do default do run.sh), mas não contaminam:
-    // sem elas o balde é 5 julgáveis, 0 ambíguos → nenhum sinal suspenso.
-    expect(b).toMatchObject({ n: 11, julgaveis: 5, infra: 6, ambiguos: 0, ambiguo: false });
+    // sem elas o balde é 19 julgáveis, 0 ambíguos → nenhum sinal suspenso.
+    expect(b).toMatchObject({ n: 25, julgaveis: 19, infra: 6, ambiguos: 0, ambiguo: false });
   });
 });
 
 describe('kpisTerreno com balde ambíguo', () => {
-  // 8 julgáveis: 3 ok1 → 38% de ok de 1ª, o que hoje dispara "subir modelo".
-  // 5 delas entraram sem terreno declarado (62% > 30%) → sinal suspenso.
+  // 20 julgáveis: 7 ok1 → 35% de ok de 1ª, o que dispara "subir modelo".
+  // 12 delas entraram sem terreno declarado (60% > 30%) → sinal suspenso.
   const contaminadas: LedgerLinha[] = [
-    ...Array.from({ length: 5 }, (_, i) =>
+    ...Array.from({ length: 12 }, (_, i) =>
       linha({
         ts: tsDiasAtras(1),
         modelo: 'gpt-5.6-sol',
         effort: 'high',
-        resultado: i < 2 ? 'ok1' : 'retrabalho',
+        resultado: i < 4 ? 'ok1' : 'retrabalho',
         auto: true,
       }),
     ),
-    ...Array.from({ length: 3 }, (_, i) =>
+    ...Array.from({ length: 8 }, (_, i) =>
       classificada({
         modelo: 'gpt-5.6-sol',
         effort: 'high',
-        resultado: i < 1 ? 'ok1' : 'retrabalho',
+        resultado: i < 3 ? 'ok1' : 'retrabalho',
       }),
     ),
   ];
 
   it('suprime o sinal de trocar o default e mostra a contagem', () => {
     const t = kpisTerreno(contaminadas, CADEIAS);
-    expect(t.rotina?.ok1Pct).toBeCloseTo(3 / 8);
+    expect(t.rotina?.ok1Pct).toBeCloseTo(7 / 20);
     expect(t.rotina?.sinal.tipo).toBe('ambiguo');
     expect(t.rotina?.ambiguo).toBe(true);
-    expect(t.rotina?.ambiguos).toBe(5);
+    expect(t.rotina?.ambiguos).toBe(12);
     expect(t.rotina?.degrausAmbiguos).toEqual([
-      { degrau: 'codex/gpt-5.6-sol/high', ambiguos: 5, julgaveis: 8 },
+      { degrau: 'codex/gpt-5.6-sol/high', ambiguos: 12, julgaveis: 20 },
     ]);
     // O motivo tem que vir com o tamanho da amostra classificada, no mesmo
     // padrão x/y do resto da tela — "suspenso" sem número não dá o que fazer.
-    expect(t.rotina?.classificados).toBe(3);
-    expect(t.rotina?.sinal.texto).toContain('3/8');
+    expect(t.rotina?.classificados).toBe(8);
+    expect(t.rotina?.sinal.texto).toContain('8/20');
     expect(t.rotina?.sinal.texto).toContain('sem sinal');
   });
 
@@ -616,13 +787,14 @@ describe('placar de valor', () => {
   it('ordena frentes por valor e deixa sem dados por último', () => {
     const placar = placarPorFrente(LINHAS_VALOR, ASSINATURAS_VALOR, 30);
     expect(placar.map((item) => item.frente)).toEqual(['codex', 'kimi', 'claude']);
-    expect(placar[0]).toMatchObject({ n: 1, q: 1, custoTarefa: 30, valor: 100 });
-    expect(placar[1]).toMatchObject({ n: 1, q: 0, custoTarefa: 10, valor: 10 });
-    expect(placar[2]).toMatchObject({ n: 0, q: null, custoTarefa: null, valor: null });
+    expect(placar[0]).toMatchObject({ n: 1, julg: 1, q: 1, custoTarefa: 30, valor: null });
+    expect(placar[1]).toMatchObject({ n: 1, julg: 1, q: 0, custoTarefa: 10, valor: null });
+    expect(placar[2]).toMatchObject({ n: 0, julg: 0, q: null, custoTarefa: null, valor: null });
   });
 
-  it('retorna null no placar geral sem julgáveis', () => {
+  it('retorna null no placar geral sem amostra suficiente', () => {
     expect(valorGeral([], ASSINATURAS_VALOR, 7)).toBeNull();
+    expect(valorGeral(LINHAS_VALOR, ASSINATURAS_VALOR, 7)).toBeNull();
   });
 });
 

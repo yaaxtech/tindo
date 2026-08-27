@@ -29,7 +29,7 @@ const FRENTES: readonly LedgerLinha['frente'][] = ['codex', 'kimi', 'claude', 'c
 const VAZIO: ResumoSegmentoDespacho = { p50: null, p90: null, n: 0 };
 
 /** Extrai a duração automática gravada pelo run.sh em `exec=Nmin`. */
-export function execMinutos(nota: string | null): number | null {
+export function execMinutos(nota: string | null | undefined): number | null {
   if (!nota) return null;
   const trecho = nota.match(/\bexec=([0-9]+(?:\.[0-9]+)?)min\b/)?.[1];
   if (!trecho) return null;
@@ -52,7 +52,7 @@ export function medidasDoLedger(linhas: LedgerLinha[]): MedidaDespacho[] {
   return linhas
     .filter((linha) => linha.resultado !== 'pendente')
     .map((linha) => {
-      const execucao = execMinutos(linha.nota);
+      const execucao = linha.exec_min ?? execMinutos(linha.nota);
       const revisao = deltaMinutos(linha.ts, linha.ts_fechado);
       return {
         ts: Date.parse(linha.ts),

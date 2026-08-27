@@ -14,6 +14,7 @@ function linha(parcial: Partial<LedgerLinha> = {}): LedgerLinha {
     effort: 'high',
     terreno: 'rotina',
     resultado: 'ok1',
+    papel: 'construtor',
     tarefa: 'teste',
     nota: 'auto run.sh rc=0 exec=10min',
     dur: null,
@@ -54,6 +55,11 @@ describe('medidasDoLedger', () => {
       revisao: 7.5,
       total: 26.5,
     });
+  });
+
+  it('prefere exec_min estruturado quando a nota livre não foi publicada', () => {
+    const [medida] = medidasDoLedger([linha({ nota: undefined, exec_min: 7.5 })]);
+    expect(medida?.execucao).toBe(7.5);
   });
 
   it('sem ts_fechado mantém revisão e total nulos', () => {

@@ -61,6 +61,17 @@ describe('FaixaAlertas', () => {
     expect(screen.getByText(/checado em 13\/08/)).toBeInTheDocument();
   });
 
+  it('não chama pouca amostra de "tudo certo"', () => {
+    const historico: HistoricoAlertas = {
+      avaliacoes: [avaliacao('av1', '13')],
+      alertas: [],
+    };
+    render(<FaixaAlertas historico={historico} violacoesAgora={[]} amostraLedger={14} />);
+    expect(screen.getByText(/amostra ainda insuficiente/)).toBeInTheDocument();
+    expect(screen.getByText(/14 construções julgáveis/)).toBeInTheDocument();
+    expect(screen.queryByText(/tudo dentro do combinado/)).not.toBeInTheDocument();
+  });
+
   it('mostra só os alertas da última checagem, com valor e limiar em %', () => {
     const historico: HistoricoAlertas = {
       avaliacoes: [avaliacao('av2', '13', 1), avaliacao('av1', '30')],

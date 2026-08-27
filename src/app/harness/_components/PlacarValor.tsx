@@ -1,4 +1,4 @@
-import { placarPorFrente, valorGeral } from '@/lib/harness/kpis';
+import { MIN_AMOSTRA_GERAL, kpisGerais, placarPorFrente, valorGeral } from '@/lib/harness/kpis';
 import { cn } from '@/lib/utils';
 import type { Assinatura, LedgerLinha } from '@/types/harness';
 import { Card, PopoverInfo } from './ui';
@@ -35,6 +35,7 @@ export function PlacarValor({
   janelaDias: number;
 }) {
   const geral = valorGeral(linhas, assinaturas, janelaDias);
+  const amostraGeral = kpisGerais(linhas).julg;
   const frentes = placarPorFrente(linhas, assinaturas, janelaDias);
 
   return (
@@ -43,12 +44,18 @@ export function PlacarValor({
         <div>
           <div className="text-xs font-semibold text-text-muted">
             Placar de Valor
-            <PopoverInfo texto="Um número de 0 a 100 que junta as três coisas que importam: qualidade (acertar de primeira, peso maior), economia (custo por tarefa) e disponibilidade (não bater no limite da assinatura). Inspirado no Balanced Value do benchmark g4oscloud, mas calculado com as NOSSAS tarefas reais. Barato mas ruim não sobe — qualidade baixa trava o bônus de custo." />
+            <PopoverInfo
+              texto={`Um número de 0 a 100 que junta qualidade, economia e disponibilidade. Barato mas ruim não sobe. Como a qualidade é o maior peso, o placar só aparece a partir de ${MIN_AMOSTRA_GERAL} construções julgáveis; antes disso seria precisão falsa.`}
+            />
           </div>
           <div className={cn('mt-1 text-4xl font-bold tabular-nums', corValor(geral))}>
-            {geral == null ? '— · coletando dados' : geral}
+            {geral == null ? '—' : geral}
           </div>
-          {geral != null && <div className="text-[11.5px] text-text-muted">de 100</div>}
+          <div className="text-[11.5px] text-text-muted">
+            {geral != null
+              ? 'de 100'
+              : `amostra insuficiente · ${amostraGeral}/${MIN_AMOSTRA_GERAL}`}
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -59,7 +66,7 @@ export function PlacarValor({
                   {NOMES_FRENTE[item.frente] ?? item.frente}
                 </span>
                 <span className={cn('font-semibold tabular-nums', corValor(item.valor))}>
-                  {item.valor == null ? '—' : item.valor}
+                  {item.valor == null ? `— · ${item.julg}/${MIN_AMOSTRA_GERAL}` : item.valor}
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-bg-surface">

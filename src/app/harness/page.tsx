@@ -10,6 +10,8 @@ import { MinutosGithub } from '@/app/harness/_components/MinutosGithub';
 import { Modelos } from '@/app/harness/_components/Modelos';
 import { NavPainel } from '@/app/harness/_components/NavPainel';
 import { PlacarValor } from '@/app/harness/_components/PlacarValor';
+import { Revisao } from '@/app/harness/_components/Revisao';
+import { SaudeDados } from '@/app/harness/_components/SaudeDados';
 import { TemposDespacho } from '@/app/harness/_components/TemposDespacho';
 import { TemposGithub } from '@/app/harness/_components/TemposGithub';
 import { Terrenos } from '@/app/harness/_components/Terrenos';
@@ -20,9 +22,12 @@ import { Secao } from '@/app/harness/_components/ui';
 import { avaliarLedger } from '@/lib/harness/alertas';
 import { carimboAtualizacao } from '@/lib/harness/atualizacao';
 import {
+  aplicarMetricasPublicadas,
   contarInfra,
   contarPendentes,
+  contratoMetricasValido,
   diasComDados,
+  filtrarHistoricoCompativel,
   kpisGerais,
   recorte,
 } from '@/lib/harness/kpis';
@@ -64,11 +69,40 @@ export default function HarnessPage() {
   }, []);
 
   const ledger = useMemo(() => snap?.dados.ledger ?? [], [snap]);
-  const dias = useMemo(() => diasComDados(ledger), [ledger]);
-  const atual = useMemo(() => recorte(ledger, janelaDias, 0), [ledger, janelaDias]);
-  const anterior = useMemo(() => recorte(ledger, janelaDias, 1), [ledger, janelaDias]);
-  const gAtual = useMemo(() => kpisGerais(atual), [atual]);
-  const gAnterior = useMemo(() => kpisGerais(anterior), [anterior]);
+  const contratoValido = useMemo(() => (snap ? contratoMetricasValido(snap.dados) : false), [snap]);
+  const historicoCompativel = useMemo(
+    () => (contratoValido ? filtrarHistoricoCompativel(snap?.dados.history ?? []) : []),
+    [snap, contratoValido],
+  );
+  const asOf = snap?.dados.as_of ?? snap?.geradoEm;
+  const asOfMs = useMemo(() => {
+    const valor = asOf ? Date.parse(asOf) : Number.NaN;
+    return Number.isFinite(valor) ? valor : Date.now();
+  }, [asOf]);
+  const dias = useMemo(() => diasComDados(ledger, asOfMs), [ledger, asOfMs]);
+  const atual = useMemo(() => recorte(ledger, janelaDias, 0, asOfMs), [ledger, janelaDias, asOfMs]);
+  const anterior = useMemo(
+    () => recorte(ledger, janelaDias, 1, asOfMs),
+    [ledger, janelaDias, asOfMs],
+  );
+  const publicadas = snap?.dados.metricas_periodos?.[String(janelaDias)];
+  const linhasDecisorias = useMemo(() => (contratoValido ? atual : []), [contratoValido, atual]);
+  const gAtual = useMemo(
+    () =>
+      aplicarMetricasPublicadas(
+        kpisGerais(linhasDecisorias),
+        contratoValido ? publicadas?.atual.construcao : null,
+      ),
+    [linhasDecisorias, contratoValido, publicadas],
+  );
+  const gAnterior = useMemo(
+    () =>
+      aplicarMetricasPublicadas(
+        kpisGerais(contratoValido ? anterior : []),
+        contratoValido ? publicadas?.anterior.construcao : null,
+      ),
+    [anterior, contratoValido, publicadas],
+  );
   // Provisórios dos run.sh sem revisão: fora de todos os KPIs, só a contagem.
   const pendentes = useMemo(() => contarPendentes(atual), [atual]);
   const infra = useMemo(() => contarInfra(atual), [atual]);
@@ -77,8 +111,12 @@ export default function HarnessPage() {
   // função que o cron usa — nenhuma fórmula nova aqui. Usa a janela FIXA do
   // revisor (14 dias), não o filtro de período da tela.
   const violacoesAgora = useMemo(
-    () => avaliarLedger(ledger, snap?.dados.assinaturas ?? []),
-    [ledger, snap],
+    () => (contratoValido ? avaliarLedger(ledger, snap?.dados.assinaturas ?? [], asOfMs) : []),
+    [ledger, snap, asOfMs, contratoValido],
+  );
+  const amostraAlertas = useMemo(
+    () => (contratoValido ? kpisGerais(recorte(ledger, 14, 0, asOfMs)).julg : 0),
+    [ledger, asOfMs, contratoValido],
   );
 
   // O painel fica aberto por horas seguidas: sem este tique, o "há 30 min"
@@ -143,7 +181,20 @@ export default function HarnessPage() {
         <div className="mx-auto mt-6 flex w-full max-w-3xl flex-col gap-9 px-6">
           {/* Faixa de alerta — o que o revisor de KPIs achou na última checagem.
               Fica no topo e só aparece depois da primeira avaliação. */}
-          <FaixaAlertas historico={alertas} violacoesAgora={violacoesAgora} />
+          <FaixaAlertas
+            historico={alertas}
+            violacoesAgora={violacoesAgora}
+            amostraLedger={amostraAlertas}
+          />
+
+          <Secao
+            id="saude-dados"
+            titulo="Saúde dos dados"
+            info="Mostra se o painel está atualizado e quanto da telemetria tem os campos necessários para uma decisão confiável. A cobertura é fixa nos 90 dias publicados."
+            escopo={{ tipo: 'fixo', rotulo: '90 dias' }}
+          >
+            <SaudeDados dados={snap.dados} contratoValido={contratoValido} />
+          </Secao>
 
           {/* Bloco 1 — segue o filtro */}
           <Secao
@@ -154,7 +205,7 @@ export default function HarnessPage() {
             <Tiles
               atual={gAtual}
               anterior={gAnterior}
-              linhasAtual={atual}
+              linhasAtual={linhasDecisorias}
               assinaturas={snap.dados.assinaturas}
               janelaDias={janelaDias}
             />
@@ -168,7 +219,7 @@ export default function HarnessPage() {
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
             <PlacarValor
-              linhas={atual}
+              linhas={linhasDecisorias}
               assinaturas={snap.dados.assinaturas}
               janelaDias={janelaDias}
             />
@@ -196,7 +247,7 @@ export default function HarnessPage() {
             titulo="Por terreno — modelo titular, fallback e sinal"
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
-            <Terrenos linhas={atual} cadeias={snap.dados.cadeias} />
+            <Terrenos linhas={linhasDecisorias} cadeias={snap.dados.cadeias} />
             <p className="mt-2.5 text-xs leading-relaxed text-text-muted">
               ▲ subir modelo = está errando demais, precisa de um mais inteligente · ▼ pode baratear
               = acerta tanto que vale testar um mais barato · ‖ saturada = bateu o limite da
@@ -204,8 +255,17 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
+          <Secao
+            id="revisao"
+            titulo="Revisão — problemas encontrados"
+            info="Métrica separada da construção. Ela mede quantas revisões carimbadas encontraram algo para corrigir; nunca entra como retrabalho do modelo construtor."
+            escopo={{ tipo: 'filtro', dias: janelaDias }}
+          >
+            <Revisao linhas={linhasDecisorias} />
+          </Secao>
+
           {/* Bloco 4 — segue o filtro */}
-          <TemposDespacho id="tempo-despacho" linhas={atual} janelaDias={janelaDias} />
+          <TemposDespacho id="tempo-despacho" linhas={linhasDecisorias} janelaDias={janelaDias} />
 
           {/* Bloco 5 — semanal fixo, independente do filtro */}
           <TemposGithub id="tempo-entrega" runs={githubRuns} />
@@ -229,11 +289,17 @@ export default function HarnessPage() {
             info="Cada card mostra o custo por tarefa daquela assinatura no período (valor mensal proporcional aos dias, dividido pelas tarefas que ela executou). O veredito traduz isso em decisão: rende bem = manter; sem uso = candidata a cancelar; custo alto = observar; saturada = está batendo no limite, candidata a aumentar. A decisão real sai do histórico na data de renovação, nunca de um dia só."
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
-            <Assinaturas
-              linhas={atual}
-              assinaturas={snap.dados.assinaturas}
-              janelaDias={janelaDias}
-            />
+            {contratoValido ? (
+              <Assinaturas
+                linhas={linhasDecisorias}
+                assinaturas={snap.dados.assinaturas}
+                janelaDias={janelaDias}
+              />
+            ) : (
+              <p className="text-sm text-text-muted">
+                Decisões de assinatura suspensas até chegar um snapshot íntegro e compatível.
+              </p>
+            )}
             <p className="mt-2.5 text-xs leading-relaxed text-text-muted">
               Custo por tarefa = quanto cada assinatura custou por tarefa que executou no período.
               Barato + saturada = aumentar; caro + parada = cancelar. Decisão final nas datas de
@@ -248,7 +314,7 @@ export default function HarnessPage() {
             info='Quantas vezes cada modelo foi acionado, separado por nível de esforço (ex.: Luna no max, Luna no low, Sonnet no medium). "ok" = quanto ele acertou de primeira. Mostra onde o trabalho está de fato caindo e se o modelo certo está sendo usado para cada peso.'
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
-            <Modelos linhas={atual} />
+            <Modelos linhas={linhasDecisorias} />
           </Secao>
 
           {/* Bloco 9 — fixo */}
@@ -268,7 +334,7 @@ export default function HarnessPage() {
             info="Foto semanal dos 5 números de cima. É esta tabela que mostra se o harness está melhorando no tempo — e é dela que saem as decisões de assinatura nas datas de renovação."
             escopo={{ tipo: 'fixo', rotulo: 'snapshots' }}
           >
-            <Historico history={snap.dados.history} totalMes={totalMes} />
+            <Historico history={historicoCompativel} totalMes={totalMes} />
           </Secao>
         </div>
       )}
