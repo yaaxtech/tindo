@@ -25,6 +25,34 @@ Uma página `/harness` no TinDo, atrás do login, que:
 Fora de escopo: o Hub do Sync (segundo artefato) — fatia futura, decisão do
 dono foi "painel primeiro, hub depois".
 
+## Revisão de confiabilidade — contrato v2 (2026-08-27)
+
+Esta revisão **substitui** as decisões abaixo que mandavam publicar texto
+livre e recalcular os KPIs decisórios apenas no navegador.
+
+- A fonte canônica continua sendo o `ledger.jsonl` estruturado. Markdown não é
+  banco de dados: o publicador gera `harness-resumo.md` apenas como recibo
+  humano e regenerável.
+- O snapshot público usa allowlist. Publica carimbos estruturados e remove
+  `tarefa`, `nota`, IDs e qualquer outro texto livre. A duração `exec=Nmin` é
+  convertida antes para `exec_min`.
+- O publicador carimba `schema_version`, `metric_version`, `as_of`,
+  `source_max_ts`, cobertura e rejeições, e pré-calcula os períodos
+  1/7/14/15/30 dias. A página só libera decisões quando versão, períodos e
+  somas do contrato fecham; snapshot ausente, legado ou incoerente deixa os
+  números decisórios suspensos.
+- Qualidade e retrabalho contam somente `papel=construtor` explícito no
+  despacho. Revisões têm métrica própria. Papel ausente ou inferido e os
+  resultados `pendente`, `quota`, `infra` e `descartado` não entram no
+  julgamento.
+- O relógio dos recortes é o `as_of` do snapshot. Abrir a página horas depois
+  não muda silenciosamente a amostra.
+- Com menos de 20 construções julgáveis, a porcentagem é provisória: não ganha
+  cor de aprovação/reprovação, não produz comparação, não dispara alerta e
+  não altera modelo ou effort — inclusive nos recortes por terreno.
+- A página mostra a saúde da telemetria e a taxa da revisão separadamente, para
+  não confundir “o revisor encontrou um problema” com “a construção falhou”.
+
 ## Fonte de dados — o desafio central
 
 `painel.mjs` lê **três** fontes, todas locais:
@@ -40,17 +68,19 @@ Uma página na Cloudflare **não alcança** a máquina local. Logo: um
 blob JSON e faz upsert numa tabela do Supabase do TinDo. A página lê a tabela
 e renderiza.
 
-Decisão-chave: o empurrador manda o **ledger cru** (últimos 90 dias), não
-KPIs pré-agregados. É isso que permite ao filtro de período recalcular
-qualquer janela **no cliente**. Já o volume de código e os PRs (que dependem
-de git/gh) vão **pré-computados** no blob — a página só os desenha.
+Decisão original (v1, substituída pela revisão acima): o empurrador mandava o
+ledger cru e o cliente recalculava tudo. No v2, viaja somente telemetria
+estruturada e sanitizada, acompanhada dos KPIs pré-calculados e versionados.
+O ledger seguro permanece no blob para detalhamentos e compatibilidade.
 
 ## Arquitetura
 
 ```
 Máquina do dono (launchd, 1×/hora)
   publicar-painel.mjs
-    ├─ lê ledger.jsonl (cru, últimos 90d)
+    ├─ lê ledger.jsonl (fonte local, últimos 90d)
+    ├─ calcula métricas versionadas + saúde da telemetria
+    ├─ remove texto livre e IDs; preserva só campos estruturados
     ├─ lê kpi-history.jsonl
     ├─ roda git log (volume) + gh pr list (PRs) → pré-computa
     ├─ carrega config (assinaturas, cadeias por terreno)
@@ -59,8 +89,8 @@ Máquina do dono (launchd, 1×/hora)
                           ▼
 TinDo (Cloudflare)  GET /harness  (atrás do login)
   page.tsx → getHarnessSnapshot() (service) → lê blob
-    └─ lib/harness/kpis.ts recalcula KPIs pro período escolhido
-       + comparação atual vs anterior → render dos 6 blocos
+    └─ usa metricas_periodos do snapshot para os cards decisórios
+       + lib/harness/kpis.ts para compatibilidade e detalhamentos
 ```
 
 ### Componente 1 — Tabela `harness_snapshot` (Supabase TinDo)

@@ -4,7 +4,13 @@ import {
   percentil,
   resumoPorSemana,
 } from '@/lib/harness/github-timings';
-import { custoMedioTarefa, kpisGerais, recorte, valorGeral } from '@/lib/harness/kpis';
+import {
+  MIN_AMOSTRA_GERAL,
+  custoMedioTarefa,
+  kpisGerais,
+  recorte,
+  valorGeral,
+} from '@/lib/harness/kpis';
 import type {
   Assinatura,
   CodigoAlerta,
@@ -56,8 +62,9 @@ export const LIMIARES = {
 
 // Amostra mínima. Sem piso, "qualidade 0%" com um único despacho vira alerta
 // — e um limiar que grita por ruído ensina o dono a ignorar a faixa inteira.
-// 5 é o mesmo MIN_N que kpis.ts usa para emitir sinal por terreno.
-const MIN_AMOSTRA_LEDGER = 5;
+// O painel geral só decide com 20 construções julgáveis; abaixo disso mostra a
+// porcentagem como provisória, mas não dispara alerta nem muda rota.
+const MIN_AMOSTRA_LEDGER = MIN_AMOSTRA_GERAL;
 const MIN_AMOSTRA_RUNS = 3;
 /** Semanas anteriores com p50 necessárias para a mediana de comparação valer. */
 const MIN_SEMANAS_BASE = 2;

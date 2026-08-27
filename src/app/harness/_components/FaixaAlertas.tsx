@@ -1,4 +1,5 @@
 import { ROTULO_ALERTA, type Violacao, reconferirLedger } from '@/lib/harness/alertas';
+import { MIN_AMOSTRA_GERAL } from '@/lib/harness/kpis';
 import { cn } from '@/lib/utils';
 import type { HistoricoAlertas } from '@/services/harness';
 import type { AlertaLinha, CodigoAlerta } from '@/types/harness';
@@ -122,8 +123,10 @@ const INFO_REPETICAO =
 export function FaixaAlertas({
   historico,
   violacoesAgora,
+  amostraLedger = MIN_AMOSTRA_GERAL,
 }: {
   historico: HistoricoAlertas | undefined;
+  amostraLedger?: number;
   /**
    * O que o MESMO cálculo do revisor acha nos dados de agora (`avaliarLedger`).
    * A avaliação gravada é quinzenal: sem esta reconferência, um número já
@@ -156,12 +159,19 @@ export function FaixaAlertas({
       {vigentes.length === 0 ? (
         <Card className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span
-            className={cn('rounded-full px-2.5 py-0.5 text-[11px] font-semibold', corPill('good'))}
+            className={cn(
+              'rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+              corPill(amostraLedger >= MIN_AMOSTRA_GERAL ? 'good' : 'mut'),
+            )}
           >
-            tudo dentro do combinado
+            {amostraLedger >= MIN_AMOSTRA_GERAL
+              ? 'tudo dentro do combinado'
+              : 'amostra ainda insuficiente'}
           </span>
           <span className="text-sm text-text-primary">
-            Nenhum número está passando do limite combinado.
+            {amostraLedger >= MIN_AMOSTRA_GERAL
+              ? 'Nenhum número está passando do limite combinado.'
+              : `Há ${amostraLedger} construções julgáveis nos 14 dias; qualidade e retrabalho só viram alerta a partir de ${MIN_AMOSTRA_GERAL}.`}
           </span>
         </Card>
       ) : (

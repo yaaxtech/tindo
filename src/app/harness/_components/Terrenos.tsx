@@ -23,13 +23,13 @@ const COMO_TERRENO =
   'O primeiro da fila é o titular; os seguintes assumem quando ele bate quota ou falha. ' +
   'Números no período: despachos = tarefas enviadas · ok de 1ª = aceitas sem correção · ' +
   'retrabalho = precisaram de rodada extra · quota = barradas por limite. ' +
-  'Sinal automático: ok de 1ª <70% com 5+ tarefas → subir modelo · ≥90% com 8+ → testar mais barato · quota 3× → saturada. ' +
+  'Sinal automático: ok de 1ª <70% com 20+ tarefas → subir modelo · ≥90% com 20+ → testar mais barato · quota 3× → saturada. ' +
   'Quando o modelo já está no teto do terreno (ex.: SQL/dinheiro em Opus 5), não há modelo pra cima: o sinal vira “subir esforço” (high→max) e, esgotado esse, “reforçar a revisão”. ' +
   'A linha “esforço” em cada terreno mostra o degrau atual e até onde o motor pode subir. ' +
   'Quando mais de 30% das tarefas de um modelo entraram sem o terreno declarado, o número mede o registro e não o modelo: ' +
   'a recomendação de trocar o modelo fica suspensa até a amostra melhorar. ' +
   'Sem recomendação, o motivo aparece na etiqueta: “sem dados” = ninguém despachou nesse terreno no período · ' +
-  '“pouco dado” = tem despacho, mas menos de 5 tarefas medíveis · ' +
+  '“pouco dado” = tem despacho, mas menos de 20 tarefas medíveis · ' +
   '“registro incompleto” = tarefa é o que não falta, mas a maioria entrou sem o terreno declarado.';
 
 export function Terrenos({

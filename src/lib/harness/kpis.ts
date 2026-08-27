@@ -8,25 +8,51 @@ import type {
   AutonomiaBlob,
   AutonomiaDia,
   CadeiaTerreno,
+  HarnessBlob,
+  KpiHistoricoLinha,
   LedgerLinha,
+  MetricasConstrucaoPublicadas,
 } from '@/types/harness';
 
 const DIA_MS = 864e5;
+
+/** Piso para transformar porcentagem geral em decisão; abaixo disso é só leitura provisória. */
+export const MIN_AMOSTRA_GERAL = 20;
+export const HARNESS_SCHEMA_VERSION = 2;
+export const HARNESS_METRIC_VERSION = 'construction-v2-2026-08-27';
+const JANELAS_OBRIGATORIAS = [1, 7, 14, 15, 30] as const;
+
+const FORA_DO_JULGAMENTO = new Set<LedgerLinha['resultado']>([
+  'pendente',
+  'quota',
+  'infra',
+  'descartado',
+]);
+
+/** Construções carimbadas no despacho. Papel ausente ou deduzido não decide nada. */
+export const soConstrucoesExplicitas = (linhas: LedgerLinha[]): LedgerLinha[] =>
+  linhas.filter((r) => r.papel === 'construtor' && r.papel_inferido !== true);
+
+/** Revisões carimbadas no despacho, mantidas numa métrica separada da construção. */
+export const soRevisoesExplicitas = (linhas: LedgerLinha[]): LedgerLinha[] =>
+  linhas.filter((r) => r.papel === 'revisor' && r.papel_inferido !== true);
 
 // "pendente" = provisório dos run.sh sem revisão do cérebro — nunca entra em
 // KPI nenhum (contaria como retrabalho e quebraria qualidade/retrabalho).
 // Filtrado na ENTRADA de cada função de KPI: blobs antigos (sem pendente)
 // passam intactos e blobs novos ficam corretos sem depender do caller.
 const semPendentes = (linhas: LedgerLinha[]): LedgerLinha[] =>
-  linhas.filter((r) => r.resultado !== 'pendente');
+  soConstrucoesExplicitas(linhas).filter((r) => r.resultado !== 'pendente');
+
+const ehJulgavel = (r: LedgerLinha): boolean => !FORA_DO_JULGAMENTO.has(r.resultado);
 
 /** Despachos provisórios (run.sh) aguardando revisão — só para a contagem ⏳. */
 export const contarPendentes = (linhas: LedgerLinha[]): number =>
-  linhas.filter((r) => r.resultado === 'pendente').length;
+  soConstrucoesExplicitas(linhas).filter((r) => r.resultado === 'pendente').length;
 
 /** Despachos cujo worker nunca rodou por falha do lançador. */
 export const contarInfra = (linhas: LedgerLinha[]): number =>
-  linhas.filter((r) => r.resultado === 'infra').length;
+  soConstrucoesExplicitas(linhas).filter((r) => r.resultado === 'infra').length;
 
 /** Tarefa ACEITA = entregue de fato (ok1 ou retrabalho) — denominador de custo. */
 const ehAceita = (r: LedgerLinha): boolean => r.resultado === 'ok1' || r.resultado === 'retrabalho';
@@ -42,9 +68,9 @@ export function diasComDados(ledger: LedgerLinha[], agora = Date.now()): number 
 }
 
 // Limiares (espelho da governança do harness)
-const MIN_N = 5; // amostra mínima p/ sinal
+const MIN_N = MIN_AMOSTRA_GERAL; // mesma porta de amostra de toda decisão de qualidade
 const OK1_PISO = 0.7; // abaixo → degrau subdimensionado
-const OK1_TETO = 0.9; // acima (n>=8, degrau não-mínimo) → candidato a descer
+const OK1_TETO = 0.9; // acima (n>=20, degrau não-mínimo) → candidato a descer
 const QUOTA_ALERTA = 3; // eventos de quota na janela → frente saturada
 const AMBIGUO_MAX = 0.3; // acima disso o balde não mede terreno — sem sinal
 
@@ -77,6 +103,7 @@ const AMBIGUO_MAX = 0.3; // acima disso o balde não mede terreno — sem sinal
 const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T21:42:23Z');
 
 export function terrenoAmbiguo(r: LedgerLinha): boolean {
+  if (r.papel !== 'construtor' || r.papel_inferido === true) return true;
   if (r.terreno_inferido) return true; // o próprio run.sh admitiu o default
   if (!r.auto) return true; // rótulo digitado à mão ≠ classificação
   return Date.parse(r.ts) < INSTRUMENTACAO_TERRENO; // antes do carimbo: indistinguível
@@ -93,6 +120,8 @@ export interface KpisGerais {
   quotaN: number;
   /** Despachos cujo worker nunca rodou (falha de infraestrutura). */
   infraN: number;
+  /** Execuções descartadas pelo cérebro; não julgam o worker. */
+  descartadoN: number;
   /** Tarefas aceitas (ok1 + retrabalho) — denominador de custo por tarefa. */
   aceitas: number;
   ok1: number | null;
@@ -198,6 +227,7 @@ export function baldesPorDegrau(entrada: LedgerLinha[]): BaldeDegrau[] {
     b.n++;
     if (r.resultado === 'quota') b.quota++;
     else if (r.resultado === 'infra') b.infra++;
+    else if (r.resultado === 'descartado') continue;
     else {
       b.julgaveis++;
       if (r.resultado === 'ok1') b.ok1++;
@@ -275,12 +305,13 @@ export function recorte(
 export function kpisGerais(entrada: LedgerLinha[]): KpisGerais {
   const linhas = semPendentes(entrada);
   const n = linhas.length;
-  const julg = linhas.filter((r) => r.resultado !== 'quota' && r.resultado !== 'infra');
+  const julg = linhas.filter(ehJulgavel);
   const ok1 = julg.filter((r) => r.resultado === 'ok1').length;
   const off = linhas.filter((r) => r.frente !== 'claude' && r.frente !== 'cerebro').length;
   const rec = julg.filter((r) => r.resultado !== 'ok1').length;
   const quotaN = linhas.filter((r) => r.resultado === 'quota').length;
   const infraN = linhas.filter((r) => r.resultado === 'infra').length;
+  const descartadoN = linhas.filter((r) => r.resultado === 'descartado').length;
   const durs = julg
     .map((r) => r.dur)
     .filter((d): d is number => typeof d === 'number' && d > 0)
@@ -298,6 +329,7 @@ export function kpisGerais(entrada: LedgerLinha[]): KpisGerais {
     offN: off,
     quotaN,
     infraN,
+    descartadoN,
     aceitas: linhas.filter(ehAceita).length,
     ok1: julg.length ? ok1 / julg.length : null,
     offload: n ? off / n : null,
@@ -311,6 +343,174 @@ export function kpisGerais(entrada: LedgerLinha[]): KpisGerais {
     durN: durs.length,
     porFrente,
     quotaPorFrente,
+  };
+}
+
+/**
+ * O publicador calcula os números decisórios uma vez e os carimba com versão.
+ * O cálculo local continua como compatibilidade para snapshots v1 e detalhes.
+ */
+export function aplicarMetricasPublicadas(
+  base: KpisGerais,
+  publicadas: MetricasConstrucaoPublicadas | null | undefined,
+): KpisGerais {
+  if (!publicadas) return base;
+  const n = Math.max(0, publicadas.total - publicadas.pendente);
+  return {
+    ...base,
+    n,
+    julg: publicadas.julgados,
+    ok1N: publicadas.ok1,
+    recN: publicadas.retrabalho,
+    offN: publicadas.offload,
+    quotaN: publicadas.quota,
+    infraN: publicadas.infra,
+    descartadoN: publicadas.descartado,
+    aceitas: publicadas.aceitas,
+    ok1: publicadas.qualidade,
+    offload: publicadas.offload_pct,
+    quotaHit: publicadas.quota_pct,
+    reciclo: publicadas.retrabalho_pct,
+    durMed: publicadas.duracao.p50_min,
+    durP90: publicadas.duracao.p90_min,
+    durN: publicadas.duracao.n,
+    porFrente: publicadas.por_frente,
+    quotaPorFrente: publicadas.quota_por_frente,
+  };
+}
+
+const inteiroNaoNegativo = (valor: unknown): valor is number =>
+  typeof valor === 'number' && Number.isInteger(valor) && valor >= 0;
+const numeroOuNull = (valor: unknown): valor is number | null =>
+  valor === null || (typeof valor === 'number' && Number.isFinite(valor));
+const proporcaoOuNull = (valor: unknown): valor is number | null =>
+  valor === null ||
+  (typeof valor === 'number' && Number.isFinite(valor) && valor >= 0 && valor <= 1);
+const perto = (a: number | null, b: number | null): boolean =>
+  a === b || (a != null && b != null && Math.abs(a - b) < 1e-9);
+
+function construcaoPublicadaValida(c: MetricasConstrucaoPublicadas): boolean {
+  if (!c || typeof c !== 'object' || !c.duracao || typeof c.duracao !== 'object') return false;
+  const contagens = [
+    c.total,
+    c.julgados,
+    c.ok1,
+    c.retrabalho,
+    c.aceitas,
+    c.pendente,
+    c.quota,
+    c.infra,
+    c.descartado,
+    c.offload,
+    c.duracao?.n,
+  ];
+  if (!contagens.every(inteiroNaoNegativo)) return false;
+  if (c.total !== c.julgados + c.pendente + c.quota + c.infra + c.descartado) return false;
+  if (c.julgados !== c.ok1 + c.retrabalho || c.aceitas > c.julgados) return false;
+  if (c.offload > c.total - c.pendente || c.duracao.n > c.julgados) return false;
+  if (!proporcaoOuNull(c.qualidade) || !proporcaoOuNull(c.retrabalho_pct)) return false;
+  if (!proporcaoOuNull(c.offload_pct) || !proporcaoOuNull(c.quota_pct)) return false;
+  if (!numeroOuNull(c.duracao.p50_min) || !numeroOuNull(c.duracao.p90_min)) return false;
+  const qualidade = c.julgados ? c.ok1 / c.julgados : null;
+  const retrabalho = c.julgados ? c.retrabalho / c.julgados : null;
+  const ativos = c.total - c.pendente;
+  const offload = ativos ? c.offload / ativos : null;
+  const quota = ativos ? c.quota / ativos : null;
+  return (
+    perto(c.qualidade, qualidade) &&
+    perto(c.retrabalho_pct, retrabalho) &&
+    perto(c.offload_pct, offload) &&
+    perto(c.quota_pct, quota)
+  );
+}
+
+function revisaoPublicadaValida(
+  r: NonNullable<HarnessBlob['metricas_periodos']>[string]['atual']['revisao'],
+): boolean {
+  if (!r || typeof r !== 'object') return false;
+  if (![r.total, r.julgados, r.problemas_encontrados].every(inteiroNaoNegativo)) return false;
+  if (r.julgados > r.total || r.problemas_encontrados > r.julgados) return false;
+  if (!proporcaoOuNull(r.deteccao_pct)) return false;
+  const deteccao = r.julgados ? r.problemas_encontrados / r.julgados : null;
+  return perto(r.deteccao_pct, deteccao);
+}
+
+/** Valida versão, completude e coerência aritmética antes de liberar decisões na tela. */
+export function contratoMetricasValido(dados: HarnessBlob): boolean {
+  if (dados.schema_version !== HARNESS_SCHEMA_VERSION) return false;
+  if (dados.metric_version !== HARNESS_METRIC_VERSION) return false;
+  if (!dados.as_of || !Number.isFinite(Date.parse(dados.as_of))) return false;
+  const saude = dados.saude_dados;
+  if (
+    !saude ||
+    saude.schema_version !== HARNESS_SCHEMA_VERSION ||
+    saude.metric_version !== HARNESS_METRIC_VERSION ||
+    !inteiroNaoNegativo(saude.eventos_publicados) ||
+    saude.eventos_publicados !== dados.ledger.length
+  )
+    return false;
+  for (const dias of JANELAS_OBRIGATORIAS) {
+    const periodo = dados.metricas_periodos?.[String(dias)];
+    if (!periodo || periodo.dias !== dias || periodo.fim_atual !== dados.as_of) return false;
+    if (!Number.isFinite(Date.parse(periodo.inicio_atual))) return false;
+    for (const recortePublicado of [periodo.atual, periodo.anterior]) {
+      if (!recortePublicado || typeof recortePublicado !== 'object') return false;
+      if (!inteiroNaoNegativo(recortePublicado.eventos)) return false;
+      if (!construcaoPublicadaValida(recortePublicado.construcao)) return false;
+      if (!revisaoPublicadaValida(recortePublicado.revisao)) return false;
+      if (
+        recortePublicado.eventos <
+        recortePublicado.construcao.total + recortePublicado.revisao.total
+      )
+        return false;
+    }
+  }
+  return true;
+}
+
+export function filtrarHistoricoCompativel(history: KpiHistoricoLinha[]): KpiHistoricoLinha[] {
+  return history.filter(
+    (linha) =>
+      linha.schema_version === HARNESS_SCHEMA_VERSION &&
+      linha.metric_version === HARNESS_METRIC_VERSION,
+  );
+}
+
+export interface KpisRevisao {
+  total: number;
+  julg: number;
+  problemasN: number;
+  deteccao: number | null;
+  ic95: { min: number; max: number } | null;
+}
+
+function intervaloWilson(sucessos: number, total: number): { min: number; max: number } | null {
+  if (!total) return null;
+  const z = 1.959963984540054;
+  const p = sucessos / total;
+  const z2 = z * z;
+  const centro = (p + z2 / (2 * total)) / (1 + z2 / total);
+  const margem = (z * Math.sqrt((p * (1 - p) + z2 / (4 * total)) / total)) / (1 + z2 / total);
+  return {
+    min: Math.max(0, centro - margem),
+    max: Math.min(1, centro + margem),
+  };
+}
+
+/**
+ * Mede o resultado das revisões sem misturá-lo à qualidade de construção.
+ * `retrabalho` em uma revisão significa que ela encontrou algo a corrigir.
+ */
+export function kpisRevisao(entrada: LedgerLinha[]): KpisRevisao {
+  const linhas = soRevisoesExplicitas(entrada);
+  const julg = linhas.filter(ehJulgavel);
+  const problemasN = julg.filter((r) => r.resultado === 'retrabalho').length;
+  return {
+    total: linhas.length,
+    julg: julg.length,
+    problemasN,
+    deteccao: julg.length ? problemasN / julg.length : null,
+    ic95: intervaloWilson(problemasN, julg.length),
   };
 }
 
@@ -343,6 +543,7 @@ export function kpisTerreno(
     t.n++;
     if (r.resultado === 'quota') t.quota++;
     else if (r.resultado === 'infra') t.infra++;
+    else if (r.resultado === 'descartado') continue;
     else {
       t.julgaveis++;
       if (r.resultado === 'ok1') t.ok1++;
@@ -407,8 +608,7 @@ export function kpisTerreno(
           texto: `subir o modelo — ok1 ${pct}% (${amostra}) < 70%`,
         };
       }
-    }
-    else if (t.ok1Pct != null && t.ok1Pct >= OK1_TETO && t.julgaveis >= 8 && !cad?.piso)
+    } else if (t.ok1Pct != null && t.ok1Pct >= OK1_TETO && t.julgaveis >= MIN_N && !cad?.piso)
       t.sinal = {
         tipo: 'baratear',
         texto: `dá pra testar modelo mais barato — ok1 ${Math.round(t.ok1Pct * 100)}% (${t.ok1}/${t.julgaveis})`,
@@ -455,7 +655,7 @@ export function porModelo(entrada: LedgerLinha[]): ModeloRow[] {
       mapa.set(nome, m);
     }
     m.n++;
-    if (r.resultado !== 'quota' && r.resultado !== 'infra') {
+    if (ehJulgavel(r)) {
       m.julg++;
       if (r.resultado === 'ok1') m.ok1++;
     }
@@ -511,6 +711,7 @@ export function valorScore(q: number, c: number, r: number): number {
 export interface FrenteValor {
   frente: string;
   n: number;
+  julg: number;
   q: number | null;
   custoTarefa: number | null;
   valor: number | null;
@@ -531,9 +732,7 @@ export function placarPorFrente(
   return frentes
     .map((frente): FrenteValor => {
       const daFrente = linhas.filter((linha) => linha.frente === frente);
-      const julgaveis = daFrente.filter(
-        (linha) => linha.resultado !== 'quota' && linha.resultado !== 'infra',
-      );
+      const julgaveis = daFrente.filter(ehJulgavel);
       const ok1 = julgaveis.filter((linha) => linha.resultado === 'ok1').length;
       const q = julgaveis.length ? ok1 / julgaveis.length : null;
       const uso = daFrente.length;
@@ -548,9 +747,10 @@ export function placarPorFrente(
       return {
         frente,
         n: uso,
+        julg: julgaveis.length,
         q,
         custoTarefa,
-        valor: q == null ? null : valorScore(q, c, r),
+        valor: q == null || julgaveis.length < MIN_AMOSTRA_GERAL ? null : valorScore(q, c, r),
       };
     })
     .sort((a, b) => {
@@ -690,7 +890,7 @@ export function valorGeral(
   janelaDias: number,
 ): number | null {
   const geral = kpisGerais(linhas);
-  if (geral.ok1 == null) return null;
+  if (geral.ok1 == null || geral.julg < MIN_AMOSTRA_GERAL) return null;
   const custo = custoMedioTarefa(linhas, assinaturas, janelaDias);
   const c = custo == null ? 0 : clamp01(CUSTO_META / custo);
   const r = 1 - (geral.quotaHit ?? 0);

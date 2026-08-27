@@ -10,14 +10,15 @@ const ASSINATURAS: Assinatura[] = [
   { nome: 'Anthropic', frente: 'claude', valor: 200, renova: '2026-09-22', papel: 'cérebro' },
 ];
 
-/** 10 despachos, 5 aceitos de primeira → qualidade e placar violados. */
-const LEDGER_RUIM: LedgerLinha[] = Array.from({ length: 10 }, (_, i) => ({
+/** 20 despachos, 10 aceitos de primeira → qualidade e placar violados. */
+const LEDGER_RUIM: LedgerLinha[] = Array.from({ length: 20 }, (_, i) => ({
   ts: new Date(AGORA - 2 * DIA).toISOString(),
   frente: 'codex',
   modelo: 'gpt-5.6-luna',
   effort: 'max',
   terreno: 'rotina',
-  resultado: i < 5 ? 'ok1' : 'retrabalho',
+  resultado: i < 10 ? 'ok1' : 'retrabalho',
+  papel: 'construtor',
   tarefa: 'x',
   nota: null,
   dur: null,
@@ -104,6 +105,7 @@ describe('revisarKpis', () => {
       effort: 'max',
       terreno: 'rotina',
       resultado: 'ok1',
+      papel: 'construtor',
       tarefa: 'x',
       nota: null,
       dur: null,

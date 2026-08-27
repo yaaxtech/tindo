@@ -1,4 +1,4 @@
-import { type KpisGerais, custoMedioTarefa } from '@/lib/harness/kpis';
+import { type KpisGerais, MIN_AMOSTRA_GERAL, custoMedioTarefa } from '@/lib/harness/kpis';
 import { cn } from '@/lib/utils';
 import type { Assinatura, LedgerLinha } from '@/types/harness';
 import { Card, PopoverInfo, type Status, corStatus, pc } from './ui';
@@ -56,6 +56,8 @@ export function Tiles({
 
   const diff = (a: number | null, b: number | null): number | null =>
     a == null || b == null ? null : a - b;
+  const qualidadeConfiavel = atual.julg >= MIN_AMOSTRA_GERAL;
+  const comparacaoQualidadeConfiavel = qualidadeConfiavel && anterior.julg >= MIN_AMOSTRA_GERAL;
 
   // Economia REAL: as assinaturas são flat — o que muda com o volume é o
   // custo POR tarefa ACEITA (ok1 + retrabalho). Gasto proporcional à janela.
@@ -71,11 +73,19 @@ export function Tiles({
     {
       k: 'Qualidade',
       v: pc(atual.ok1),
-      meta: `certo de primeira · ${atual.ok1N}/${atual.julg} · meta ≥80%`,
+      meta: qualidadeConfiavel
+        ? `certo de primeira · ${atual.ok1N}/${atual.julg} · meta ≥80%`
+        : `provisório · ${atual.ok1N}/${atual.julg} · precisa de ${MIN_AMOSTRA_GERAL}`,
       st:
-        atual.ok1 == null ? 'mut' : atual.ok1 >= 0.8 ? 'good' : atual.ok1 >= 0.7 ? 'warn' : 'crit',
-      como: 'De cada 100 tarefas despachadas, quantas foram aceitas na 1ª revisão, sem precisar de correção. Tarefas barradas por quota e despachos que nunca rodaram (infra) não entram na conta, pois não julgam a qualidade do modelo. Meta: 80% ou mais.',
-      delta: diff(atual.ok1, anterior.ok1),
+        atual.ok1 == null || !qualidadeConfiavel
+          ? 'mut'
+          : atual.ok1 >= 0.8
+            ? 'good'
+            : atual.ok1 >= 0.7
+              ? 'warn'
+              : 'crit',
+      como: `De cada 100 construções com papel carimbado no despacho, quantas foram aceitas na 1ª revisão, sem correção. Revisões, papéis deduzidos, quota, infra e descarte ficam fora. Com menos de ${MIN_AMOSTRA_GERAL} construções julgáveis, a porcentagem aparece como provisória e não dispara alerta. Meta: 80% ou mais.`,
+      delta: comparacaoQualidadeConfiavel ? diff(atual.ok1, anterior.ok1) : null,
       deltaFmt: ppFmt,
       melhor: 'up',
     },
@@ -109,17 +119,19 @@ export function Tiles({
     {
       k: 'Retrabalho',
       v: pc(atual.reciclo),
-      meta: `rodada extra · ${atual.recN}/${atual.julg} · meta ≤20%`,
+      meta: qualidadeConfiavel
+        ? `rodada extra · ${atual.recN}/${atual.julg} · meta ≤20%`
+        : `provisório · ${atual.recN}/${atual.julg} · precisa de ${MIN_AMOSTRA_GERAL}`,
       st:
-        atual.reciclo == null
+        atual.reciclo == null || !qualidadeConfiavel
           ? 'mut'
           : atual.reciclo <= 0.2
             ? 'good'
             : atual.reciclo <= 0.35
               ? 'warn'
               : 'crit',
-      como: '% de tarefas que precisaram de uma rodada extra: correção, escalada para modelo mais forte, ou refeitas. Despachos barrados por quota ou que nunca rodaram (infra) ficam fora da conta. Cada rodada extra custa um ciclo inteiro de despacho + revisão. Meta: 20% ou menos.',
-      delta: diff(atual.reciclo, anterior.reciclo),
+      como: `Percentual das construções carimbadas que precisaram de correção, escalada ou nova rodada. Revisões ficam numa métrica própria; papéis deduzidos, quota, infra e descarte não entram. Com menos de ${MIN_AMOSTRA_GERAL} construções julgáveis, o número é provisório. Meta: 20% ou menos.`,
+      delta: comparacaoQualidadeConfiavel ? diff(atual.reciclo, anterior.reciclo) : null,
       deltaFmt: ppFmt,
       melhor: 'down',
     },

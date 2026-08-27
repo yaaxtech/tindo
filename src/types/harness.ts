@@ -8,14 +8,26 @@ export interface LedgerLinha {
   frente: 'codex' | 'kimi' | 'claude' | 'cerebro';
   modelo: string;
   effort: string | null;
-  terreno: 'ui' | 'rotina' | 'dificil' | 'mecanico' | 'sql';
+  terreno: 'ui' | 'rotina' | 'dificil' | 'mecanico' | 'sql' | 'analise';
   // "pendente" = linha provisória gravada pelos run.sh dos workers antes da
   // revisão do cérebro (2026-08-10). Fica FORA de todos os KPIs da tela.
   // "infra" = worker nunca rodou por falha do lançador. Fica fora da qualidade.
-  resultado: 'ok1' | 'retrabalho' | 'escalado' | 'falhou' | 'infra' | 'quota' | 'pendente';
-  tarefa: string;
-  nota: string | null;
+  resultado:
+    | 'ok1'
+    | 'retrabalho'
+    | 'escalado'
+    | 'falhou'
+    | 'infra'
+    | 'quota'
+    | 'descartado'
+    | 'pendente';
+  /** Texto livre existe apenas em snapshots antigos; o contrato v2 não o publica. */
+  tarefa?: string;
+  /** Texto livre existe apenas em snapshots antigos; o contrato v2 não o publica. */
+  nota?: string | null;
   dur: number | null;
+  /** Duração automática extraída de `nota` antes de remover o texto livre. */
+  exec_min?: number | null;
   /** Id do registro provisório (só em linhas gravadas pelos run.sh). */
   id?: string;
   /** true quando a linha foi gravada automaticamente pelo run.sh. */
@@ -27,9 +39,15 @@ export interface LedgerLinha {
    * em src/lib/harness/kpis.ts.
    */
   terreno_inferido?: boolean;
+  /** Papel carimbado no despacho. Ausente não entra em nenhuma decisão. */
+  papel?: 'construtor' | 'revisor';
+  /** true = papel deduzido depois por texto; fica fora de decisões. */
+  papel_inferido?: boolean;
 }
 
 export interface KpiHistoricoLinha {
+  schema_version?: number;
+  metric_version?: string;
   ts: string;
   janela_dias: number;
   n: number;
@@ -39,7 +57,75 @@ export interface KpiHistoricoLinha {
   reciclo_pct: number | null;
   dur_mediana_min: number | null;
   por_frente: Record<string, number>;
-  nota: string | null;
+  nota?: string | null;
+}
+
+export interface SaudeDadosHarness {
+  schema_version: number;
+  metric_version: string;
+  gerado_em: string;
+  source_max_ts: string | null;
+  atraso_fonte_seg: number | null;
+  eventos_recebidos: number;
+  eventos_publicados: number;
+  eventos_rejeitados: number;
+  rejeicoes_por_motivo?: Record<string, number>;
+  papel_explicito: number;
+  papel_explicito_pct: number | null;
+  duracao_preenchida: number;
+  duracao_preenchida_pct: number | null;
+  /** Snapshots antigos preservados só localmente por usarem a fórmula v1. */
+  historico_legado?: number;
+}
+
+export interface IntervaloConfianca {
+  min: number;
+  max: number;
+}
+
+export interface MetricasConstrucaoPublicadas {
+  total: number;
+  julgados: number;
+  ok1: number;
+  retrabalho: number;
+  aceitas: number;
+  pendente: number;
+  quota: number;
+  infra: number;
+  descartado: number;
+  qualidade: number | null;
+  retrabalho_pct: number | null;
+  qualidade_ic95: IntervaloConfianca | null;
+  offload: number;
+  offload_pct: number | null;
+  quota_pct: number | null;
+  duracao: { n: number; p50_min: number | null; p90_min: number | null };
+  por_frente: Record<string, number>;
+  quota_por_frente: Record<string, number>;
+}
+
+export interface MetricasRevisaoPublicadas {
+  total: number;
+  julgados: number;
+  problemas_encontrados: number;
+  deteccao_pct: number | null;
+  deteccao_ic95: IntervaloConfianca | null;
+}
+
+export interface MetricasPeriodoPublicadas {
+  dias: number;
+  atual: {
+    eventos: number;
+    construcao: MetricasConstrucaoPublicadas;
+    revisao: MetricasRevisaoPublicadas;
+  };
+  anterior: {
+    eventos: number;
+    construcao: MetricasConstrucaoPublicadas;
+    revisao: MetricasRevisaoPublicadas;
+  };
+  inicio_atual: string;
+  fim_atual: string;
 }
 
 export interface VolumeRepo {
@@ -183,8 +269,13 @@ export interface JanelaErro {
 export type JanelaCampo = JanelaBlob | JanelaErro | null;
 
 export interface HarnessBlob {
+  schema_version?: number;
+  metric_version?: string;
   gerado_em: string;
+  as_of?: string;
   ledger: LedgerLinha[];
+  metricas_periodos?: Record<string, MetricasPeriodoPublicadas>;
+  saude_dados?: SaudeDadosHarness;
   history: KpiHistoricoLinha[];
   volume_codigo: VolumeRepo[];
   prs: PrSemana[];
