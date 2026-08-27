@@ -10,7 +10,8 @@ const VEREDITO: Record<VereditoAssinatura, { st: Status; txt: (quotas: number) =
   manter: { st: 'good', txt: () => 'rende bem — manter' },
 };
 
-const fmtBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const fmtBR = (iso: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : iso;
 
 // Bloco 5 — assinaturas: custo por tarefa proporcional ao período + veredito.
 export function Assinaturas({
