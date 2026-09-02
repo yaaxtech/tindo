@@ -20,6 +20,24 @@ const nextConfig = {
   images: {
     remotePatterns: [{ protocol: 'https', hostname: '*.supabase.co' }],
   },
+  /*
+   * Atalhos anunciados na vitrine da YaaX (`/yaax`), para que o rótulo do card
+   * seja exatamente o endereço que o link abre.
+   *
+   * Ficam aqui, e não como páginas com `redirect()`: sem dados dinâmicos, o Next
+   * prerenderiza a rota e resolve o `redirect()` com `<meta http-equiv="refresh"
+   * content="1;url=...">` — um segundo de tela branca a cada clique. Aqui vira
+   * 308 na camada de roteamento, instantâneo e sem HTML intermediário.
+   *
+   * Os destinos seguem protegidos: o middleware roda depois e manda quem não
+   * tem sessão para `/login?next=…`.
+   */
+  async redirects() {
+    return [
+      { source: '/tindo', destination: '/cards', permanent: false },
+      { source: '/roadmapmind', destination: '/docs', permanent: false },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);
