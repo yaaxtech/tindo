@@ -72,6 +72,14 @@ export function NavPainel({ grupos }: { grupos: SecaoNavGrupo[] }) {
     const alvo = document.getElementById(id);
     if (!alvo) return;
 
+    // Seções do diagnóstico vivem dentro de um <details> fechado por padrão:
+    // rolar até um bloco escondido não leva a lugar nenhum. Abrimos o
+    // disclosure ANTES de medir — o `toggle` que isso dispara mantém o estado
+    // React da página em dia.
+    for (let d = alvo.closest('details'); d; d = d.parentElement?.closest('details') ?? null) {
+      if (!d.open) d.open = true;
+    }
+
     // Quem posiciona é o `scrollIntoView`: ele já respeita o `scroll-margin-top`
     // que a nav publica e é o mesmo caminho do salto nativo, inclusive na
     // ancoragem de rolagem (o navegador reposiciona a página quando um bloco
@@ -174,13 +182,16 @@ export function NavPainel({ grupos }: { grupos: SecaoNavGrupo[] }) {
       const fimDaPagina =
         window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
       if (fimDaPagina) {
-        const ultima = secoes[secoes.length - 1];
+        const ultima = [...secoes].reverse().find((s) => !s.closest('details:not([open])'));
         if (ultima) setAtivo(ultima.id);
         return;
       }
       const linha = window.innerHeight * 0.35;
-      let atual = secoes[0];
-      for (const secao of secoes) {
+      // Bloco dentro de <details> fechado não está na tela: nem como
+      // candidato a ativo (o rect dele é zero e "passaria" da linha).
+      const visiveis = secoes.filter((s) => !s.closest('details:not([open])'));
+      let atual = visiveis[0] ?? secoes[0];
+      for (const secao of visiveis) {
         if (secao.getBoundingClientRect().top <= linha) atual = secao;
       }
       if (atual) setAtivo(atual.id);

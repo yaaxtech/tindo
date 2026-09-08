@@ -16,7 +16,7 @@ const INFO_BLOCO =
 const COMO_PREFIXO =
   'Toda chamada ao modelo paga para ler a conversa inteira de novo. Este número mede quanto do gasto total foi só reler o que já estava escrito, em vez de trabalho novo. Alto é esperado — mas perto de 100% com sessões longas indica conversa inchada.';
 const COMO_POS_200 =
-  'Depois da chamada 200 a sessão já está longa demais e cada chamada custa caro. Este percentual é o gasto que aconteceu nesse trecho — é exatamente o que o corte de janela (compactar antes) economiza.';
+  'Depois da chamada 200 a sessão já está longa demais e cada chamada custa caro. Este percentual é uma estimativa do gasto nesse trecho — um proxy do que compactar antes poderia reduzir, não uma economia garantida.';
 const COMO_TETO =
   'Sessões que passaram de 200 chamadas sem compactar. Cada uma delas pagou o preço cheio de uma janela inchada até o fim.';
 const COMO_TOKENS_TAREFA =
@@ -63,11 +63,11 @@ function Corpo({ blob }: { blob: JanelaBlob }) {
           }
         />
         <Kpi
-          titulo="Desperdício pós-200"
+          titulo="Consumo pós-200 (estimativa)"
           valor={formatarPct(kpis.pct_pos_200)}
           detalhe={
             <>
-              gasto depois da chamada 200 — é o que o corte de janela economiza
+              gasto estimado depois da chamada 200 — proxy do que compactar antes pode reduzir
               <PopoverInfo texto={COMO_POS_200} />
               <br />
               {formatarNumero(totais.sessoes)} sessões medidas

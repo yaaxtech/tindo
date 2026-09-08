@@ -107,3 +107,56 @@ describe('NavPainel — navegação por âncora', () => {
     expect(document.documentElement.style.scrollBehavior).toBe('');
   });
 });
+
+describe('NavPainel — seções dentro do disclosure de diagnóstico', () => {
+  /** Seção escondida num <details> fechado, como o diagnóstico da página. */
+  function montarDiagnostico({ aberto = false } = {}) {
+    const details = document.createElement('details');
+    details.id = 'diagnostico';
+    details.open = aberto;
+    const secao = document.createElement('section');
+    secao.id = 'modelos';
+    details.appendChild(secao);
+    document.body.appendChild(details);
+    secao.scrollIntoView = vi.fn();
+    return { details, secao };
+  }
+
+  it('clicar num item escondido abre o disclosure antes de rolar', () => {
+    const { details, secao } = montarDiagnostico();
+    render(<NavPainel grupos={SECOES_PAINEL} />);
+
+    fireEvent.click(screen.getByRole('link', { name: /Modelos/ }));
+
+    expect(details.open).toBe(true);
+    expect(secao.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it('disclosure já aberto não é fechado pelo clique', () => {
+    const { details } = montarDiagnostico({ aberto: true });
+    render(<NavPainel grupos={SECOES_PAINEL} />);
+
+    fireEvent.click(screen.getByRole('link', { name: /Modelos/ }));
+
+    expect(details.open).toBe(true);
+  });
+
+  it('seção escondida nunca vira o item ativo ao rolar', () => {
+    // Bloco visível já passou da linha de leitura; o escondido "está" em 0 só
+    // porque não tem layout — não pode roubar o destaque.
+    const visivel = montarPagina({ topo: 10 });
+    const { secao } = montarDiagnostico();
+    vi.spyOn(secao, 'getBoundingClientRect').mockReturnValue({ top: 0 } as DOMRect);
+    render(<NavPainel grupos={SECOES_PAINEL} />);
+
+    fireEvent.scroll(window);
+    vi.advanceTimersByTime(50);
+
+    expect(screen.getByRole('link', { name: /Assinaturas/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    expect(screen.getByRole('link', { name: /Modelos/ })).not.toHaveAttribute('aria-current');
+    expect(visivel.id).toBe('assinaturas');
+  });
+});
