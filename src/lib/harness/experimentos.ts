@@ -46,8 +46,8 @@ export const STATUS_EXPERIMENTO = 'Piloto preliminar concluído · sem vencedor 
 
 /**
  * Ressalva do piloto: os pedidos usaram modelos explícitos, mas os recibos
- * não confirmam o modelo devolvido nem o effort aplicado. Sem isso, e com
+ * não identificam o modelo em todas as execuções nem confirmam o effort aplicado. Sem isso, e com
  * amostra pequena, nenhum candidato troca de lugar sozinho.
  */
 export const NOTA_EXPERIMENTOS =
-  'Amostra pequena e registros incompletos: nenhuma troca automática. Os recibos não confirmam o modelo devolvido nem o effort; um A/B mais representativo ainda é necessário.';
+  'Amostra pequena: nenhuma troca automática. O effort não foi confirmado e o modelo não está identificado em todas as execuções. Precisamos de testes mais representativos.';
