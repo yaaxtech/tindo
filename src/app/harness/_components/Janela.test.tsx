@@ -45,7 +45,7 @@ describe('Janela', () => {
     expect(screen.getByText(/Releitura de prefixo/)).toBeInTheDocument();
     expect(screen.getByText(/96%/)).toBeInTheDocument();
     expect(screen.getByText(/17,8 bi de 18,7 bi tokens/)).toBeInTheDocument();
-    expect(screen.getByText(/Desperdício pós-200/)).toBeInTheDocument();
+    expect(screen.getByText(/Consumo pós-200 \(estimativa\)/)).toBeInTheDocument();
     expect(screen.getByText(/1\.074 sessões medidas/)).toBeInTheDocument();
     // Percentual nunca solto: o teto traz n de N junto.
     expect(screen.getByText('74 de 1.074 (6,9%)')).toBeInTheDocument();

@@ -56,7 +56,7 @@ export function SaudeDados({
         <div className="text-xs font-semibold text-text-muted">Atualidade da fonte</div>
         <div className="my-1 text-lg font-bold tabular-nums">{dataHora(saude?.source_max_ts)}</div>
         <p className="text-[11.5px] leading-snug text-text-muted">
-          atraso na geração: {atraso(saude?.atraso_fonte_seg)} · rejeitados:{' '}
+          atraso na geração: {atraso(saude?.atraso_fonte_seg)} · registros rejeitados:{' '}
           {saude?.eventos_rejeitados ?? '—'}
         </p>
       </Card>
@@ -66,7 +66,7 @@ export function SaudeDados({
         <div className="my-1 text-2xl font-bold tabular-nums">{pc(coberturaPapel)}</div>
         <p className="text-[11.5px] leading-snug text-text-muted">
           {saude
-            ? `${saude.papel_explicito}/${saude.eventos_publicados} eventos dizem se eram construção ou revisão. O restante não decide qualidade.`
+            ? `${saude.papel_explicito}/${saude.eventos_publicados} registros dizem se eram construção ou revisão. O restante não decide qualidade.`
             : 'Sem cobertura informada neste snapshot.'}
         </p>
       </Card>
@@ -76,7 +76,7 @@ export function SaudeDados({
         <div className="my-1 text-2xl font-bold tabular-nums">{pc(coberturaDuracao)}</div>
         <p className="text-[11.5px] leading-snug text-text-muted">
           {saude
-            ? `${saude.duracao_preenchida}/${saude.eventos_publicados} eventos têm duração. Os percentis mostram sempre o n usado.${historicoLegado ? ` ${historicoLegado} fotos antigas ficaram em quarentena por usarem a fórmula anterior.` : ''}`
+            ? `${saude.duracao_preenchida}/${saude.eventos_publicados} registros têm duração. Os percentis mostram sempre o n usado.${historicoLegado ? ` ${historicoLegado} fotos antigas ficaram em quarentena por usarem a fórmula anterior.` : ''}`
             : 'Sem cobertura informada neste snapshot.'}
         </p>
       </Card>

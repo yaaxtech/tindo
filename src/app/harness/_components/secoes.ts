@@ -1,9 +1,11 @@
 import {
   Activity,
   AppWindow,
+  ClipboardList,
   CodeXml,
   Cpu,
   CreditCard,
+  FlaskConical,
   Gauge,
   GitPullRequest,
   History,
@@ -23,7 +25,7 @@ import {
  * CRÍTICO: `id` é a âncora (`#id`) e precisa bater EXATAMENTE com a prop
  * `id` da `Secao` correspondente em `page.tsx` — mudou aqui, mude lá.
  * A ORDEM e o AGRUPAMENTO dos blocos foram decididos pelo dono: não mexer
- * sem OK dele.
+ * sem OK dele (última reorganização autorizada: 2026-09-07).
  */
 export interface SecaoNavItem {
   id: string;
@@ -41,44 +43,44 @@ export interface SecaoNavGrupo {
 // faixa media 1541px num espaço de 768px e rolava na horizontal até no
 // desktop — menu que exige arrastar de lado numa tela grande não é menu.
 // O nome completo de cada bloco continua no título da seção logo abaixo.
+//
+// Dois grupos, por pedido do dono (2026-09-07): "Painel" é o fluxo principal,
+// sempre visível; "Diagnóstico" fica atrás do disclosure "Ver diagnóstico
+// detalhado" em page.tsx. Os ids continuam âncoras válidas — a NavPainel abre
+// o disclosure antes de rolar, então nenhum item vira link para o nada.
 export const SECOES_PAINEL: SecaoNavGrupo[] = [
   {
-    id: 'como-estamos',
-    rotulo: 'Como estamos',
+    id: 'painel',
+    rotulo: 'Painel',
     itens: [
-      { id: 'saude-dados', rotulo: 'Dados', icone: Activity },
+      { id: 'resumo', rotulo: 'Resumo', icone: ClipboardList },
       { id: 'visao-geral', rotulo: 'Visão geral', icone: Gauge },
       { id: 'placar', rotulo: 'Placar', icone: Trophy },
-      { id: 'autonomia', rotulo: 'Autonomia', icone: MessageCircleQuestion },
-      { id: 'janela', rotulo: 'Janela', icone: AppWindow },
+      { id: 'terrenos', rotulo: 'Terrenos', icone: Layers },
+      { id: 'assinaturas', rotulo: 'Assinaturas', icone: CreditCard },
+      { id: 'experimentos', rotulo: 'A/B', icone: FlaskConical },
     ],
   },
   {
-    id: 'onde-agir',
-    rotulo: 'Onde agir',
+    id: 'diagnostico',
+    rotulo: 'Diagnóstico',
     itens: [
-      { id: 'terrenos', rotulo: 'Terrenos', icone: Layers },
+      { id: 'saude-dados', rotulo: 'Dados', icone: Activity },
+      { id: 'autonomia', rotulo: 'Autonomia', icone: MessageCircleQuestion },
+      { id: 'janela', rotulo: 'Janela', icone: AppWindow },
       { id: 'revisao', rotulo: 'Revisão', icone: SearchCheck },
       { id: 'tempo-despacho', rotulo: 'Despacho', icone: Timer },
       { id: 'tempo-entrega', rotulo: 'Entrega', icone: GitPullRequest },
       { id: 'fluxo', rotulo: 'Fluxo', icone: GitPullRequest },
-    ],
-  },
-  {
-    id: 'dinheiro',
-    rotulo: 'Dinheiro',
-    itens: [
       { id: 'minutos-github', rotulo: 'Minutos', icone: Timer },
-      { id: 'assinaturas', rotulo: 'Assinaturas', icone: CreditCard },
-    ],
-  },
-  {
-    id: 'historico',
-    rotulo: 'Histórico',
-    itens: [
       { id: 'modelos', rotulo: 'Modelos', icone: Cpu },
       { id: 'volume', rotulo: 'Volume', icone: CodeXml },
       { id: 'historico-kpis', rotulo: 'KPIs', icone: History },
     ],
   },
 ];
+
+/** Ids que moram dentro do disclosure "Ver diagnóstico detalhado". */
+export const IDS_DIAGNOSTICO = new Set(
+  SECOES_PAINEL.find((g) => g.id === 'diagnostico')?.itens.map((i) => i.id) ?? [],
+);

@@ -111,7 +111,7 @@ export function Tiles({
             : atual.quotaHit > 0
               ? 'good'
               : 'mut',
-      como: '% de despachos que bateram no limite da assinatura e tiveram que ir para outra frente. 0% o tempo todo = assinatura sobrando (dinheiro parado); alto = frente saturada. O saudável é baixo, mas maior que zero.',
+      como: '% de despachos que bateram no limite da assinatura e tiveram que ir para outra frente, conforme os registros do ledger. Não é o saldo restante do plano — o painel não lê saldo. Alto = frente saturada; 0% pode ser folga ou pouco uso no período. O saudável é baixo, mas maior que zero.',
       delta: diff(atual.quotaHit, anterior.quotaHit),
       deltaFmt: ppFmt,
       melhor: 'down',

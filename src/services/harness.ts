@@ -9,27 +9,36 @@ import type {
   HarnessSnapshot,
 } from '@/types/harness';
 
-/** Snapshot agregado dos minutos do GitHub. Erro ou tabela vazia → null. */
-export async function getActionsSnapshot(): Promise<ActionsSnapshot | null> {
-  try {
-    const supabase = createClient();
-    // biome-ignore lint/suspicious/noExplicitAny: migration ainda fora do Database gerado
-    const { data, error } = await (supabase as any)
-      .from('harness_actions_snapshot')
-      .select('dados, gerado_em')
-      .eq('id', 'singleton')
-      .maybeSingle();
+/**
+ * Erro real de leitura (rede, RLS, tabela inexistente) vira rejeição — nunca
+ * um retorno vazio. Quem consome (useDadosHarness) usa `allSettled` e, numa
+ * rejeição, mantém a leitura anterior e avisa; um retorno vazio, ao contrário,
+ * é legítimo ("ainda não houve empurrão") e substitui o que estava na tela.
+ * Antes, erro e vazio voltavam iguais (null/[]), e uma falha silenciosa
+ * apagava fontes boas.
+ */
+function falhaLeitura(origem: string, error: { message?: string } | null): Error {
+  return new Error(`harness/${origem}: ${error?.message ?? 'erro de leitura'}`);
+}
 
-    if (error || !data) return null;
-    return { dados: data.dados as ActionsBlob, geradoEm: data.gerado_em as string };
-  } catch {
-    return null;
-  }
+/** Snapshot agregado dos minutos do GitHub. Tabela vazia → null; erro → throw. */
+export async function getActionsSnapshot(): Promise<ActionsSnapshot | null> {
+  const supabase = createClient();
+  // biome-ignore lint/suspicious/noExplicitAny: migration ainda fora do Database gerado
+  const { data, error } = await (supabase as any)
+    .from('harness_actions_snapshot')
+    .select('dados, gerado_em')
+    .eq('id', 'singleton')
+    .maybeSingle();
+
+  if (error) throw falhaLeitura('actions_snapshot', error);
+  if (!data) return null;
+  return { dados: data.dados as ActionsBlob, geradoEm: data.gerado_em as string };
 }
 
 /**
  * Lê o snapshot singleton do Painel do Harness.
- * Retorna null quando ainda não houve nenhum empurrão (tabela vazia) ou erro.
+ * null = ainda não houve nenhum empurrão (tabela vazia); erro de leitura → throw.
  */
 export async function getHarnessSnapshot(): Promise<HarnessSnapshot | null> {
   const supabase = createClient();
@@ -39,15 +48,15 @@ export async function getHarnessSnapshot(): Promise<HarnessSnapshot | null> {
     .eq('id', 'singleton')
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) throw falhaLeitura('snapshot', error);
+  if (!data) return null;
   // `dados` é jsonb livre — o formato do blob é contrato do publicar-painel.mjs.
   return { dados: data.dados as unknown as HarnessBlob, geradoEm: data.gerado_em };
 }
 
 /**
  * Lê os tempos crus do GitHub Actions dos últimos `dias`.
- * Tabela ainda vazia (antes da 1ª coleta) ou erro → `[]`, nunca throw: o bloco
- * do painel precisa mostrar estado vazio, não quebrar a página.
+ * Tabela ainda vazia (antes da 1ª coleta) → `[]`; erro de leitura → throw.
  */
 export async function getGithubRuns(dias = 90): Promise<GithubRunLinha[]> {
   const supabase = createClient();
@@ -65,7 +74,8 @@ export async function getGithubRuns(dias = 90): Promise<GithubRunLinha[]> {
     // PostgREST trunca em 1000 mesmo com limite maior — ver src/services/CLAUDE.md.
     .limit(1000);
 
-  if (error || !data) return [];
+  if (error) throw falhaLeitura('github_runs', error);
+  if (!data) return [];
   // Único ponto que ainda estreita: `evento` é varchar no banco e união fechada
   // ('pull_request' | 'push') no domínio — quem grava é o coletor-github.
   return data as GithubRunLinha[];
@@ -83,8 +93,7 @@ export interface HistoricoAlertas {
  * Lê as últimas `quantas` avaliações do revisor e seus alertas.
  * Traz o histórico inteiro (não só a última) de propósito: é a contagem de
  * disparos por limiar que separa alerta de barulho.
- * Erro ou tabela vazia → listas vazias, nunca throw: a faixa some, o resto do
- * painel continua de pé.
+ * Tabela vazia → listas vazias (a faixa some); erro de leitura → throw.
  */
 export async function getHarnessAlertas(quantas = 12): Promise<HistoricoAlertas> {
   const supabase = createClient();
@@ -99,15 +108,18 @@ export async function getHarnessAlertas(quantas = 12): Promise<HistoricoAlertas>
     .order('avaliado_em', { ascending: false })
     .limit(quantas);
 
-  if (error || !avaliacoes || avaliacoes.length === 0) return vazio;
+  if (error) throw falhaLeitura('avaliacoes', error);
+  if (!avaliacoes || avaliacoes.length === 0) return vazio;
 
   const ids = (avaliacoes as AvaliacaoLinha[]).map((a) => a.id);
   // biome-ignore lint/suspicious/noExplicitAny: tabelas fora do Database tipado por ora
-  const { data: alertas } = await (supabase as any)
+  const { data: alertas, error: erroAlertas } = await (supabase as any)
     .from('harness_alertas')
     .select('id, avaliacao_id, avaliado_em, codigo, severidade, valor, limiar, amostra')
     .in('avaliacao_id', ids)
     .order('avaliado_em', { ascending: false });
+
+  if (erroAlertas) throw falhaLeitura('alertas', erroAlertas);
 
   return {
     avaliacoes: avaliacoes as AvaliacaoLinha[],

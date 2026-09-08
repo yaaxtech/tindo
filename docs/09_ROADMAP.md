@@ -224,6 +224,46 @@ Postgres/rede só existe no log do servidor. Única exceção documentada:
 `/api/ai/testar` devolve `{ ok, detalhe }` com status 200 mesmo em falha, porque
 o corpo é o RESULTADO de um teste de conexão, não um erro da aplicação.
 
+## Painel do Harness — clareza (2026-09-07)
+
+Pedido do dono: painel confuso, uso atual misturado com modelos em teste.
+
+- [x] Abertura com resumo de papéis (Claude orquestra/planeja/frontend/revisa
+      Codex; Codex executa/revisa Claude) e aviso de que configuração declarada
+      não confirma modelo executado
+- [x] Fluxo principal enxuto (resumo, Como estamos, Placar, configuração por
+      terreno, assinaturas, A/B); o resto atrás de "Ver diagnóstico detalhado",
+      com a navegação abrindo o disclosure antes de rolar
+- [x] Bloco Experimentos A/B com candidatos fixos do plano (Sol/high vs
+      Astra/high na execução; Fable 5.1/high vs medium no planejamento).
+      Não conta registros do ledger: histórico não é resultado pareado, e o
+      nome logado não separa Fable 5 de 5.1. O piloto roda fora, em recibos
+      separados; o resumo de cada rodada é uma string fixa em
+      `lib/harness/experimentos.ts`, escrita pelo cérebro
+- [x] Piloto preliminar de 07/09/2026 anexado como texto: 4 pares de código
+      (16 verificações funcionais em 4 tarefas passaram nos dois braços) e
+      4 pares de planejamento sem ferramentas (revisão cega achou lacunas nos
+      dois, sem vencedor). Status "Piloto preliminar concluído · sem vencedor
+      confirmado"; os recibos não confirmam modelo devolvido nem effort, então
+      nenhuma troca automática
+- [x] Snapshot fora do contrato de métricas: aviso `role=alert` sempre à
+      vista (fora do diagnóstico fechado), cabeçalho diz "Leitura incompatível
+      — indicadores suspensos" em vez de "0 despachos", e Como estamos/Placar
+      mostram "indisponível" em vez de zeros. Terrenos fica só com a
+      configuração declarada
+- [x] Linguagem: sem "candidata a cancelar/aumentar"; quota barrada ≠ saldo do
+      plano; "consumo pós-200" é estimativa, não economia garantida; "eventos"
+      viraram "registros". Fórmulas intactas
+- [x] Botão Atualizar que refaz as quatro buscas; o serviço rejeita em erro
+      real e devolve vazio só quando o banco está vazio — falha mantém a
+      última leitura e avisa, vazio legítimo substitui (o tique de 30s
+      continua só para a idade do carimbo)
+- [ ] Gerador do snapshot: publicar `renova` real de cada assinatura (a tela já
+      mostra "renovação não informada" quando vier vazio)
+- [ ] A/B mais representativo (tarefas reais, recibos com modelo e effort
+      confirmados); a promoção segue os critérios do teste, não leitura visual
+      de taxas, e o bloco não muda titular sozinho
+
 ## Fase 12+ — Futuro
 
 - Multi-usuário com convites
