@@ -18,7 +18,7 @@ export interface DadosHarness {
 }
 
 export const ERRO_ATUALIZACAO =
-  'Não foi possível atualizar agora. Os números abaixo são da última leitura que deu certo.';
+  'Atualização parcial: algumas fontes falharam. Os dados disponíveis continuam na tela.';
 export const ERRO_CARGA_INICIAL =
   'Não foi possível ler o painel agora. Tente atualizar em instantes.';
 

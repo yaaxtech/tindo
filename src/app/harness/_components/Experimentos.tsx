@@ -36,10 +36,8 @@ export function Experimentos() {
       ))}
       <p className="text-xs leading-relaxed text-warning">{NOTA_EXPERIMENTOS}</p>
       <p className="text-xs leading-relaxed text-text-muted">
-        Os registros históricos do ledger não são resultados pareados e não entram aqui. O piloto
-        roda fora do painel, em recibos separados, e o resumo acima é escrito à mão a partir deles.
-        A promoção de um candidato depende dos critérios do teste, nunca de uma leitura visual das
-        taxas, e nenhum candidato substitui o titular de um terreno até isso acontecer.
+        Estes resultados vêm do piloto pareado, separado do histórico de uso. Os modelos atuais
+        continuam em uso até os testes justificarem uma troca.
       </p>
     </div>
   );
