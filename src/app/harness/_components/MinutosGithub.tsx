@@ -86,7 +86,8 @@ export function MinutosGithub({
 
           {snapshot.dados.parcial && (
             <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
-              Coleta parcial: {snapshot.dados.parcial}
+              Coleta parcial: {snapshot.dados.parcial} Totais e fila ainda não sustentam
+              recomendação de compra, troca de plano ou inatividade.
             </div>
           )}
 
@@ -111,7 +112,8 @@ export function MinutosGithub({
                   uso até agora {minutos(kpis.equivalenteNuvem)} · projeção mensal
                   <br />
                   custaria{' '}
-                  {kpis.custoSeLigarUsd == null ? '—' : dinheiro.format(kpis.custoSeLigarUsd)} no mês
+                  {kpis.custoSeLigarUsd == null ? '—' : dinheiro.format(kpis.custoSeLigarUsd)} no
+                  mês
                 </>
               }
             />
@@ -143,7 +145,10 @@ export function MinutosGithub({
                   <br />
                   {kpis.concentracaoBranch.top5.length
                     ? kpis.concentracaoBranch.top5
-                        .map((branch) => `${branch.branch} (${numero.format(branch.min_total)})`)
+                        .map(
+                          (branch) =>
+                            `${branch.repo ? `${branch.repo}/` : ''}${branch.branch} (${numero.format(branch.min_total)})`,
+                        )
                         .join(' · ')
                     : '—'}
                 </>

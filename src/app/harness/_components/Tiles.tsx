@@ -59,15 +59,15 @@ export function Tiles({
   const qualidadeConfiavel = atual.julg >= MIN_AMOSTRA_GERAL;
   const comparacaoQualidadeConfiavel = qualidadeConfiavel && anterior.julg >= MIN_AMOSTRA_GERAL;
 
-  // Economia REAL: as assinaturas são flat — o que muda com o volume é o
-  // custo POR tarefa ACEITA (ok1 + retrabalho). Gasto proporcional à janela.
+  // Estimativa por construção aceita: as assinaturas são flat — o que muda
+  // com o volume é o custo por entrega. Gasto proporcional à janela.
   const gastoJanela = (totalMes * janelaDias) / 30;
   const rotuloPeriodo =
     janelaDias === 1 ? 'no dia' : janelaDias === 7 ? 'na semana' : `em ${janelaDias} dias`;
   const comoEconomia =
     custoDesp != null
-      ? `Some as ${assinaturas.length} assinaturas ($${totalMes}/mês = $${gastoJanela.toFixed(0)} em ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'}) e divida pelas ${atual.aceitas} tarefas ACEITAS ${rotuloPeriodo} (concluídas de 1ª ou após retrabalho — quota, escalada e falha não entregaram nada e ficam fora da divisão). Como as assinaturas são de valor fixo, quanto MAIS tarefas o harness entrega, MENOR fica este número — é a medida de aproveitar o que já se paga.`
-      : 'Custo médio por tarefa aceita (ok de 1ª + retrabalho), somando as assinaturas.';
+      ? `Estimativa: some as ${assinaturas.length} assinaturas ($${totalMes}/mês = $${gastoJanela.toFixed(0)} em ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'}) e divida pelas ${atual.aceitas} construções aceitas ${rotuloPeriodo} (ok de 1ª ou após retrabalho). É um rateio de referência; não mede economia realizada nem custo marginal.`
+      : 'Estimativa por construção aceita, com preço de referência proporcional ao período; não mede economia realizada.';
 
   const tiles: TileDef[] = [
     {
@@ -90,9 +90,9 @@ export function Tiles({
       melhor: 'up',
     },
     {
-      k: 'Economia',
+      k: 'Custo estimado',
       v: custoDesp != null ? `$${custoDesp.toFixed(2)}` : '—',
-      meta: `por tarefa aceita (${atual.aceitas}) · fora do Claude ${pc(atual.offload)} (${atual.offN}/${atual.n})`,
+      meta: `por construção aceita (${atual.aceitas}) · fora do Claude ${pc(atual.offload)} (${atual.offN}/${atual.n})`,
       st: custoDesp == null ? 'mut' : custoDesp <= 2.5 ? 'good' : custoDesp <= 5 ? 'acc' : 'warn',
       como: comoEconomia,
       delta: diff(custoDesp, custoDespAnt),
@@ -102,7 +102,7 @@ export function Tiles({
     {
       k: 'Quota',
       v: pc(atual.quotaHit),
-      meta: `barrados por limite · ${atual.quotaN}/${atual.n} · ideal baixo, >0`,
+      meta: `barrados por limite · ${atual.quotaN}/${atual.n} · zero é informação`,
       st:
         atual.quotaHit == null
           ? 'mut'
@@ -111,7 +111,7 @@ export function Tiles({
             : atual.quotaHit > 0
               ? 'good'
               : 'mut',
-      como: '% de despachos que bateram no limite da assinatura e tiveram que ir para outra frente, conforme os registros do ledger. Não é o saldo restante do plano — o painel não lê saldo. Alto = frente saturada; 0% pode ser folga ou pouco uso no período. O saudável é baixo, mas maior que zero.',
+      como: '% de despachos que bateram no limite da assinatura e tiveram que ir para outra frente, conforme os registros do ledger. Não é o saldo restante do plano — o painel não lê saldo. Alto = frente saturada; 0% só informa que nenhum bloqueio foi registrado no período e não recomenda mudar o plano.',
       delta: diff(atual.quotaHit, anterior.quotaHit),
       deltaFmt: ppFmt,
       melhor: 'down',
@@ -120,7 +120,7 @@ export function Tiles({
       k: 'Retrabalho',
       v: pc(atual.reciclo),
       meta: qualidadeConfiavel
-        ? `rodada extra · ${atual.recN}/${atual.julg} · meta ≤20%`
+        ? `falha, escalada ou rodada extra · ${atual.recN}/${atual.julg} · meta ≤20%`
         : `provisório · ${atual.recN}/${atual.julg} · precisa de ${MIN_AMOSTRA_GERAL}`,
       st:
         atual.reciclo == null || !qualidadeConfiavel
@@ -130,7 +130,7 @@ export function Tiles({
             : atual.reciclo <= 0.35
               ? 'warn'
               : 'crit',
-      como: `Percentual das construções carimbadas que precisaram de correção, escalada ou nova rodada. Revisões ficam numa métrica própria; papéis deduzidos, quota, infra e descarte não entram. Com menos de ${MIN_AMOSTRA_GERAL} construções julgáveis, o número é provisório. Meta: 20% ou menos.`,
+      como: `Percentual das construções carimbadas que falharam, foram escaladas ou precisaram de uma rodada extra. Revisões ficam numa métrica própria; papéis deduzidos, quota, infra e descarte não entram. Com menos de ${MIN_AMOSTRA_GERAL} construções julgáveis, o número é provisório. Meta: 20% ou menos.`,
       delta: comparacaoQualidadeConfiavel ? diff(atual.reciclo, anterior.reciclo) : null,
       deltaFmt: ppFmt,
       melhor: 'down',

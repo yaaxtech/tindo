@@ -17,6 +17,7 @@ import {
   diasComDados,
   filtrarHistoricoCompativel,
   kpisAutonomia,
+  kpisAutonomiaCodex,
   kpisGerais,
   kpisRevisao,
   kpisTerreno,
@@ -697,6 +698,21 @@ describe('kpisTerreno com balde ambíguo', () => {
     expect(t.rotina?.degrausAmbiguos.map((d) => d.degrau)).toEqual(['codex/gpt-5.6-sol/high']);
   });
 
+  it('não recomenda manter quando rótulos sem prova estão dispersos em baldes pequenos', () => {
+    const dispersas = Array.from({ length: 30 }, (_, i) =>
+      linha({
+        ts: tsDiasAtras(1),
+        terreno: 'rotina',
+        modelo: i < 15 ? 'gpt-5.6-sol' : 'gpt-5.6-luna',
+        resultado: 'ok1',
+        auto: false,
+      }),
+    );
+    const terreno = kpisTerreno(dispersas, CADEIAS).rotina;
+    expect(terreno?.classificados).toBe(0);
+    expect(terreno?.sinal.tipo).toBe('ambiguo');
+  });
+
   it('terreno todo classificado segue emitindo sinal normalmente', () => {
     const t = kpisTerreno(
       contaminadas.map((l) => ({ ...l, auto: true, ts: TS_CLASSIFICADO })),
@@ -722,14 +738,17 @@ describe('porModelo', () => {
   it('normModelo cobre as variantes conhecidas (espelho de modelos.mjs)', () => {
     // K3: as 3 grafias reais do ledger fundem numa só
     expect(normModelo('kimi-code/k3-256k')).toBe('k3-256k');
-    expect(normModelo('kimi-code/k3')).toBe('k3-256k');
-    expect(normModelo('k3')).toBe('k3-256k');
+    expect(normModelo('kimi-code/k3')).toBe('k3');
+    expect(normModelo('k3')).toBe('k3');
     // Opus 4.8 e apelidos; opus-5 fica separado
     expect(normModelo('claude-opus-4-8')).toBe('opus-4.8');
     expect(normModelo('opus')).toBe('opus-4.8');
     expect(normModelo('opus-5')).toBe('opus-5');
     // família Claude só tolera prefixo/versão
     expect(normModelo('claude-fable-5')).toBe('fable');
+    expect(normModelo('claude-fable-5-1')).toBe('fable-5.1');
+    expect(normModelo('fable-5.1')).toBe('fable-5.1');
+    expect(normModelo('fable')).toBe('fable');
     expect(normModelo('sonnet')).toBe('sonnet');
     // desconhecidos passam intactos
     expect(normModelo('gpt-5.6-sol')).toBe('gpt-5.6-sol');
@@ -908,5 +927,46 @@ describe('autonomia', () => {
     expect(k.n2Carimbadas).toBe(0);
     expect(k.n2DesfeitasPct).toBeNull();
     expect(k.veredito.tipo).toBe('ok');
+  });
+
+  it('agrega perguntas do Codex separadas, sem inventar aceite ou correção', () => {
+    const k = kpisAutonomia(blob([], null), 7, AGORA);
+    expect(k.codex).toBeNull();
+    expect(
+      kpisAutonomiaCodex(
+        {
+          dias: 90,
+          gerado_em: new Date(AGORA).toISOString(),
+          perguntas_por_dia: [
+            { data: diaAtras(1), perguntas: 4, respondidas: 3, pendentes: 1 },
+            { data: diaAtras(30), perguntas: 9, respondidas: 8, pendentes: 1 },
+          ],
+        },
+        7,
+        AGORA,
+      ),
+    ).toEqual({ disponivel: true, perguntas: 4, respondidas: 3, pendentes: 1, motivo: null });
+  });
+
+  it('mantém o Codex indisponível sem transformar ausência em zero perguntas', () => {
+    expect(
+      kpisAutonomiaCodex(
+        {
+          disponivel: false,
+          dias: 90,
+          gerado_em: new Date(AGORA).toISOString(),
+          motivo: 'arquivo de sessões ausente',
+          perguntas_por_dia: [],
+        },
+        7,
+        AGORA,
+      ),
+    ).toEqual({
+      disponivel: false,
+      perguntas: null,
+      respondidas: null,
+      pendentes: null,
+      motivo: 'arquivo de sessões ausente',
+    });
   });
 });

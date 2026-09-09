@@ -96,7 +96,11 @@ function veredito(
   cota: number,
   filaP50: number | null,
   usdPorHora: number | null,
+  parcial: string | null,
 ): string {
+  if (parcial) {
+    return 'A coleta está parcial; estes totais ainda não permitem recomendar ligar a nuvem ou mudar o plano.';
+  }
   if (projecaoEquivalente == null) {
     return 'Ainda não há amostra suficiente para decidir sobre os minutos do GitHub.';
   }
@@ -185,6 +189,12 @@ export function calcularActionsKpis(blob: ActionsBlob, agora = new Date()): Acti
       ? { nome: dominante.nome, pct: percentual(dominante.seg_total, totalSteps) }
       : null,
     horaPico,
-    veredito: veredito(projecaoEquivalente, blob.cota_min, filaP50, usdPorHoraEconomizada),
+    veredito: veredito(
+      projecaoEquivalente,
+      blob.cota_min,
+      filaP50,
+      usdPorHoraEconomizada,
+      blob.parcial,
+    ),
   };
 }

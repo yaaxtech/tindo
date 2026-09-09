@@ -70,6 +70,7 @@ describe('normalizar', () => {
       pr_numero: 50,
     });
     expect(linha?.pr_merged_em).toBe(iso(1));
+    expect(linha?.coletado_em).toMatch(/^20\d\d-/);
     // Nenhuma chave de texto livre do GitHub sobrevive à normalização.
     const chaves = Object.keys(linha ?? {});
     expect(chaves).not.toContain('title');
@@ -123,7 +124,19 @@ describe('coletarRunsGithub', () => {
     expect(r.comToken).toBe(false);
     expect(r.parcial).toBeNull();
     expect(destino.gravadas).toHaveLength(1);
+    expect(destino.gravadas[0]?.coletado_em).toBe(new Date(AGORA).toISOString());
     expect(resumoColeta(r)).toContain('sem GITHUB_TOKEN');
+  });
+
+  it('sem token coleta só o repositório público por padrão', async () => {
+    const destino = destinoFake();
+    const { impl } = fetchFake({ runs: [[runApi()]], pulls: [[prApi()]] });
+    const r = await coletarRunsGithub(destino, {
+      token: null,
+      agora: AGORA,
+      fetchImpl: impl,
+    });
+    expect(r.repos).toEqual(['yaaxtech/tindo']);
   });
 
   it('para de paginar ao passar dos 90 dias', async () => {

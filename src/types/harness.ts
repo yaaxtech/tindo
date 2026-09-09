@@ -182,11 +182,31 @@ export interface AutonomiaN2 {
   por_dia: Record<string, { carimbadas: number; desfeitas: number }>;
 }
 
+export interface AutonomiaCodexDia {
+  data: string;
+  perguntas: number;
+  respondidas: number;
+  pendentes: number;
+}
+
+/** Perguntas do Codex, separadas porque não têm as mesmas respostas do Claude. */
+export interface AutonomiaCodex {
+  disponivel?: boolean;
+  dias: number;
+  gerado_em: string;
+  source_max_ts?: string | null;
+  erros_leitura?: number;
+  motivo?: string | null;
+  perguntas_por_dia: AutonomiaCodexDia[];
+}
+
 export interface AutonomiaBlob {
   dias: number;
   gerado_em: string;
   perguntas_por_dia: AutonomiaDia[];
   n2: AutonomiaN2 | null;
+  /** Fonte Codex opcional; não se mistura com aceite/correção do Claude. */
+  codex?: AutonomiaCodex | null;
 }
 
 // ── Janela de contexto das sessões do Claude (bloco "Janela" do painel) ────
@@ -207,10 +227,20 @@ export interface JanelaKpis {
   pct_prefixo: number | null;
   /** Fração do gasto depois da chamada 200 de cada sessão. */
   pct_pos_200: number | null;
-  /** Sessões que passaram do teto de chamadas sem compactar. */
-  sessoes_acima_teto: { n: number; pct: number; teto: number } | null;
-  /** Custo de contexto médio por tarefa entregue, em tokens. */
+  /** Sessões que passaram do limite medido pela coleta. */
+  sessoes_acima_teto: {
+    n: number;
+    pct: number;
+    teto: number;
+    /** Snapshot novo mede tokens; ausente = corte histórico por chamadas. */
+    unidade_teto?: 'chamadas' | 'tokens';
+    /** Fonte a que o corte se aplica; ausente = snapshot legado. */
+    escopo?: 'claude' | 'codex';
+  } | null;
+  /** Custo de contexto médio por tarefa entregue, em tokens, quando há vínculo real. */
   tokens_por_tarefa: number | null;
+  /** Explica por que tokens_por_tarefa não está disponível. */
+  motivo_tokens_por_tarefa?: string | null;
   /** Gestos de higiene da janela (subagente, chip, compactar, mensagem entre chats). */
   gestos: {
     subagentes: number;
@@ -257,6 +287,39 @@ export interface JanelaBlob {
   por_modelo: JanelaModelo[];
   faixas: JanelaFaixa[];
   top_sessoes: JanelaSessao[];
+  /** Medição independente do Codex; não é somada aos totais do Claude. */
+  codex?: JanelaCodex | null;
+}
+
+export interface JanelaCodexModelo {
+  modelo: string;
+  chamadas: number;
+  tokens: number;
+}
+
+export interface JanelaCodexDia {
+  data: string;
+  perguntas: number;
+  respondidas: number;
+  pendentes: number;
+}
+
+/** Fonte Codex opcional, publicada separada da série histórica do Claude. */
+export interface JanelaCodex {
+  disponivel: boolean;
+  sessoes: number;
+  chamadas: number;
+  tokens: number;
+  input: number;
+  cache_read: number;
+  output: number;
+  source_max_ts: string | null;
+  arquivos_lidos: number;
+  erros_leitura: number;
+  por_modelo: JanelaCodexModelo[];
+  perguntas_por_dia: JanelaCodexDia[];
+  dias: number;
+  gerado_em: string;
 }
 
 /** Forma do campo quando a coleta falhou na máquina local. */
@@ -311,6 +374,8 @@ export interface GithubRunLinha {
   pr_numero: number | null;
   pr_criado_em: string | null;
   pr_merged_em: string | null;
+  /** Momento em que esta linha foi coletada; ausente em registros legados. */
+  coletado_em?: string;
 }
 
 export type SegmentoGithub = 'fila_ci' | 'exec_ci' | 'espera_merge' | 'deploy';
@@ -389,6 +454,8 @@ export interface ActionsDia {
 }
 
 export interface ActionsBranch {
+  /** Repositório da branch; ausente em snapshots antigos. */
+  repo?: string;
   branch: string;
   runs: number;
   min_total: number;

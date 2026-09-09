@@ -21,7 +21,8 @@ import { Tiles } from '@/app/harness/_components/Tiles';
 import { Historico, VolumeCodigo } from '@/app/harness/_components/VolumeHistorico';
 import { IDS_DIAGNOSTICO, SECOES_PAINEL } from '@/app/harness/_components/secoes';
 import { Secao } from '@/app/harness/_components/ui';
-import { useDadosHarness } from '@/app/harness/_components/useDadosHarness';
+import { fonteVelha, useDadosHarness } from '@/app/harness/_components/useDadosHarness';
+import type { FontesHarness } from '@/app/harness/_components/useDadosHarness';
 import { avaliarLedger } from '@/lib/harness/alertas';
 import { carimboAtualizacao } from '@/lib/harness/atualizacao';
 import {
@@ -43,7 +44,7 @@ const INDICADORES_INDISPONIVEIS =
   'Indicadores indisponíveis: o snapshot não cumpre o contrato de métricas. Nenhum número deste bloco é mostrado até chegar uma leitura íntegra.';
 
 export default function HarnessPage() {
-  const { snap, githubRuns, actionsSnapshot, alertas, carregando, erro, atualizar } =
+  const { snap, githubRuns, actionsSnapshot, alertas, fontes, carregando, erro, atualizar } =
     useDadosHarness();
   const [janelaDias, setJanelaDias] = useState(7);
 
@@ -118,6 +119,16 @@ export default function HarnessPage() {
 
   const carimbo = snap ? carimboAtualizacao(snap.geradoEm, agora) : null;
   const totalMes = (snap?.dados.assinaturas ?? []).reduce((s, a) => s + a.valor, 0);
+  const rotuloFonte: Record<string, string> = {
+    snapshot: 'Snapshot principal',
+    githubRuns: 'Execuções do GitHub',
+    minutos: 'Minutos do GitHub',
+    alertas: 'Alertas',
+  };
+  const avisosFontes = Object.entries(fontes ?? {}).filter(([chave, status]) => {
+    const velhaAgora = fonteVelha(chave as keyof FontesHarness, status, agora);
+    return status.estado === 'erro' || status.estado === 'anterior' || velhaAgora;
+  });
 
   return (
     <main className="min-h-dvh pb-16 safe-top safe-bottom">
@@ -168,6 +179,20 @@ export default function HarnessPage() {
             <p role="alert" className="mx-auto mt-2 w-full max-w-3xl text-xs text-warning">
               {erro}
             </p>
+          )}
+          {avisosFontes.length > 0 && (
+            <div className="mx-auto mt-2 w-full max-w-3xl space-y-1 text-xs text-warning">
+              {avisosFontes.map(([chave, status]) => (
+                <p key={chave} role={status.estado === 'erro' ? 'alert' : 'status'}>
+                  <span className="font-semibold">{rotuloFonte[chave] ?? chave}:</span>{' '}
+                  {status.estado === 'erro'
+                    ? 'não foi possível carregar esta fonte; as demais continuam disponíveis.'
+                    : status.estado === 'anterior'
+                      ? 'falha ao atualizar; a leitura anterior foi mantida.'
+                      : `fonte desatualizada — ${status.atualizadoEm ? carimboAtualizacao(status.atualizadoEm, agora) : 'data não informada'}`}
+                </p>
+              ))}
+            </div>
           )}
         </header>
 
@@ -283,7 +308,7 @@ export default function HarnessPage() {
           <Secao
             id="assinaturas"
             titulo={`Assinaturas — referência $${totalMes}/mês`}
-            info="Valores de referência dos planos atuais, como vêm do snapshot — não é fatura. Cada card mostra um custo rateado estimado por tarefa no período (valor de referência proporcional aos dias, dividido pelas tarefas que a assinatura executou). A etiqueta resume o período: rende bem, sem uso, custo alto ou saturada. Nenhuma decisão é automática — cancelar, manter ou ampliar é escolha do dono na renovação, com o histórico na mão."
+            info="Valores de referência dos planos atuais, como vêm do snapshot — não é fatura. Cada card mostra um custo rateado estimado por construção aceita no período (valor de referência proporcional aos dias, dividido pelas construções aceitas atribuídas à assinatura). A etiqueta resume o período: rende bem, nenhum despacho registrado, custo alto ou saturada. Nenhuma decisão é automática — cancelar, manter ou ampliar é escolha do dono na renovação, com o histórico na mão."
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
             {contratoValido ? (
@@ -298,10 +323,10 @@ export default function HarnessPage() {
               </p>
             )}
             <p className="mt-2.5 text-xs leading-relaxed text-text-muted">
-              Valores são a referência dos planos atuais, não fatura; o custo por tarefa é um rateio
-              estimado, não economia realizada. “Saturada” conta despachos barrados por quota nos
-              registros; o uso do plano (saldo) não é medido pelo painel. Datas de renovação vêm do
-              snapshot, e aparecem como “não informada” quando o gerador não as publica.
+              Valores são a referência dos planos atuais, não fatura; o custo por construção é um
+              rateio estimado, não economia realizada. “Saturada” conta despachos barrados por quota
+              nos registros; o uso do plano (saldo) não é medido pelo painel. Datas de renovação vêm
+              do snapshot, e aparecem como “não informada” quando o gerador não as publica.
             </p>
           </Secao>
 
@@ -340,7 +365,7 @@ export default function HarnessPage() {
                 info="Mostra se o painel está atualizado e quanto da telemetria tem os campos necessários para uma leitura confiável. A cobertura é fixa nos 90 dias publicados."
                 escopo={{ tipo: 'fixo', rotulo: '90 dias' }}
               >
-                <SaudeDados dados={snap.dados} contratoValido={contratoValido} />
+                <SaudeDados dados={snap.dados} contratoValido={contratoValido} fontes={fontes} />
               </Secao>
 
               {snap.dados.autonomia && (

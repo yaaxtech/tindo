@@ -6,6 +6,7 @@
 import type {
   Assinatura,
   AutonomiaBlob,
+  AutonomiaCodex,
   AutonomiaDia,
   CadeiaTerreno,
   HarnessBlob,
@@ -566,6 +567,9 @@ export function kpisTerreno(
     t.ok1Pct = t.julgaveis ? t.ok1 / t.julgaveis : null;
     t.recicloPct = t.julgaveis ? t.reciclo / t.julgaveis : null;
     t.classificados = t.julgaveis - t.ambiguos;
+    // The terrain aggregate also needs proven coverage: several small,
+    // unclassified model buckets cannot turn into a "supported" recommendation.
+    t.ambiguo ||= t.julgaveis >= MIN_N && t.ambiguos / t.julgaveis > AMBIGUO_MAX;
     const cad = cadeias[nome];
     // Três estados distintos de "não há 🔺/🔻", e a tela precisa dizer QUAL:
     // sem nenhum registro (instrumento sem entrada) · registro de menos para
@@ -630,7 +634,12 @@ const CANON_MODELO: [RegExp, string][] = [
   // "opus" seco é sempre Opus 4.8 (registros anteriores a 2026-08-04)
   [/^(claude-)?opus([-_.]?4[-_.]?8)?$/i, 'opus-4.8'],
   [/^(claude-)?opus[-_.]?5$/i, 'opus-5'],
-  [/^(kimi-code\/)?k3(-256k)?$/i, 'k3-256k'],
+  [/^kimi-code\/k3-256k$/i, 'k3-256k'],
+  [/^k3-256k$/i, 'k3-256k'],
+  [/^kimi-code\/k3$/i, 'k3'],
+  [/^k3$/i, 'k3'],
+  [/^claude-fable-5-1$/i, 'fable-5.1'],
+  [/^fable-5\.1$/i, 'fable-5.1'],
   [/^(claude-)?fable(-5)?$/i, 'fable'],
   [/^(claude-)?sonnet(-5)?$/i, 'sonnet'],
   [/^(claude-)?haiku(-4[-_.]?5)?$/i, 'haiku'],
@@ -787,7 +796,16 @@ export interface AutonomiaKpi {
   n2Carimbadas: number;
   n2Desfeitas: number;
   n2DesfeitasPct: number | null;
+  codex: AutonomiaCodexKpi | null;
   veredito: { tipo: 'perguntando-demais' | 'decidindo-demais' | 'ok'; texto: string };
+}
+
+export interface AutonomiaCodexKpi {
+  disponivel: boolean;
+  perguntas: number | null;
+  respondidas: number | null;
+  pendentes: number | null;
+  motivo: string | null;
 }
 
 const AUTONOMIA_VAZIA: AutonomiaKpi = {
@@ -804,11 +822,47 @@ const AUTONOMIA_VAZIA: AutonomiaKpi = {
   n2Carimbadas: 0,
   n2Desfeitas: 0,
   n2DesfeitasPct: null,
+  codex: null,
   veredito: { tipo: 'ok', texto: 'coletando dados' },
 };
 
 const mediana = (xs: number[]): number | null =>
   xs.length === 0 ? null : ([...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] ?? null);
+
+export function kpisAutonomiaCodex(
+  codex: AutonomiaCodex | null | undefined,
+  janelaDias: number,
+  agora: number = Date.now(),
+): AutonomiaCodexKpi | null {
+  if (!codex) return null;
+  if (codex.disponivel === false) {
+    return {
+      disponivel: false,
+      perguntas: null,
+      respondidas: null,
+      pendentes: null,
+      motivo: codex.motivo ?? 'a fonte do Codex não está disponível nesta coleta',
+    };
+  }
+  const ini = agora - janelaDias * DIA_MS;
+  const dentro = codex.perguntas_por_dia.filter((dia) => {
+    const t = Date.parse(`${dia.data}T12:00:00Z`);
+    return Number.isFinite(t) && t >= ini && t < agora + DIA_MS;
+  });
+  const totais: AutonomiaCodexKpi = {
+    disponivel: true,
+    perguntas: 0,
+    respondidas: 0,
+    pendentes: 0,
+    motivo: null,
+  };
+  for (const dia of dentro) {
+    totais.perguntas = (totais.perguntas ?? 0) + dia.perguntas;
+    totais.respondidas = (totais.respondidas ?? 0) + dia.respondidas;
+    totais.pendentes = (totais.pendentes ?? 0) + dia.pendentes;
+  }
+  return totais;
+}
 
 /**
  * Agregado da janela. Mesma convenção de `recorte`: os últimos `janelaDias`
@@ -879,6 +933,7 @@ export function kpisAutonomia(
     n2Carimbadas,
     n2Desfeitas,
     n2DesfeitasPct,
+    codex: kpisAutonomiaCodex(autonomia.codex, janelaDias, agora),
     veredito,
   };
 }

@@ -177,4 +177,11 @@ describe('calcularActionsKpis', () => {
     expect(kpis.stepDominante).toBeNull();
     expect(kpis.horaPico).toBeNull();
   });
+
+  it('suspende recomendação quando a coleta é parcial', () => {
+    const kpis = calcularActionsKpis(blob({ parcial: 'backfill ainda em andamento' }), AGORA);
+    expect(kpis.veredito).toContain('coleta está parcial');
+    expect(kpis.veredito).not.toContain('vale ligar');
+    expect(kpis.veredito).not.toContain('Melhor ficar');
+  });
 });

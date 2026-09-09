@@ -264,6 +264,19 @@ Pedido do dono: painel confuso, uso atual misturado com modelos em teste.
       confirmados); a promoção segue os critérios do teste, não leitura visual
       de taxas, e o bloco não muda titular sozinho
 
+## Painel do Harness — fontes confiáveis (2026-09-09)
+
+- [x] Estado e carimbo de cada fonte; erros parciais preservam fontes boas e
+      identificam a origem; periodicidade dos alertas respeitada.
+- [x] Coleta GitHub local retoma execuções e minutos com paginação e RLS de
+      leitura pública; recomposição histórica incremental sinalizada como parcial.
+- [x] Kimi preservado no histórico e aliases explícitos de modelo unificados;
+      recomendações suspensas quando a classificação não sustenta a conclusão.
+- [x] Contexto Claude com corte por evento e sem duplicação de mensagens;
+      Codex medido separadamente; tokens por entrega sem vínculo indisponível.
+- [x] Quota zero não significa ociosidade; custo é rateio estimado e alertas
+      mostram a base fixa de 14 dias. Testes Node dos coletores incluídos na CI.
+
 ## Fase 12+ — Futuro
 
 - Multi-usuário com convites

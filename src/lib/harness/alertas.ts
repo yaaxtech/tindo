@@ -30,7 +30,7 @@ import type {
 // números que a própria tela mostra logo abaixo dela.
 //
 // Unidade de `valor`/`limiar` por código (o banco guarda numeric cru):
-//   qualidade_baixa, retrabalho_alto, quota_alta, quota_zerada → fração 0..1
+//   qualidade_baixa, retrabalho_alto, quota_alta → fração 0..1
 //   custo_alto                                                  → dólares
 //   valor_baixo                                                 → pontos 0..100
 //   espera_merge_longa, segmento_*                               → segundos
@@ -79,7 +79,7 @@ export const ROTULO_ALERTA: Record<CodigoAlerta, string> = {
   retrabalho_alto: 'Retrabalho acima da meta',
   custo_alto: 'Custo por tarefa alto',
   quota_alta: 'Assinatura batendo no limite',
-  quota_zerada: 'Assinatura sobrando',
+  quota_zerada: 'Nenhum bloqueio por quota',
   valor_baixo: 'Placar de valor baixo',
   espera_merge_longa: 'Demora para aprovar o merge',
   segmento_fila_ci: 'Fila do CI mais lenta que o normal',
@@ -175,9 +175,8 @@ export function avaliarLedger(
     });
   }
 
-  // Quota alta = frente saturada. Quota exatamente zero na janela inteira =
-  // assinatura sobrando — a janela É de 14 dias, então "0% por 14 dias
-  // seguidos" e "0% nesta janela" são a mesma frase.
+  // Quota alta = frente saturada. Quota zero só informa ausência de bloqueios
+  // registrados; não permite inferir saldo, ociosidade ou plano adequado.
   if (g.n >= MIN_AMOSTRA_LEDGER && g.quotaHit != null) {
     if (g.quotaHit > LIMIARES.quotaAlerta) {
       achados.push({
@@ -185,14 +184,6 @@ export function avaliarLedger(
         severidade: 'alerta',
         valor: g.quotaHit,
         limiar: LIMIARES.quotaAlerta,
-        amostra: g.n,
-      });
-    } else if (g.quotaHit === 0) {
-      achados.push({
-        codigo: 'quota_zerada',
-        severidade: 'alerta',
-        valor: 0,
-        limiar: 0,
         amostra: g.n,
       });
     }

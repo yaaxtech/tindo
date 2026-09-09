@@ -15,7 +15,7 @@ vi.mock('@/lib/supabase/client', () => ({
     from: (tabela: string) => {
       const resposta = mocks.porTabela[tabela] ?? { data: null, error: null };
       const b: Record<string, unknown> = {};
-      for (const m of ['select', 'eq', 'gte', 'in', 'order', 'limit']) b[m] = () => b;
+      for (const m of ['select', 'eq', 'gte', 'in', 'order', 'limit', 'range']) b[m] = () => b;
       b.maybeSingle = () => Promise.resolve(resposta);
       // biome-ignore lint/suspicious/noThenProperty: imita o builder thenable do PostgREST
       b.then = (ok: (r: Resposta) => unknown, falha?: (e: unknown) => unknown) =>
@@ -72,6 +72,38 @@ describe('services/harness — erro real rejeita, vazio legítimo resolve vazio'
 
     mocks.porTabela.harness_github_runs = { data: null, error: erroSupabase };
     await expect(getGithubRuns()).rejects.toThrow(/github_runs/);
+  });
+
+  it('getGithubRuns: pagina além de 1000 e preserva o carimbo de coleta', async () => {
+    const primeira = Array.from({ length: 1000 }, (_, i) => ({
+      run_id: 2000 - i,
+      repo: 'yaaxtech/tindo',
+      evento: 'push',
+      branch: 'main',
+      head_sha: null,
+      conclusao: 'success',
+      criado_em: '2026-09-08T12:00:00Z',
+      iniciado_em: null,
+      atualizado_em: null,
+      pr_numero: null,
+      pr_criado_em: null,
+      pr_merged_em: null,
+      coletado_em: '2026-09-09T12:00:00Z',
+    }));
+    const segunda = [{ ...primeira[0], run_id: 1 }];
+    // O mock deste arquivo devolve a mesma resposta para toda página; trocar a
+    // lista entre as duas leituras mantém o teste focado no caminho de paginação.
+    let chamadas = 0;
+    mocks.porTabela.harness_github_runs = {
+      get data() {
+        chamadas += 1;
+        return chamadas === 1 ? primeira : segunda;
+      },
+      error: null,
+    };
+    const linhas = await getGithubRuns();
+    expect(linhas).toHaveLength(1001);
+    expect(linhas[0]?.coletado_em).toBe('2026-09-09T12:00:00Z');
   });
 
   it('getHarnessAlertas: sem avaliações → listas vazias; erro em qualquer consulta → throw', async () => {

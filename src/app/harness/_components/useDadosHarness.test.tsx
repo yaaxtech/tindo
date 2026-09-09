@@ -39,6 +39,10 @@ describe('useDadosHarness', () => {
     await waitFor(() => expect(result.current.carregando).toBe(false));
     expect(result.current.snap?.geradoEm).toBe('2026-09-07T10:00:00Z');
     expect(result.current.erro).toBeNull();
+    expect(result.current.fontes.snapshot.estado).toBe('fresco');
+    expect(result.current.fontes.githubRuns.estado).toBe('vazio');
+    expect(result.current.fontes.minutos.estado).toBe('vazio');
+    expect(result.current.fontes.alertas.estado).toBe('vazio');
   });
 
   it('Atualizar busca tudo de novo e troca o snapshot pelo mais recente', async () => {
@@ -66,6 +70,9 @@ describe('useDadosHarness', () => {
     expect(result.current.snap?.geradoEm).toBe('2026-09-07T10:00:00Z');
     expect(result.current.erro).toBe(ERRO_ATUALIZACAO);
     expect(result.current.carregando).toBe(false);
+    expect(result.current.fontes.snapshot.estado).toBe('anterior');
+    expect(result.current.fontes.snapshot.origem).toBe('harness/x');
+    expect(result.current.fontes.snapshot.mensagem).toContain('permission denied');
   });
 
   it('erro do Supabase nas fontes auxiliares preserva as quatro leituras anteriores e avisa', async () => {
@@ -87,6 +94,10 @@ describe('useDadosHarness', () => {
     expect(result.current.actionsSnapshot).toBe(actions);
     expect(result.current.alertas).toBe(alertas);
     expect(result.current.erro).toBe(ERRO_ATUALIZACAO);
+    expect(result.current.fontes.githubRuns.estado).toBe('anterior');
+    expect(result.current.fontes.githubRuns.origem).toBe('harness/x');
+    expect(result.current.fontes.minutos.estado).toBe('anterior');
+    expect(result.current.fontes.alertas.estado).toBe('anterior');
   });
 
   it('retorno vazio legítimo (sem erro) substitui a leitura anterior, sem aviso', async () => {
@@ -110,6 +121,10 @@ describe('useDadosHarness', () => {
     expect(result.current.actionsSnapshot).toBeNull();
     expect(result.current.alertas).toBe(vazio);
     expect(result.current.erro).toBeNull();
+    expect(result.current.fontes.snapshot.estado).toBe('vazio');
+    expect(result.current.fontes.githubRuns.estado).toBe('vazio');
+    expect(result.current.fontes.minutos.estado).toBe('vazio');
+    expect(result.current.fontes.alertas.estado).toBe('vazio');
   });
 
   it('null na primeira carga é "ainda sem dados", sem erro', async () => {
@@ -124,5 +139,18 @@ describe('useDadosHarness', () => {
     const { result } = await montarCarregado();
     expect(result.current.snap).toBeNull();
     expect(result.current.erro).toBe(ERRO_CARGA_INICIAL);
+    expect(result.current.fontes.snapshot.estado).toBe('erro');
+    expect(result.current.fontes.snapshot.origem).toBe('harness/x');
+  });
+
+  it('marca GitHub runs sem carimbo como fonte velha, sem depender do snapshot principal', async () => {
+    servicos.getHarnessSnapshot.mockResolvedValue(
+      snapshot(new Date(Date.now() - 30 * 60e3).toISOString()),
+    );
+    servicos.getGithubRuns.mockResolvedValue([{ run_id: 1, coletado_em: '2026-08-28T10:00:00Z' }]);
+    const { result } = await montarCarregado();
+    expect(result.current.fontes.snapshot.velho).toBe(false);
+    expect(result.current.fontes.githubRuns.velho).toBe(true);
+    expect(result.current.fontes.githubRuns.atualizadoEm).toBe('2026-08-28T10:00:00Z');
   });
 });

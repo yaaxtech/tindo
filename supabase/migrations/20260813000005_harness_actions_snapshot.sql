@@ -45,3 +45,8 @@ alter table public.harness_actions_snapshot enable row level security;
 drop policy if exists harness_actions_snapshot_read on public.harness_actions_snapshot;
 create policy harness_actions_snapshot_read on public.harness_actions_snapshot
   for select to anon, authenticated using (true);
+
+-- Explicit ACL: avoid inheriting broad default grants on a fresh installation.
+revoke all on public.harness_actions_snapshot from anon, authenticated;
+grant select on public.harness_actions_snapshot to anon, authenticated;
+grant all on public.harness_actions_snapshot to service_role;
