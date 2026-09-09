@@ -1,8 +1,7 @@
-import { createReadStream } from 'node:fs';
 import { opendir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
-import { createInterface } from 'node:readline';
+import { linhasJsonl } from './linhas-jsonl.mjs';
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 const MODELO_DESCONHECIDO = 'desconhecido';
@@ -213,8 +212,7 @@ async function analisarArquivo(caminho, erros, agoraMs) {
     leu: false,
   };
   let seq = 0;
-  const entrada = createReadStream(caminho);
-  const linhas = createInterface({ input: entrada, crlfDelay: Number.POSITIVE_INFINITY });
+  const linhas = linhasJsonl(caminho);
   try {
     for await (const linha of linhas) {
       resultado.linhas += 1;
@@ -288,8 +286,6 @@ async function analisarArquivo(caminho, erros, agoraMs) {
     resultado.leu = true;
   } catch {
     erros.value += 1;
-  } finally {
-    linhas.close();
   }
   return resultado;
 }
