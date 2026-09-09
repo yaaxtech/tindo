@@ -3,8 +3,8 @@ import { createReadStream } from 'node:fs';
 import { appendFile, opendir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
-import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
+import { linhasJsonl } from './linhas-jsonl.mjs';
 
 const CLAUDE_DIR = join(homedir(), '.claude');
 const PROJECTS_DIR = join(CLAUDE_DIR, 'projects');
@@ -22,10 +22,7 @@ function percentual(parte, total) {
 }
 
 async function lerJsonl(caminho, visitar) {
-  const linhas = createInterface({
-    input: createReadStream(caminho),
-    crlfDelay: Number.POSITIVE_INFINITY,
-  });
+  const linhas = linhasJsonl(caminho);
   for await (const linha of linhas) {
     if (!linha) continue;
     try {
@@ -148,9 +145,10 @@ async function listarTranscripts(dir, limite, saida = []) {
 }
 
 export async function analisarTranscript(caminho, { limite = 0, agora = Date.now() } = {}) {
+  const caminhos = Array.isArray(caminho) ? caminho : [caminho];
   const modelos = new Map();
   const sessao = {
-    id: basename(caminho, '.jsonl'),
+    id: basename(caminhos[0], '.jsonl'),
     chamadas: 0,
     tokens: 0,
     tokensPos200: 0,
@@ -163,38 +161,44 @@ export async function analisarTranscript(caminho, { limite = 0, agora = Date.now
     pico_contexto: 0,
   };
   const mensagens = new Map();
-  await lerJsonl(caminho, (registro) => {
-    const ts = Date.parse(registro.timestamp);
-    if (!Number.isFinite(ts) || ts < limite || ts >= agora) return;
-    if (registro.subtype === 'compact_boundary') sessao.compacts += 1;
-    if (registro.type !== 'assistant' || !registro.message?.usage) return;
-    const uso = registro.message.usage;
-    const id = registro.message.id || registro.uuid;
-    if (!id) return; // Sem identidade não é possível deduplicar blocos de streaming.
-    const anterior = mensagens.get(id);
-    const entrada = numero(uso.input_tokens);
-    const cache = numero(uso.cache_read_input_tokens);
-    const criacao = numero(uso.cache_creation_input_tokens);
-    const output = numero(uso.output_tokens);
-    const atual = anterior || {
-      input: 0,
-      cache: 0,
-      criacao: 0,
-      output: 0,
-      modelo: registro.message.model || 'desconhecido',
-      ferramentas: new Map(),
-    };
-    // Um assistant message pode ser emitido em vários blocos com o mesmo usage.
-    atual.input = Math.max(atual.input, entrada);
-    atual.cache = Math.max(atual.cache, cache);
-    atual.criacao = Math.max(atual.criacao, criacao);
-    atual.output = Math.max(atual.output, output);
-    for (const bloco of registro.message.content || []) {
-      if (bloco.type === 'tool_use' && bloco.id) atual.ferramentas.set(bloco.id, bloco.name);
-    }
-    mensagens.set(id, atual);
-  });
-  for (const uso of mensagens.values()) {
+  const compacts = new Set();
+  for (const arquivo of caminhos)
+    await lerJsonl(arquivo, (registro) => {
+      const ts = Date.parse(registro.timestamp);
+      if (!Number.isFinite(ts) || ts < limite || ts >= agora) return;
+      if (registro.subtype === 'compact_boundary')
+        compacts.add(registro.uuid || registro.timestamp);
+      if (registro.type !== 'assistant' || !registro.message?.usage) return;
+      const uso = registro.message.usage;
+      const id = registro.message.id || registro.uuid;
+      if (!id) return; // Sem identidade não é possível deduplicar blocos de streaming.
+      const anterior = mensagens.get(id);
+      const entrada = numero(uso.input_tokens);
+      const cache = numero(uso.cache_read_input_tokens);
+      const criacao = numero(uso.cache_creation_input_tokens);
+      const output = numero(uso.output_tokens);
+      const atual = anterior || {
+        ts,
+        input: 0,
+        cache: 0,
+        criacao: 0,
+        output: 0,
+        modelo: registro.message.model || 'desconhecido',
+        ferramentas: new Map(),
+      };
+      // Um assistant message pode ser emitido em vários blocos com o mesmo usage.
+      atual.ts = Math.min(atual.ts, ts);
+      atual.input = Math.max(atual.input, entrada);
+      atual.cache = Math.max(atual.cache, cache);
+      atual.criacao = Math.max(atual.criacao, criacao);
+      atual.output = Math.max(atual.output, output);
+      for (const bloco of registro.message.content || []) {
+        if (bloco.type === 'tool_use' && bloco.id) atual.ferramentas.set(bloco.id, bloco.name);
+      }
+      mensagens.set(id, atual);
+    });
+  sessao.compacts = compacts.size;
+  for (const uso of [...mensagens.values()].sort((a, b) => a.ts - b.ts)) {
     const tokens = uso.input + uso.cache + uso.criacao + uso.output;
     if (!tokens) continue;
     sessao.chamadas += 1;
@@ -281,8 +285,14 @@ export async function coletar({ dias = 14, agora = Date.now() } = {}) {
   const caminhos = await listarTranscripts(PROJECTS_DIR, limite);
   if (!caminhos.length) return vazio(diasValidos);
 
-  const sessoes = [];
+  const grupos = new Map();
   for (const caminho of caminhos) {
+    const id = basename(caminho, '.jsonl');
+    if (!grupos.has(id)) grupos.set(id, []);
+    grupos.get(id).push(caminho);
+  }
+  const sessoes = [];
+  for (const caminho of grupos.values()) {
     try {
       const sessao = await analisarTranscript(caminho, { limite, agora });
       if (sessao.chamadas > 0) sessoes.push(sessao);

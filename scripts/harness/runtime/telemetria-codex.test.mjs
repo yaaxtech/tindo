@@ -498,3 +498,24 @@ test('conta perguntas estruturais, respostas pareadas e pendências por dia', as
     functions_exec: 'somente_payload_estruturado',
   });
 });
+
+test('preserva separadores Unicode dentro de JSON válido em todos os runtimes', async () => {
+  const resultado = await comFixture(
+    [
+      linha(
+        '2026-09-08T00:00:00Z',
+        0,
+        { type: 'session_meta', id: 'unicode', text: 'a\u2028b\u2029c' },
+        'session_meta',
+      ),
+      linha('2026-09-08T00:00:01Z', 1, {
+        type: 'token_count',
+        info: { total_token_usage: { total_tokens: 100, input_tokens: 80, output_tokens: 20 } },
+      }),
+    ],
+    (dir) => coletarTelemetriaCodex({ dirs: [dir], agora: AGORA, dias: 14 }),
+  );
+  assert.equal(resultado.erros_leitura, 0);
+  assert.equal(resultado.tokens, 100);
+  assert.equal(resultado.sessoes, 1);
+});

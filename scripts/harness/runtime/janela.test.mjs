@@ -47,3 +47,46 @@ test('contexto Claude respeita timestamps e conta cada mensagem uma vez', async 
     await rm(dir, { recursive: true });
   }
 });
+
+test('une cópias da sessão preservando continuação e deduplicando compact e ferramentas', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'harness-copias-'));
+  const mensagem = (id, timestamp) => ({
+    timestamp,
+    type: 'assistant',
+    message: {
+      id,
+      model: 'fixture',
+      usage: { input_tokens: 100, output_tokens: 10 },
+      content: [
+        {
+          type: 'tool_use',
+          id: `tool-${id}`,
+          name: 'Agent',
+          input: { text: 'unicode\u2028válido\u2029' },
+        },
+      ],
+    },
+  });
+  const compact = {
+    timestamp: '2026-09-08T01:00:00Z',
+    subtype: 'compact_boundary',
+    uuid: 'compact-1',
+  };
+  const a = join(dir, 'a.jsonl');
+  const b = join(dir, 'b.jsonl');
+  const comum = mensagem('comum', '2026-09-08T00:00:00Z');
+  try {
+    await writeFile(a, [comum, compact].map(JSON.stringify).join('\r\n'));
+    await writeFile(
+      b,
+      [comum, compact, mensagem('nova', '2026-09-08T02:00:00Z')].map(JSON.stringify).join('\n'),
+    );
+    const r = await analisarTranscript([b, a], { agora: Date.parse('2026-09-09T00:00:00Z') });
+    assert.equal(r.chamadas, 2);
+    assert.equal(r.tokens, 220);
+    assert.equal(r.compacts, 1);
+    assert.equal(r.subagentes, 2);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
