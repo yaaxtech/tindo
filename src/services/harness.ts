@@ -1,3 +1,4 @@
+import { REPO_TEMPOS_GITHUB } from '@/lib/harness/github-timings';
 import { createClient } from '@/lib/supabase/client';
 import type {
   ActionsBlob,
@@ -73,6 +74,7 @@ export async function getGithubRuns(dias = 90): Promise<GithubRunLinha[]> {
         run_id, repo, evento, branch, head_sha, conclusao, criado_em, iniciado_em,
         atualizado_em, pr_numero, pr_criado_em, pr_merged_em, coletado_em
       `)
+      .eq('repo', REPO_TEMPOS_GITHUB)
       .gte('criado_em', desde)
       .order('criado_em', { ascending: false })
       .order('run_id', { ascending: false })

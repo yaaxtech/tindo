@@ -249,7 +249,7 @@ export interface ModeloRow {
   ok1: number;
 }
 
-export type VereditoAssinatura = 'aumentar' | 'cancelar' | 'observar' | 'manter';
+export type VereditoAssinatura = 'aumentar' | 'sem_registro' | 'observar' | 'manter';
 
 export interface AssinaturaCalc {
   nome: string;
@@ -690,11 +690,11 @@ export function custoAssinaturas(
     const quotas = g.quotaPorFrente[a.frente] || 0;
     const gasto = (a.valor * janelaDias) / 30;
     const custoSub = aceitas ? gasto / aceitas : null;
-    // Veredito de renovação: saturada (quer mais) > sem uso (cancelar) >
+    // Veredito de renovação: saturada (quer mais) > sem registro (informação neutra) >
     // cara por uso > rende bem. Usa o custo médio do harness como régua.
     let veredito: VereditoAssinatura;
     if (quotas > 0) veredito = 'aumentar';
-    else if (uso === 0) veredito = 'cancelar';
+    else if (uso === 0) veredito = 'sem_registro';
     else if (custoMedio != null && custoSub != null && custoSub > 1.6 * custoMedio)
       veredito = 'observar';
     else veredito = 'manter';

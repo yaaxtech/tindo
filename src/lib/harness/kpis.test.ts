@@ -792,7 +792,7 @@ describe('custoAssinaturas', () => {
     const gemini = calc[3];
     expect(gemini?.uso).toBe(0);
     expect(gemini?.custoSub).toBeNull();
-    expect(gemini?.veredito).toBe('cancelar');
+    expect(gemini?.veredito).toBe('sem_registro');
   });
 });
 

@@ -140,12 +140,9 @@ export function Autonomia({
                 como={COMO_CODEX}
               />
               <Linha
-                rotulo="Pendentes"
+                rotulo="Sem resposta identificada"
                 valor={String(k.codex.pendentes)}
                 como={COMO_CODEX}
-                destaque={
-                  k.codex.pendentes != null && k.codex.pendentes > 0 ? 'text-warning' : undefined
-                }
               />
             </div>
           )}

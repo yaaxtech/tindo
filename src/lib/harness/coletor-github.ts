@@ -1,4 +1,5 @@
 import type { GithubRunLinha } from '@/types/harness';
+import { REPO_TEMPOS_GITHUB } from './github-timings';
 
 // Coletor dos tempos crus do GitHub Actions (passo do /api/cron/diario).
 //
@@ -10,7 +11,7 @@ import type { GithubRunLinha } from '@/types/harness';
 // Economia de chamadas: NUNCA uma requisição de PR por run. São duas listagens
 // paginadas (runs e PRs fechados) casadas em memória por head_sha/número.
 
-export const REPOS_ATIVOS = ['seucamarao/seucamaraov1', 'yaaxtech/tindo'] as const;
+export const REPOS_ATIVOS = [REPO_TEMPOS_GITHUB] as const;
 export const DIAS_COLETA = 90;
 const POR_PAGINA = 100;
 const MAX_PAGINAS = 20;
@@ -172,7 +173,7 @@ export async function coletarRunsGithub(
     agora = Date.now(),
     fetchImpl = fetch,
   } = opcoes;
-  const repos = opcoes.repos ?? (token ? REPOS_ATIVOS : ['yaaxtech/tindo']);
+  const repos = opcoes.repos ?? REPOS_ATIVOS;
 
   const corte = agora - dias * 864e5;
   const resultado: ResultadoColeta = {

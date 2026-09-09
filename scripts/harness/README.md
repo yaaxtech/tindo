@@ -12,7 +12,7 @@ no contrato público são enviados. Não carrega títulos de PR ou mensagens de
 commit. `coletar-actions.mjs --dump /tmp/revisao.json` coleta e salva o cache local,
 mas não publica; o arquivo `.runs.json` acompanhante contém o lote revisável.
 
-`telemetria-codex.mjs` é instalado ao lado dos arquivos de runtime. O consumo
+`runtime/telemetria-codex.mjs` é instalado junto aos demais arquivos de runtime. O consumo
 Codex permanece separado de Claude: os provedores contabilizam tokens de forma
 diferente. Perguntas Codex não são convertidas em aceite/correção por heurística.
 Durações antigas sem medição e tokens por entrega sem vínculo ficam sem valor;
@@ -22,7 +22,7 @@ como frente histórica, sem ser recomendado como assinatura ativa.
 ## Validação
 
 ```
-node --test scripts/harness/runtime/metricas-snapshot.test.mjs scripts/harness/runtime/janela.test.mjs scripts/harness/telemetria-codex.test.mjs
+node --test scripts/harness/runtime/metricas-snapshot.test.mjs scripts/harness/runtime/janela.test.mjs scripts/harness/runtime/telemetria-codex.test.mjs
 node scripts/harness/runtime/coletar-actions.mjs --self-test
 ```
 
@@ -40,3 +40,11 @@ gerado por `--dump` pode ser reutilizado com
 GitHub novamente antes de atualizar as datas no painel. O orçamento por
 execução continua limitado por `ACTIONS_TETO` e a coleta para novas chamadas
 de jobs quando identifica esgotamento da quota.
+
+Os tempos de entrega (`harness_github_runs`) são exclusivos de `yaaxtech/tindo`;
+o snapshot de minutos continua cobrindo os dois repositórios. PRs são identificados
+por repositório e número, nunca apenas pelo número.
+
+Tokens incluem releituras reais de contexto em novas execuções/forks. Cópias do
+mesmo evento de log são deduplicadas; não se desconta uma leitura efetivamente
+feita por outro fluxo apenas porque o texto do contexto era compartilhado.

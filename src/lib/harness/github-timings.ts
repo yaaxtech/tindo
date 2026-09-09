@@ -19,6 +19,8 @@ import type {
 // Toda diferença negativa (relógio torto do runner) vira null, nunca número
 // negativo — um segmento negativo envenenaria a mediana em silêncio.
 
+export const REPO_TEMPOS_GITHUB = 'yaaxtech/tindo';
+
 const DIA_MS = 864e5;
 const SEMANA_MS = 7 * DIA_MS;
 
@@ -70,12 +72,13 @@ const ehVerde = (run: GithubRunLinha): boolean => run.conclusao === 'success';
  */
 function esperaMergePorRun(runs: GithubRunLinha[]): Map<number, number> {
   // Agrupa por PR — reunindo o que veio casado por head_sha e por pr_numero.
-  const porPr = new Map<number, GithubRunLinha[]>();
+  const porPr = new Map<string, GithubRunLinha[]>();
   for (const run of runs) {
     if (run.pr_numero == null || !run.pr_merged_em) continue;
-    const lista = porPr.get(run.pr_numero);
+    const chave = `${run.repo}#${run.pr_numero}`;
+    const lista = porPr.get(chave);
     if (lista) lista.push(run);
-    else porPr.set(run.pr_numero, [run]);
+    else porPr.set(chave, [run]);
   }
 
   const saida = new Map<number, number>();

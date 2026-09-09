@@ -6,6 +6,7 @@ type Resposta = { data?: unknown; error?: { message: string } | null };
 
 const mocks = vi.hoisted(() => ({
   porTabela: {} as Record<string, Resposta>,
+  filtros: [] as { tabela: string; coluna: string; valor: unknown }[],
 }));
 
 // Builder mínimo do PostgREST: todo método encadeia e o `await` (ou
@@ -15,7 +16,11 @@ vi.mock('@/lib/supabase/client', () => ({
     from: (tabela: string) => {
       const resposta = mocks.porTabela[tabela] ?? { data: null, error: null };
       const b: Record<string, unknown> = {};
-      for (const m of ['select', 'eq', 'gte', 'in', 'order', 'limit', 'range']) b[m] = () => b;
+      for (const m of ['select', 'gte', 'in', 'order', 'limit', 'range']) b[m] = () => b;
+      b.eq = (coluna: string, valor: unknown) => {
+        mocks.filtros.push({ tabela, coluna, valor });
+        return b;
+      };
       b.maybeSingle = () => Promise.resolve(resposta);
       // biome-ignore lint/suspicious/noThenProperty: imita o builder thenable do PostgREST
       b.then = (ok: (r: Resposta) => unknown, falha?: (e: unknown) => unknown) =>
@@ -36,6 +41,7 @@ const erroSupabase = { message: 'permission denied for table' };
 
 beforeEach(() => {
   mocks.porTabela = {};
+  mocks.filtros = [];
 });
 
 describe('services/harness — erro real rejeita, vazio legítimo resolve vazio', () => {
@@ -104,6 +110,16 @@ describe('services/harness — erro real rejeita, vazio legítimo resolve vazio'
     const linhas = await getGithubRuns();
     expect(linhas).toHaveLength(1001);
     expect(linhas[0]?.coletado_em).toBe('2026-09-09T12:00:00Z');
+  });
+
+  it('getGithubRuns mantém o escopo do TinDo na consulta', async () => {
+    mocks.porTabela.harness_github_runs = { data: [], error: null };
+    await getGithubRuns();
+    expect(mocks.filtros).toContainEqual({
+      tabela: 'harness_github_runs',
+      coluna: 'repo',
+      valor: 'yaaxtech/tindo',
+    });
   });
 
   it('getHarnessAlertas: sem avaliações → listas vazias; erro em qualquer consulta → throw', async () => {

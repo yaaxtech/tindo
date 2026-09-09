@@ -51,6 +51,7 @@ const ESTADO = join(DIR, 'actions-coletados.json');
 const ENV_FILE = '/Users/maiaemanuel/Apps YaaX/tindo/.env.local';
 
 const REPOS = ['seucamarao/seucamaraov1', 'yaaxtech/tindo'];
+const REPO_TEMPOS = 'yaaxtech/tindo';
 const REPO_DESTINO = 'seucamarao/seucamaraov1'; // de quem lemos o disjuntor
 const DIAS = 90;
 // Teto de runs novas por passada. Sobrescrevível por env só para depuração —
@@ -288,6 +289,20 @@ async function agregarRun(repo, run, buscarJobs = buscarJobsRun) {
     }
   }
 
+  if (
+    listaJobs.length === 0 &&
+    run.conclusion &&
+    !['cancelled', 'skipped'].includes(run.conclusion)
+  ) {
+    // Empty input is unknown, not measured zero. Cool down retries so a block
+    // of unavailable jobs cannot monopolize every hourly backfill budget.
+    return {
+      ...linha,
+      jobs_indisponiveis: true,
+      tentar_apos: new Date(Date.now() + 24 * 3600e3).toISOString(),
+    };
+  }
+
   // Uma run concluída só com jobs cancelados/skipped antes de receber runner
   // vale zero, mas precisa ser persistida para não consumir o teto eternamente.
   return linha.jobs > 0 || todosIgnoraveisTerminais ? linha : null;
@@ -346,6 +361,7 @@ function montarBlob(runs, prsPorRepo, mergeadosCiclo, cicloInicio, destino, parc
   const porHora = new Map();
 
   for (const run of Object.values(runs)) {
+    if (run.jobs_indisponiveis) continue;
     const chave = `${run.repo}|${run.dia}`;
     const dia = porDia.get(chave) ?? {
       dia: run.dia,
@@ -429,7 +445,9 @@ function montarBlob(runs, prsPorRepo, mergeadosCiclo, cicloInicio, destino, parc
 // Only the existing public run contract; never PR titles or commit messages.
 function normalizarRuns(repo, runs, porNumero, porSha, coletadoEm, todos = false) {
   return runs
-    .filter((r) => todos || r.event === 'push' || r.event === 'pull_request')
+    .filter(
+      (r) => todos || (repo === REPO_TEMPOS && (r.event === 'push' || r.event === 'pull_request')),
+    )
     .map((run) => {
       const numero = run.pull_requests?.[0]?.number;
       const pr = porSha.get(run.head_sha) || porNumero.get(numero);
@@ -449,6 +467,14 @@ function normalizarRuns(repo, runs, porNumero, porSha, coletadoEm, todos = false
         coletado_em: coletadoEm,
       };
     });
+}
+
+function precisaColetar(run, cache, agora) {
+  if (!run.conclusion) return false;
+  if (!cache) return true;
+  if (!cache.jobs_indisponiveis) return false;
+  const depois = Date.parse(cache.tentar_apos);
+  return !Number.isFinite(depois) || depois <= agora;
 }
 
 // ── principal ──────────────────────────────────────────────────────────────
@@ -508,7 +534,7 @@ async function main() {
       const coletadoEm = new Date().toISOString();
       runsBrutas.push(...normalizarRuns(repo, runs, porNumero, porSha, coletadoEm));
       inventarioCompleto.push(...normalizarRuns(repo, runs, porNumero, porSha, coletadoEm, true));
-      const todosPendentes = runs.filter((r) => r.conclusion && !estado.runs[r.id]);
+      const todosPendentes = runs.filter((r) => precisaColetar(r, estado.runs[r.id], agora));
       // Reserve a share for each repository; a busy repo must not starve TinDo.
       const reserva = Math.ceil(restante / (REPOS.length - REPOS.indexOf(repo)));
       const pendentes = todosPendentes.slice(0, Math.max(0, reserva));
@@ -554,6 +580,9 @@ async function main() {
   }
 
   const runsPodadas = gravarEstado(estado, corte);
+  const indisponiveis = Object.values(runsPodadas).filter((r) => r.jobs_indisponiveis).length;
+  if (indisponiveis)
+    avisos.push(`${indisponiveis} execuções com jobs indisponíveis; nova tentativa programada`);
   const destino = await lerDestino();
   const blob = montarBlob(
     runsPodadas,
@@ -724,7 +753,7 @@ async function selfTest() {
   assert.equal(migrado.runs.contaminado, undefined, 'v1 cancelada deve ser recoletada');
   assert.equal(migrado.runs.preservado.min_nuvem, 2, 'v1 sem cancelamento deve ser preservada');
   const cru = normalizarRuns(
-    'org/repo',
+    REPO_TEMPOS,
     [
       {
         id: 4,
@@ -743,6 +772,35 @@ async function selfTest() {
   assert.equal(cru[0].pr_numero, 3);
   assert.equal(cru[0].coletado_em, '2026-09-09T00:00:00Z');
   assert.equal('title' in cru[0], false);
+  const semJobs = await agregarRun(
+    'org/repo',
+    { id: 10, conclusion: 'success', created_at: '2026-09-01T00:00:00Z' },
+    async () => ({ jobs: [] }),
+  );
+  assert.equal(semJobs.jobs_indisponiveis, true);
+  assert.equal(
+    precisaColetar({ conclusion: 'success' }, semJobs, Date.parse(semJobs.tentar_apos) - 1),
+    false,
+  );
+  assert.equal(
+    precisaColetar({ conclusion: 'success' }, semJobs, Date.parse(semJobs.tentar_apos) + 1),
+    true,
+  );
+  assert.equal(
+    montarBlob({ 10: semJobs }, new Map(), 0, '2026-09-01', {}, 'parcial').dias.length,
+    0,
+  );
+  assert.equal(
+    normalizarRuns(
+      'seucamarao/seucamaraov1',
+      [{ id: 1, event: 'push', created_at: '2026-09-01T00:00:00Z' }],
+      new Map(),
+      new Map(),
+      '2026-09-09T00:00:00Z',
+    ).length,
+    0,
+    'tempos de outro repo não entram no snapshot TinDo',
+  );
   console.log('self-test coletar-actions: ok');
 }
 

@@ -83,6 +83,24 @@ describe('medidasDosRuns — os 4 segmentos', () => {
     expect(m?.espera_merge).toBe(25 * 60);
   });
 
+  it('números de PR iguais de repos diferentes não compartilham a espera pelo merge', () => {
+    const a = run({
+      repo: 'yaaxtech/tindo',
+      pr_numero: 85,
+      atualizado_em: '2026-08-13T10:00:00Z',
+      pr_merged_em: '2026-08-13T10:10:00Z',
+    });
+    const b = run({
+      repo: 'seucamarao/seucamaraov1',
+      pr_numero: 85,
+      atualizado_em: '2026-08-13T11:00:00Z',
+      pr_merged_em: '2026-08-13T11:30:00Z',
+    });
+    const medidas = medidasDosRuns([a, b]);
+    expect(medidas.find((m) => m.runId === a.run_id)?.espera_merge).toBe(600);
+    expect(medidas.find((m) => m.runId === b.run_id)?.espera_merge).toBe(1800);
+  });
+
   it('deploy = execução do run de push no branch padrão', () => {
     const r = run({
       evento: 'push',

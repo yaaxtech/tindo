@@ -139,6 +139,13 @@ describe('coletarRunsGithub', () => {
     expect(r.repos).toEqual(['yaaxtech/tindo']);
   });
 
+  it('com token também mantém o escopo dos tempos no TinDo', async () => {
+    const destino = destinoFake();
+    const { impl } = fetchFake({ runs: [[runApi()]], pulls: [[prApi()]] });
+    const r = await coletarRunsGithub(destino, { token: 'fixture', agora: AGORA, fetchImpl: impl });
+    expect(r.repos).toEqual(['yaaxtech/tindo']);
+  });
+
   it('para de paginar ao passar dos 90 dias', async () => {
     const destino = destinoFake();
     const primeira = Array.from({ length: 100 }, (_, i) => runApi({ id: i + 1 }));
