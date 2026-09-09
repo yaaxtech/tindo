@@ -12,7 +12,7 @@ import type { SecaoNavGrupo } from './secoes';
  * shadcn. Só a CASCA de navegação — a lista de seções vive em `secoes.ts`.
  *
  * Vive dentro do container sticky que também segura o header (ver page.tsx) —
- * por isso ela não tem `sticky`/`top` próprios. De md pra cima quebra em duas
+ * por isso ela não tem `sticky`/`top` próprios. De md pra cima quebra em
  * linhas; abaixo disso rola na horizontal, em vez de virar parede de botões.
  */
 export function NavPainel({ grupos }: { grupos: SecaoNavGrupo[] }) {
@@ -219,7 +219,10 @@ export function NavPainel({ grupos }: { grupos: SecaoNavGrupo[] }) {
           rolagem horizontal só abaixo de md, onde o gesto é natural. */}
       <div className="mx-auto flex w-full max-w-3xl items-center gap-x-5 gap-y-1 overflow-x-auto px-6 py-2 md:flex-wrap md:overflow-x-visible">
         {grupos.map((grupo) => (
-          <div key={grupo.id} className="flex shrink-0 items-center gap-1">
+          <div
+            key={grupo.id}
+            className="flex shrink-0 items-center gap-1 md:max-w-full md:shrink md:flex-wrap"
+          >
             <span className="mr-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-text-muted">
               {grupo.rotulo}
             </span>

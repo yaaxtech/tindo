@@ -7,7 +7,7 @@ import { Card, type Status, corPill, corStatus } from './ui';
 // dono na renovação. Os nomes das chaves vêm de kpis.ts e a fórmula não mudou.
 const VEREDITO: Record<VereditoAssinatura, { st: Status; txt: (quotas: number) => string }> = {
   aumentar: { st: 'acc', txt: (q) => `saturada — ${q}× barrada por quota nos registros` },
-  cancelar: { st: 'crit', txt: () => 'sem uso no período' },
+  sem_registro: { st: 'mut', txt: () => 'nenhum despacho registrado no período' },
   observar: { st: 'warn', txt: () => 'custo alto por tarefa — observar' },
   manter: { st: 'good', txt: () => 'rende bem' },
 };

@@ -10,7 +10,14 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     css: false,
-    exclude: ['.claude/**', 'node_modules/**', '.next/**', 'supabase/**', 'tests/e2e/**'],
+    exclude: [
+      '.claude/**',
+      'node_modules/**',
+      '.next/**',
+      'supabase/**',
+      'tests/e2e/**',
+      'scripts/harness/**/*.test.mjs',
+    ],
   },
   resolve: {
     alias: {

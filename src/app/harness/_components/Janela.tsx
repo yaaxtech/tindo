@@ -1,4 +1,5 @@
 import {
+  JANELA_LIMIAR_MS,
   estadoJanela,
   formatarAcimaTeto,
   formatarHoraColeta,
@@ -8,19 +9,17 @@ import {
   formatarPct,
   formatarTokens,
 } from '@/lib/harness/janela';
-import type { JanelaBlob, JanelaCampo } from '@/types/harness';
+import type { JanelaBlob, JanelaCampo, JanelaCodex } from '@/types/harness';
 import { Card, PopoverInfo, Secao } from './ui';
 
 const INFO_BLOCO =
-  'Retrato do consumo de contexto das sessões do Claude: quanto do gasto é reler a conversa, quanto vai embora depois da chamada 200, e se os gestos de higiene (subagente, chip, compactar, mensagem entre chats) estão acontecendo. Snapshot calculado na máquina local e atualizado de hora em hora — não segue o filtro do painel.';
+  'Retrato do consumo de contexto das sessões do Claude: quanto do gasto é reler a conversa, quanto foi registrado depois da chamada 200, e se os gestos de higiene (subagente, chip, compactar, mensagem entre chats) estão acontecendo. Quando disponível, o Codex aparece em uma medição separada. Snapshot calculado na máquina local e atualizado de hora em hora — não segue o filtro do painel.';
 const COMO_PREFIXO =
   'Toda chamada ao modelo paga para ler a conversa inteira de novo. Este número mede quanto do gasto total foi só reler o que já estava escrito, em vez de trabalho novo. Alto é esperado — mas perto de 100% com sessões longas indica conversa inchada.';
 const COMO_POS_200 =
-  'Depois da chamada 200 a sessão já está longa demais e cada chamada custa caro. Este percentual é uma estimativa do gasto nesse trecho — um proxy do que compactar antes poderia reduzir, não uma economia garantida.';
-const COMO_TETO =
-  'Sessões que passaram de 200 chamadas sem compactar. Cada uma delas pagou o preço cheio de uma janela inchada até o fim.';
+  'Mostra a fatia do gasto que aconteceu depois da chamada 200. É um diagnóstico do histórico de chamadas e um proxy para investigar compactação; não prova uma economia que teria acontecido.';
 const COMO_TOKENS_TAREFA =
-  'O total de tokens do período dividido pelo que foi entregue. Serve como régua no tempo: se as sessões ficarem mais curtas e os gestos de higiene subirem, este número tem que cair.';
+  'Fica disponível quando a coleta consegue ligar tokens a uma construção entregue. Sem esse vínculo, o painel deixa o valor em branco para não atribuir consumo a uma tarefa por aproximação.';
 const COMO_GESTOS =
   'Os gestos que mantêm a janela curta: subagente (manda parte do trabalho para um assistente separado, fora da conversa principal), chip, compactação (resumo da conversa antes de estourar o teto) e mensagem entre chats (uma janela pergunta para outra em vez de trazer todo o contexto de lá para cá). A média por sessão perto de zero quer dizer que ninguém está limpando a janela. Mensagem entre chats só passou a ser medida em 15/08 — coleta mais antiga aparece como "sem sinal", não como zero.';
 const COMO_FAIXAS =
@@ -47,6 +46,31 @@ function Kpi({
 function Corpo({ blob }: { blob: JanelaBlob }) {
   const { totais, kpis } = blob;
   const mensagens = formatarMensagensEntreChats(kpis.gestos, totais.sessoes);
+  const acima = kpis.sessoes_acima_teto;
+  const usaTokens = acima?.unidade_teto === 'tokens';
+  const tituloAcima = usaTokens
+    ? 'Sessões acima do limite de contexto'
+    : 'Sessões acima do teto de chamadas (legado)';
+  const detalheAcima = acima ? (
+    <>
+      {usaTokens
+        ? `passaram de ${formatarTokens(acima.teto)} tokens de contexto${acima.escopo ? ` (${acima.escopo})` : ''}`
+        : `passaram do corte histórico de ${formatarNumero(acima.teto)} chamadas`}
+      <PopoverInfo
+        texto={
+          usaTokens
+            ? 'O snapshot novo mede sessões cujo pico de contexto passou do limite de tokens configurado para a fonte. Isso descreve um pico; não afirma que houve ociosidade nem que compactar teria gerado uma economia certa.'
+            : 'Snapshot legado: este corte de chamadas era usado pela coleta antiga. Ele não representa um teto configurado e não permite concluir que houve economia perdida ou que a sessão ficou sem trabalho.'
+        }
+      />
+    </>
+  ) : (
+    'sem leitura para este indicador'
+  );
+  const detalheTokens =
+    kpis.tokens_por_tarefa == null
+      ? (kpis.motivo_tokens_por_tarefa ?? COMO_TOKENS_TAREFA)
+      : 'valor publicado somente quando existe vínculo real com uma construção entregue';
   return (
     <div className="space-y-2.5">
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -75,24 +99,23 @@ function Corpo({ blob }: { blob: JanelaBlob }) {
           }
         />
         <Kpi
-          titulo="Sessões acima do teto"
+          titulo={tituloAcima}
           valor={formatarAcimaTeto(kpis.sessoes_acima_teto, totais.sessoes)}
-          detalhe={
-            <>
-              passaram de {kpis.sessoes_acima_teto?.teto ?? 200} chamadas sem compactar
-              <PopoverInfo texto={COMO_TETO} />
-            </>
-          }
+          detalhe={detalheAcima}
         />
         <Kpi
           titulo="Tokens por tarefa"
           valor={formatarTokens(kpis.tokens_por_tarefa)}
           detalhe={
             <>
-              custo de contexto de cada coisa entregue
+              {detalheTokens}
               <PopoverInfo texto={COMO_TOKENS_TAREFA} />
-              <br />
-              sobre {formatarNumero(totais.sessoes)} sessões
+              {kpis.tokens_por_tarefa != null && (
+                <>
+                  <br />
+                  sobre {formatarNumero(totais.sessoes)} sessões
+                </>
+              )}
             </>
           }
         />
@@ -200,6 +223,60 @@ function Corpo({ blob }: { blob: JanelaBlob }) {
   );
 }
 
+function Codex({ dados }: { dados: JanelaCodex | null | undefined }) {
+  if (dados == null) return null;
+  if (!dados.disponivel) {
+    return (
+      <Card>
+        <div className="text-xs font-semibold text-text-muted">Codex</div>
+        <p className="mt-1 text-sm text-text-primary">Sem leitura do Codex nesta coleta.</p>
+        <p className="mt-1 text-xs leading-relaxed text-text-muted">
+          A fonte existe no contrato, mas ainda não entregou dados utilizáveis.
+        </p>
+      </Card>
+    );
+  }
+
+  const coletado = dados.source_max_ts ? Date.parse(dados.source_max_ts) : Number.NaN;
+  const velho = !Number.isFinite(coletado) || Date.now() - coletado > JANELA_LIMIAR_MS;
+  const perguntas = dados.perguntas_por_dia.reduce((total, dia) => total + dia.perguntas, 0);
+  const respondidas = dados.perguntas_por_dia.reduce((total, dia) => total + dia.respondidas, 0);
+  const pendentes = dados.perguntas_por_dia.reduce((total, dia) => total + dia.pendentes, 0);
+  return (
+    <Card>
+      <div className="flex flex-wrap items-baseline gap-2">
+        <div className="text-sm font-semibold text-text-primary">Codex</div>
+        <span className="text-[11.5px] text-text-muted">fonte separada</span>
+        {velho && <span className="text-[11.5px] text-warning">fonte velha</span>}
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <div className="text-lg font-bold tabular-nums">{formatarTokens(dados.tokens)}</div>
+          <div className="text-[11px] text-text-muted">tokens</div>
+        </div>
+        <div>
+          <div className="text-lg font-bold tabular-nums">{formatarNumero(dados.sessoes)}</div>
+          <div className="text-[11px] text-text-muted">sessões</div>
+        </div>
+        <div>
+          <div className="text-lg font-bold tabular-nums">{formatarNumero(dados.chamadas)}</div>
+          <div className="text-[11px] text-text-muted">chamadas</div>
+        </div>
+      </div>
+      <p className="mt-2 text-[11.5px] leading-snug text-text-muted">
+        cobertura: {formatarNumero(dados.arquivos_lidos)} arquivos lidos ·{' '}
+        {formatarNumero(dados.erros_leitura)} erros · {dados.dias} dias
+        {dados.source_max_ts && ` · última fonte ${formatarHoraColeta(dados.source_max_ts)}`}
+      </p>
+      <p className="mt-1 text-[11.5px] leading-snug text-text-muted">
+        Perguntas do Codex: {formatarNumero(perguntas)} · respondidas {formatarNumero(respondidas)}
+        {'·'}
+        pendentes {formatarNumero(pendentes)}
+      </p>
+    </Card>
+  );
+}
+
 export function Janela({ campo, id }: { campo: JanelaCampo | undefined; id?: string }) {
   const estado = estadoJanela(campo);
 
@@ -242,6 +319,7 @@ export function Janela({ campo, id }: { campo: JanelaCampo | undefined; id?: str
             </div>
           )}
           <Corpo blob={estado.blob} />
+          <Codex dados={estado.blob.codex} />
         </div>
       )}
     </Secao>

@@ -1,4 +1,5 @@
 import type { GithubRunLinha } from '@/types/harness';
+import { REPO_TEMPOS_GITHUB } from './github-timings';
 
 // Coletor dos tempos crus do GitHub Actions (passo do /api/cron/diario).
 //
@@ -10,7 +11,7 @@ import type { GithubRunLinha } from '@/types/harness';
 // Economia de chamadas: NUNCA uma requisição de PR por run. São duas listagens
 // paginadas (runs e PRs fechados) casadas em memória por head_sha/número.
 
-export const REPOS_ATIVOS = ['yaaxtech/tindo'] as const;
+export const REPOS_ATIVOS = [REPO_TEMPOS_GITHUB] as const;
 export const DIAS_COLETA = 90;
 const POR_PAGINA = 100;
 const MAX_PAGINAS = 20;
@@ -118,7 +119,12 @@ async function paginar<T>(
 }
 
 /** Casa runs com PRs em memória e normaliza para as colunas da tabela. */
-export function normalizar(repo: string, runs: RunApi[], prs: PrApi[]): GithubRunLinha[] {
+export function normalizar(
+  repo: string,
+  runs: RunApi[],
+  prs: PrApi[],
+  coletadoEm = new Date().toISOString(),
+): GithubRunLinha[] {
   const porSha = new Map<string, PrApi>();
   const porNumero = new Map<number, PrApi>();
   for (const pr of prs) {
@@ -147,6 +153,7 @@ export function normalizar(repo: string, runs: RunApi[], prs: PrApi[]): GithubRu
       pr_numero: pr?.number ?? doRun ?? null,
       pr_criado_em: pr?.created_at ?? null,
       pr_merged_em: pr?.merged_at ?? null,
+      coletado_em: coletadoEm,
     });
   }
   return linhas;
@@ -161,12 +168,12 @@ export async function coletarRunsGithub(
   opcoes: OpcoesColeta = {},
 ): Promise<ResultadoColeta> {
   const {
-    repos = REPOS_ATIVOS,
     dias = DIAS_COLETA,
     token = process.env.GITHUB_TOKEN ?? null,
     agora = Date.now(),
     fetchImpl = fetch,
   } = opcoes;
+  const repos = opcoes.repos ?? REPOS_ATIVOS;
 
   const corte = agora - dias * 864e5;
   const resultado: ResultadoColeta = {
@@ -196,7 +203,7 @@ export async function coletarRunsGithub(
         fetchImpl,
       );
 
-      const linhas = normalizar(repo, runs, prs);
+      const linhas = normalizar(repo, runs, prs, new Date(agora).toISOString());
       if (linhas.length === 0) continue;
       const { erro } = await destino.upsert(linhas);
       if (erro) {

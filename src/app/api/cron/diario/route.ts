@@ -1,3 +1,4 @@
+import { REPO_TEMPOS_GITHUB } from '@/lib/harness/github-timings';
 export const dynamic = 'force-dynamic';
 
 import { ErroNaoAutenticado } from '@/lib/api/erros';
@@ -114,6 +115,7 @@ async function handler(request: NextRequest) {
             'run_id, repo, evento, branch, head_sha, conclusao, criado_em, iniciado_em, ' +
               'atualizado_em, pr_numero, pr_criado_em, pr_merged_em',
           )
+          .eq('repo', REPO_TEMPOS_GITHUB)
           .gte('criado_em', desde)
           .order('criado_em', { ascending: false })
           .limit(1000);

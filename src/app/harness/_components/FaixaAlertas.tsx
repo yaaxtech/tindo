@@ -21,7 +21,7 @@ const TEXTO: Record<CodigoAlerta, { significa: string; fazer: string }> = {
   },
   retrabalho_alto: {
     significa:
-      'Muitas tarefas precisaram de uma rodada extra. Cada rodada extra custa um ciclo inteiro de despacho e revisão.',
+      'Muitos despachos julgáveis falharam, foram escalados ou precisaram de uma rodada extra, em vez de sair como ok de primeira.',
     fazer:
       'É o mesmo problema visto de outro ângulo: o terreno marcado com ▲ abaixo é o que está puxando o número.',
   },
@@ -38,9 +38,9 @@ const TEXTO: Record<CodigoAlerta, { significa: string; fazer: string }> = {
   },
   quota_zerada: {
     significa:
-      'Em duas semanas, nenhum despacho bateu no limite de nenhuma assinatura. Sobra capacidade paga e não usada.',
+      'Em duas semanas, nenhum despacho registrado bateu no limite de uma assinatura. Isso só informa ausência de bloqueios; não mede saldo, ociosidade ou o plano adequado.',
     fazer:
-      'É dinheiro parado: dá para mandar mais trabalho para essas assinaturas ou baixar o plano de uma delas.',
+      'Nenhuma ação é recomendada por este indicador. Leia volume, qualidade e uso registrado antes de decidir sobre uma assinatura.',
   },
   valor_baixo: {
     significa:
@@ -154,7 +154,7 @@ export function FaixaAlertas({
       titulo="Precisa da sua atenção"
       info={INFO_SECAO}
       subtitulo={`checado em ${dataBR(ultima.avaliado_em)} · conferido de novo agora`}
-      escopo={{ tipo: 'fixo', rotulo: 'a cada 14 dias' }}
+      escopo={{ tipo: 'fixo', rotulo: 'base · últimos 14 dias' }}
     >
       {vigentes.length === 0 ? (
         <Card className="flex flex-wrap items-center gap-x-3 gap-y-1">

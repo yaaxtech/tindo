@@ -116,4 +116,47 @@ describe('Janela', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
     expect(screen.getByText(/dado insuficiente/)).toBeInTheDocument();
   });
+
+  it('mostra Codex separado e explica tokens por tarefa sem vínculo real', () => {
+    render(
+      <Janela
+        campo={blob({
+          kpis: {
+            pct_prefixo: null,
+            pct_pos_200: null,
+            sessoes_acima_teto: {
+              n: 2,
+              pct: 0.1,
+              teto: 400000,
+              unidade_teto: 'tokens',
+              escopo: 'claude',
+            },
+            tokens_por_tarefa: null,
+            motivo_tokens_por_tarefa: 'vínculo com a construção ainda não disponível',
+            gestos: null,
+          },
+          codex: {
+            disponivel: true,
+            sessoes: 3,
+            chamadas: 12,
+            tokens: 9000,
+            input: 6000,
+            cache_read: 1000,
+            output: 2000,
+            source_max_ts: new Date().toISOString(),
+            arquivos_lidos: 8,
+            erros_leitura: 1,
+            por_modelo: [],
+            perguntas_por_dia: [{ data: '2026-09-09', perguntas: 2, respondidas: 1, pendentes: 1 }],
+            dias: 90,
+            gerado_em: new Date().toISOString(),
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText('Codex')).toBeInTheDocument();
+    expect(screen.getByText('9 mil')).toBeInTheDocument();
+    expect(screen.getByText(/vínculo com a construção ainda não disponível/)).toBeInTheDocument();
+    expect(screen.getByText(/passaram de 400 mil tokens de contexto/)).toBeInTheDocument();
+  });
 });

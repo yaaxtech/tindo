@@ -1,3 +1,4 @@
+import { REPO_TEMPOS_GITHUB } from '@/lib/harness/github-timings';
 import { createClient } from '@/lib/supabase/client';
 import type {
   ActionsBlob,
@@ -61,24 +62,33 @@ export async function getHarnessSnapshot(): Promise<HarnessSnapshot | null> {
 export async function getGithubRuns(dias = 90): Promise<GithubRunLinha[]> {
   const supabase = createClient();
   const desde = new Date(Date.now() - dias * 864e5).toISOString();
-  const { data, error } = await supabase
-    .from('harness_github_runs')
-    // Uma string literal só: concatenar com `+` impede o supabase-js de inferir
-    // as colunas e o retorno degrada para `GenericStringError[]`.
-    .select(`
-      run_id, repo, evento, branch, head_sha, conclusao, criado_em, iniciado_em,
-      atualizado_em, pr_numero, pr_criado_em, pr_merged_em
-    `)
-    .gte('criado_em', desde)
-    .order('criado_em', { ascending: false })
-    // PostgREST trunca em 1000 mesmo com limite maior — ver src/services/CLAUDE.md.
-    .limit(1000);
+  const linhas: GithubRunLinha[] = [];
+  const porPagina = 1000;
 
-  if (error) throw falhaLeitura('github_runs', error);
-  if (!data) return [];
-  // Único ponto que ainda estreita: `evento` é varchar no banco e união fechada
-  // ('pull_request' | 'push') no domínio — quem grava é o coletor-github.
-  return data as GithubRunLinha[];
+  for (let inicio = 0; ; inicio += porPagina) {
+    const { data, error } = await supabase
+      .from('harness_github_runs')
+      // Uma string literal só: concatenar com `+` impede o supabase-js de inferir
+      // as colunas e o retorno degrada para `GenericStringError[]`.
+      .select(`
+        run_id, repo, evento, branch, head_sha, conclusao, criado_em, iniciado_em,
+        atualizado_em, pr_numero, pr_criado_em, pr_merged_em, coletado_em
+      `)
+      .eq('repo', REPO_TEMPOS_GITHUB)
+      .gte('criado_em', desde)
+      .order('criado_em', { ascending: false })
+      .order('run_id', { ascending: false })
+      .range(inicio, inicio + porPagina - 1);
+
+    if (error) throw falhaLeitura('github_runs', error);
+    if (!data || data.length === 0) break;
+    // Único ponto que ainda estreita: `evento` é varchar no banco e união fechada
+    // ('pull_request' | 'push') no domínio — quem grava é o coletor-github.
+    linhas.push(...(data as GithubRunLinha[]));
+    if (data.length < porPagina) break;
+  }
+
+  return linhas;
 }
 
 /** Avaliações do revisor de KPIs + as violações que cada uma encontrou. */

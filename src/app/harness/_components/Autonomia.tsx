@@ -4,15 +4,17 @@ import type { AutonomiaBlob } from '@/types/harness';
 import { Card, PopoverInfo, pc } from './ui';
 
 const COMO_PERGUNTAS =
-  'Toda vez que o assistente para o trabalho e abre aquela caixinha de opções para você escolher. Contado direto do histórico das sessões, dia a dia. Quanto menor, mais ele resolve sozinho.';
+  'Toda vez que o assistente para o trabalho e abre aquela caixinha de opções para você escolher. Contado direto do histórico das sessões, dia a dia.';
 const COMO_ACEITE =
-  'Das perguntas que você respondeu, quantas terminaram na PRIMEIRA opção — que é sempre a recomendada. Aceite muito alto quer dizer que a pergunta não precisava existir: era para eu ter decidido.';
+  'Das perguntas que você respondeu, quantas terminaram na PRIMEIRA opção — que é sempre a recomendada. A taxa descreve a escolha feita, sem concluir sozinha se a pergunta deveria ter sido evitada.';
 const COMO_CORRECAO =
   'Você respondeu por fora da lista, trazendo uma regra da fazenda que só você sabia. Essa é a pergunta que VALEU — é ela que eu quero continuar fazendo.';
 const COMO_ESPERA =
   'Perguntas que ficaram mais de uma hora na tela sem resposta. Cada uma dessas é uma sessão parada esperando você.';
 const COMO_N2 =
   'Nível 2 da regra de autonomia: decisões que eu tomei sozinho, apliquei e só carimbei para você revisar depois. "Você desfez" conta quantas você mandou voltar atrás — é o freio que diz se estou passando do ponto.';
+const COMO_CODEX =
+  'Perguntas registradas separadamente pelo Codex. Esta fonte informa perguntas respondidas e pendentes, sem classificar aceite ou correção como a coleta do Claude.';
 
 function corVeredito(tipo: AutonomiaKpi['veredito']['tipo']): string {
   if (tipo === 'decidindo-demais') return 'bg-warning/15 text-warning';
@@ -60,7 +62,7 @@ export function Autonomia({
       <div className="grid gap-5 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:items-center">
         <div>
           <div className="text-xs font-semibold text-text-muted">
-            Perguntas por dia
+            Perguntas por dia (Claude)
             <PopoverInfo texto={COMO_PERGUNTAS} />
           </div>
           <div className="mt-1 text-4xl font-bold tabular-nums text-text-primary">
@@ -117,6 +119,35 @@ export function Autonomia({
       >
         {k.veredito.texto}
       </div>
+
+      {k.codex && (
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="mb-2 text-xs font-semibold text-text-muted">
+            Codex — perguntas separadas
+            <PopoverInfo texto={COMO_CODEX} />
+          </div>
+          {!k.codex.disponivel ? (
+            <p className="text-xs leading-relaxed text-text-muted">
+              Dados do Codex indisponíveis nesta coleta: {k.codex.motivo ?? 'motivo não informado'}.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <Linha rotulo="Perguntas" valor={String(k.codex.perguntas)} como={COMO_CODEX} />
+              <Linha
+                rotulo="Respondidas"
+                valor={String(k.codex.respondidas)}
+                amostra={`${k.codex.respondidas}/${k.codex.perguntas}`}
+                como={COMO_CODEX}
+              />
+              <Linha
+                rotulo="Sem resposta identificada"
+                valor={String(k.codex.pendentes)}
+                como={COMO_CODEX}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

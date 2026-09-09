@@ -21,6 +21,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test --run
+      - run: bun run test:harness
       # Valida o mesmo bundle OpenNext usado pelos deploys Cloudflare.
       - run: bun run cf:build
         env:

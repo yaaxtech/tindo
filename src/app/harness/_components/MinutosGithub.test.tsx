@@ -29,7 +29,13 @@ function blob(over: Partial<ActionsBlob> = {}): ActionsBlob {
       },
     ],
     branches: [
-      { branch: 'claude/refatora-tudo', runs: 20, min_total: 600, virou_pr: false, mergeado: false },
+      {
+        branch: 'claude/refatora-tudo',
+        runs: 20,
+        min_total: 600,
+        virou_pr: false,
+        mergeado: false,
+      },
       { branch: 'fix/ci', runs: 5, min_total: 400, virou_pr: true, mergeado: true },
     ],
     steps: [
@@ -68,5 +74,6 @@ describe('MinutosGithub', () => {
   it('avisa quando a coleta veio incompleta, em vez de mostrar número parcial calado', () => {
     render(<MinutosGithub snapshot={snapshot({ parcial: 'teto de 400 runs atingido' })} />);
     expect(screen.getByText(/Coleta parcial/)).toBeInTheDocument();
+    expect(screen.getByText(/não permitem recomendar ligar a nuvem/)).toBeInTheDocument();
   });
 });

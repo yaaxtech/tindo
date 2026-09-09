@@ -107,9 +107,9 @@ describe('avaliarLedger', () => {
     expect(codigos(violacoes)).not.toContain('quota_zerada');
   });
 
-  it('dispara quota zerada quando ninguém bateu no limite na janela inteira', () => {
+  it('não transforma quota zerada em alerta ou recomendação', () => {
     const violacoes = avaliarLedger(ledgerCom(20, 20), ASSINATURAS, AGORA);
-    expect(codigos(violacoes)).toContain('quota_zerada');
+    expect(codigos(violacoes)).not.toContain('quota_zerada');
   });
 
   it('dispara placar de valor abaixo de 55', () => {
