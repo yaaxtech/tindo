@@ -476,6 +476,7 @@ async function main() {
   const inventarioCompleto = [];
   let novas = 0;
   let quotaEsgotada = false;
+  let consultasFalharam = false;
   let restante = TETO_RUNS;
 
   for (const repo of REPOS) {
@@ -546,6 +547,7 @@ async function main() {
         }
       }
     } catch (e) {
+      consultasFalharam = true;
       console.error(`coleta de ${repo} falhou:`, e instanceof Error ? e.message : String(e));
       avisos.push(`${repo}: consulta indisponível; histórico incompleto`);
     }
@@ -575,6 +577,13 @@ async function main() {
     return;
   }
 
+  // Keep the last successful public snapshot when repository metadata could
+  // not be refreshed. Missing PR input must not become zero with a fresh date.
+  if (consultasFalharam) {
+    console.error('Consulta de repositórios incompleta; snapshot anterior preservado.');
+    process.exitCode = 1;
+    return;
+  }
   const env = lerEnv(ENV_FILE);
   const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL;
   const SERVICE_ROLE = env.SUPABASE_SERVICE_ROLE_KEY;
