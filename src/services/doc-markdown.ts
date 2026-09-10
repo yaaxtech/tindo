@@ -69,8 +69,10 @@ export function derivarTextoMd(conteudo: unknown[]): string {
 
 /**
  * Achata a árvore de blocos (filhos de `paiId`) em linhas planas com pai_id +
- * ordem fracional. Linhas de conteúdo vazio E sem filhos são descartadas
- * (linhas em branco não persistem).
+ * ordem fracional. Linhas em branco PERSISTEM (são espaço que o usuário criou
+ * com Enter); só blocos-espelho ficam de fora, pois viram aresta no mapa e não
+ * linha própria. O mapa já ignora parágrafos vazios sozinho (ver `conta` em
+ * Mindmap.tsx), então persistir vazio não polui o mapa.
  */
 export function blocosParaLinhas(
   blocos: BlocoBN[],
@@ -79,11 +81,7 @@ export function blocosParaLinhas(
 ): DocLinha[] {
   const out: DocLinha[] = [];
   const walk = (nivel: BlocoBN[], pai: string | null): void => {
-    const relevantes = nivel.filter(
-      (b) =>
-        !espelhoIds?.has(b.id) &&
-        (derivarTextoMd(asArray(b.content)).trim() !== '' || (b.children?.length ?? 0) > 0),
-    );
+    const relevantes = nivel.filter((b) => !espelhoIds?.has(b.id));
     const ordens = generateNKeysBetween(null, null, relevantes.length);
     relevantes.forEach((b, i) => {
       const conteudo = asArray(b.content);
