@@ -41,14 +41,14 @@ const blocosExemplo = [
 describe('blocosParaLinhas', () => {
   it('achata a árvore preservando id, pai e ordem', () => {
     const linhas = blocosParaLinhas(blocosExemplo, RAIZ);
-    expect(linhas).toHaveLength(4);
+    expect(linhas).toHaveLength(5);
     const byId = new Map(linhas.map((l) => [l.id, l]));
     expect(byId.get('a')?.paiId).toBe(RAIZ);
     expect(byId.get('b')?.paiId).toBe('a');
     expect(byId.get('c')?.paiId).toBe('b');
     expect(byId.get('d')?.paiId).toBe(RAIZ);
-    // 'e' está vazio → não vira linha (linhas vazias de topo são descartadas)
-    expect(byId.has('e')).toBe(false);
+    // 'e' é um parágrafo vazio → PERSISTE (é espaço que o usuário criou com Enter)
+    expect(byId.get('e')?.paiId).toBe(RAIZ);
   });
 
   it('deriva tipo, tarefa_estado e modo_lista', () => {
@@ -66,7 +66,26 @@ describe('blocosParaLinhas', () => {
     const topo = linhas
       .filter((l) => l.paiId === RAIZ)
       .sort((x, y) => (x.ordem < y.ordem ? -1 : 1));
-    expect(topo.map((l) => l.id)).toEqual(['a', 'd']);
+    expect(topo.map((l) => l.id)).toEqual(['a', 'd', 'e']);
+  });
+
+  it('linhas em branco no fim do doc persistem (dar Enter cria espaço que sobrevive ao salvar)', () => {
+    const comEspaco = [
+      {
+        id: 'x',
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: 'Fim', styles: {} }],
+        children: [],
+      },
+      { id: 'v1', type: 'paragraph', props: {}, content: [], children: [] },
+      { id: 'v2', type: 'paragraph', props: {}, content: [], children: [] },
+    ];
+    const linhas = blocosParaLinhas(comEspaco as never, RAIZ);
+    expect(linhas.map((l) => l.id)).toEqual(['x', 'v1', 'v2']);
+    // round-trip: reabrir o doc traz as linhas em branco de volta
+    const blocos = linhasParaBlocos(linhas, RAIZ);
+    expect(blocos.map((b) => b.id)).toEqual(['x', 'v1', 'v2']);
   });
 });
 
@@ -74,7 +93,7 @@ describe('round-trip blocos ↔ linhas', () => {
   it('linhasParaBlocos reconstrói a mesma árvore (id, type, aninhamento, checked)', () => {
     const linhas = blocosParaLinhas(blocosExemplo, RAIZ);
     const blocos = linhasParaBlocos(linhas, RAIZ);
-    // remove o paragraph vazio 'e' do esperado (foi descartado)
+    // 'e' (paragraph vazio) agora persiste e volta no round-trip
     const simplifica = (
       bs: {
         id: string;
@@ -91,7 +110,7 @@ describe('round-trip blocos ↔ linhas', () => {
         content: b.content,
         children: simplifica((b.children ?? []) as typeof bs),
       }));
-    expect(simplifica(blocos as never)).toEqual(simplifica(blocosExemplo.slice(0, 2) as never));
+    expect(simplifica(blocos as never)).toEqual(simplifica(blocosExemplo as never));
   });
 });
 
@@ -129,7 +148,7 @@ describe('espelhos (Fatia 7)', () => {
     const blocos = linhasParaBlocos(linhasBase, RAIZ, espelhos);
     const linhas = blocosParaLinhas(blocos as never, RAIZ, new Set(['esp-1']));
     expect(linhas.find((l) => l.id === 'esp-1')).toBeUndefined();
-    // e as linhas reais continuam todas lá
-    expect(linhas.map((l) => l.id).sort()).toEqual(['a', 'b', 'c', 'd']);
+    // e as linhas reais continuam todas lá ('e' é o parágrafo vazio, que agora persiste)
+    expect(linhas.map((l) => l.id).sort()).toEqual(['a', 'b', 'c', 'd', 'e']);
   });
 });
