@@ -151,7 +151,7 @@ export default function HarnessPage() {
                 {snap && !contratoValido
                   ? `Leitura incompatível — indicadores suspensos${carimbo ? ` · ${carimbo}` : ''}`
                   : snap
-                    ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${infra > 0 ? ` · ${infra} nunca ${infra === 1 ? 'rodou' : 'rodaram'} (infra)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''}${carimbo ? ` · ${carimbo}` : ''}`
+                    ? `KPIs dos últimos ${janelaDias} ${janelaDias === 1 ? 'dia' : 'dias'} (${gAtual.n} despachos com resultado)${pendentes > 0 ? ` · ⏳ ${pendentes} pendente${pendentes === 1 ? '' : 's'} de revisão (fora dos números)` : ''}${infra > 0 ? ` · ${infra} nunca ${infra === 1 ? 'rodou' : 'rodaram'} (infra)` : ''}${janelaDias > dias ? ` · só há ${dias}d de dados` : ''}${carimbo ? ` · ${carimbo}` : ''}`
                     : carregando
                       ? 'Carregando…'
                       : 'KPIs da orquestração multi-LLM'}
@@ -247,6 +247,16 @@ export default function HarnessPage() {
             amostraLedger={amostraAlertas}
           />
 
+          {contratoValido && (
+            <p className="rounded-xl border border-border-strong bg-bg-elevated px-4 py-3 text-xs leading-relaxed text-text-secondary">
+              {gAtual.n === 0 && 'Ainda não há despachos com resultado neste período. '}
+              Estes indicadores contam despachos registrados, não todo o trabalho no aplicativo.
+              Pendentes ficam fora dos indicadores; sessões e chamadas do Codex aparecem na
+              telemetria de uso. Os dados são publicados de hora em hora; Atualizar relê a última
+              publicação.
+            </p>
+          )}
+
           {/* Bloco 1 — segue o filtro */}
           <Secao
             id="visao-geral"
@@ -334,7 +344,7 @@ export default function HarnessPage() {
               Não depende do filtro: nada aqui vem do ledger. */}
           <Secao
             id="experimentos"
-            titulo="Experimentos A/B"
+            titulo="Experimentos A/B/C"
             info="Comparações previstas no plano do dono. O painel só lista os candidatos e o status do piloto, que roda fora dele em recibos separados. Registros históricos do ledger não são resultados pareados e não são contados aqui; a promoção depende dos critérios do teste."
             escopo={{ tipo: 'fixo', rotulo: 'plano' }}
           >
