@@ -58,7 +58,7 @@ export const SECOES_PAINEL: SecaoNavGrupo[] = [
       { id: 'placar', rotulo: 'Placar', icone: Trophy },
       { id: 'terrenos', rotulo: 'Terrenos', icone: Layers },
       { id: 'assinaturas', rotulo: 'Assinaturas', icone: CreditCard },
-      { id: 'experimentos', rotulo: 'A/B', icone: FlaskConical },
+      { id: 'experimentos', rotulo: 'A/B/C', icone: FlaskConical },
     ],
   },
   {

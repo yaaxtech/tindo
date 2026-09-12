@@ -290,3 +290,17 @@ Pedido do dono: painel confuso, uso atual misturado com modelos em teste.
 - Cada fase deve caber em 1 semana calendário (mesmo que a estimativa em dias seja menor).
 - Ao fim de cada fase: retrospectiva rápida, atualizar este doc com reais vs estimado.
 - Se uma fase estourar em >50% do estimado, dividir ao invés de alongar.
+
+## Harness — testes A/B/C e cobertura (2026-09-12)
+
+- [x] Cadastrar coordenação Astra/high × Luna/xhigh × Sol/high com executor
+      Astra/high fixo, para bugs, refatorações e backend sem SQL; interface/design
+      continua Claude. Status por experimento, sem alterar padrões.
+- [x] Separar testes posteriores de contexto e esforço, xhigh já configurado e
+      análise offline condicionada; preservar evidências dos pilotos anteriores.
+- [x] Explicar que os indicadores contam despachos com resultado, não toda a
+      atividade do app, e que Atualizar relê a publicação horária.
+- [ ] Executar os novos testes com recibos de modelo/esforço confirmados e
+      avaliação por terreno; cadastro não é execução nem prova de economia.
+- [ ] Vincular sessões nativas a despachos avaliados por identificador explícito;
+      telemetria de uso não autoriza inferir conclusão ou qualidade de tarefas.
