@@ -1,0 +1,667 @@
+/*
+ * YaaX — vitrine das ferramentas da casa (rota /yaax).
+ *
+ * Porte do protótipo aprovado "e1-vitrine.html". Prefixo `yx-` em todas as
+ * classes porque CSS importado de página no App Router é global (mesmo
+ * precedente do `rmm-` do RoadMapMind).
+ *
+ * Cores: obsidian, jade e textos vêm dos tokens de `globals.css`. Só o que é
+ * específico desta página — o fundo mais fundo que o obsidian, os fios do card
+ * e os dois cinzas do desenho esquemático — é declarado aqui, uma vez só, no
+ * bloco abaixo. Fora dele não existe hex solto.
+ */
+
+.yx-root {
+  /* fundo desta peça: um degrau ABAIXO do obsidian deep, para o painel flutuar */
+  --yx-fundo-rgb: 6 8 12;
+  --yx-fundo: rgb(var(--yx-fundo-rgb));
+
+  /* molduras do programa */
+  --yx-linha: #161d26;
+  --yx-linha-2: #242d3a;
+
+  /* o fio do card em repouso e os dois passos que ele acende */
+  --yx-fio: #232c39;
+  --yx-fio-aceso: rgb(var(--jade-accent-rgb) / 0.42);
+  --yx-fio-presso: rgb(var(--jade-accent-rgb) / 0.66);
+
+  /* o fio INTERNO: mesma família, um degrau abaixo da moldura, sempre neutro */
+  --yx-divisa: #202a36;
+
+  /* o visor: rebaixo em repouso, um degrau aceso sob atenção */
+  --yx-visor-fundo: rgb(var(--yx-fundo-rgb) / 0.5);
+  --yx-visor-aceso: rgb(var(--jade-accent-rgb) / 0.055);
+  --yx-visor-presso: rgb(var(--jade-accent-rgb) / 0.08);
+
+  /* rampa de texto desta peça: viés frio de tela de terminal, entre o
+     text-primary e o text-muted do projeto — por isso não sai de token */
+  --yx-txt-2: #9aa6b4;
+  --yx-txt-3: #6f7c8b;
+
+  /* tintas de jade derivadas do token, nunca de hex novo */
+  --yx-jade-tint: rgb(var(--jade-accent-rgb) / 0.09);
+  --yx-sobre-jade: #04140f;
+  --yx-sup: rgb(var(--text-primary-rgb) / 0.05);
+  --yx-sup-fraca: rgb(var(--text-primary-rgb) / 0.026);
+
+  /* os dois tons do desenho esquemático, em repouso e acesos */
+  --yx-esq-est: #262f3b;
+  --yx-esq-est-alto: #3a4553;
+  --yx-esq-cont: #3d4855;
+  --yx-esq-cont-alto: #7d8a99;
+  --yx-esq-jade: rgb(var(--jade-accent-rgb) / 0.34);
+
+  /* medidas do card em pé */
+  --yx-h-cartao: 330px;
+  --yx-h-visor: 186px;
+
+  /* a medida interna do card: onde o texto começa e onde a tinta do fio começa */
+  --yx-recuo: 22px;
+
+  --yx-mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 18px 46px;
+  background: var(--yx-fundo);
+  color: var(--text-primary);
+  font-family: var(--yx-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.yx-root *,
+.yx-root *::before,
+.yx-root *::after {
+  box-sizing: border-box;
+}
+
+/*
+  Reset mínimo. `ul` fica DE FORA do zeramento de margem de propósito: scopado
+  em `.yx-root` ele passaria na frente de `.yx-cards { margin-block: auto }` na
+  especificidade e a pilha encostaria no topo do estágio em vez de centralizar.
+  Quem zera a margem e o recuo da lista é a própria `.yx-cards`.
+*/
+.yx-root h1,
+.yx-root p {
+  margin: 0;
+  padding: 0;
+}
+
+.yx-root ul {
+  list-style: none;
+}
+
+.yx-root kbd {
+  font: inherit;
+}
+
+.yx-root ::selection {
+  background: var(--jade-primary);
+  color: var(--yx-sobre-jade);
+}
+
+/* ---------- palco ---------- */
+
+.yx-palco {
+  width: 100%;
+  max-width: 1180px;
+  height: calc(100dvh - 64px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-deep);
+  border: 1px solid var(--yx-linha);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ---------- moldura do programa ---------- */
+
+.yx-app {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  background: var(--bg-deep);
+  animation: yx-entra 0.25s ease both;
+}
+
+@keyframes yx-entra {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- régua de identidade ---------- */
+
+.yx-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 26px 21px;
+  border-bottom: 1px solid var(--yx-linha);
+  min-width: 0;
+}
+
+.yx-marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.yx-marca-y .yx-a {
+  stroke: var(--jade-primary);
+}
+
+.yx-marca-y .yx-b {
+  stroke: var(--jade-accent);
+}
+
+.yx-wordmark {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  color: var(--text-primary);
+}
+
+.yx-sep {
+  color: var(--yx-linha-2);
+}
+
+.yx-assinatura {
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yx-dica {
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.yx-dica kbd {
+  color: var(--yx-txt-3);
+  letter-spacing: 0.14em;
+}
+
+/* ---------- estágio dos cards ---------- */
+
+.yx-estagio {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--yx-linha-2) transparent;
+  padding: 40px 48px 52px;
+}
+
+.yx-cards {
+  margin-block: auto;
+  margin-inline: auto;
+  padding: 0;
+  width: 100%;
+  max-width: 900px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.yx-cards li {
+  display: flex;
+  min-width: 0;
+}
+
+/* ---------- o card em pé (link de fio) ---------- */
+
+.yx-cartao {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--yx-h-cartao);
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+  text-align: left;
+  background: var(--yx-sup-fraca);
+  border: 1px solid var(--yx-fio);
+  border-radius: 2px;
+  overflow: hidden;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+
+/* ---------- região 1: o visor ---------- */
+
+.yx-visor {
+  position: relative;
+  flex: none;
+  height: var(--yx-h-visor);
+  padding: 18px var(--yx-recuo);
+  background: var(--yx-visor-fundo);
+  transition: background-color 0.16s ease;
+}
+
+/*
+  O fio interno atravessa o card inteiro, mas a tinta só nasce no --yx-recuo,
+  exatamente onde o nome e a frase começam: nunca encosta na moldura, então
+  não existe encontro de canto — é régua dentro de um painel, não costura
+  entre dois cards. E o tom fica sempre um degrau ABAIXO da moldura,
+  inclusive no hover, quando a moldura vai para o jade e o fio interno só
+  sobe meio passo, continuando neutro.
+*/
+.yx-visor::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0,
+    var(--yx-divisa) var(--yx-recuo),
+    var(--yx-divisa) calc(100% - var(--yx-recuo)),
+    transparent 100%
+  );
+  opacity: 0.62;
+  transition: opacity 0.16s ease;
+}
+
+/* ---------- região 2: a faixa de texto ---------- */
+
+.yx-faixa {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px var(--yx-recuo) 22px;
+}
+
+.yx-cabeca {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.yx-nome {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yx-rota {
+  flex: none;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: color 0.14s ease;
+}
+
+.yx-base {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.yx-frase {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0.012em;
+  color: var(--yx-txt-3);
+  overflow-wrap: anywhere;
+  transition: color 0.14s ease;
+}
+
+.yx-seta {
+  flex: none;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  transition: color 0.14s ease, transform 0.14s ease;
+}
+
+/* ---------- os quatro estados ---------- */
+
+.yx-cartao:hover {
+  background: var(--yx-sup);
+  border-color: var(--yx-fio-aceso);
+}
+
+.yx-cartao:hover .yx-visor {
+  background: var(--yx-visor-aceso);
+}
+
+.yx-cartao:hover .yx-visor::after {
+  opacity: 1;
+}
+
+.yx-cartao:hover .yx-seta {
+  color: var(--jade-accent);
+  transform: translateX(3px);
+}
+
+.yx-cartao:hover .yx-frase {
+  color: var(--yx-txt-2);
+}
+
+.yx-cartao:hover .yx-rota {
+  color: var(--yx-txt-3);
+}
+
+.yx-cartao:focus-visible {
+  outline: 1px solid var(--jade-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+  border-color: var(--yx-fio-aceso);
+  background: var(--yx-sup);
+}
+
+.yx-cartao:focus-visible .yx-visor {
+  background: var(--yx-visor-aceso);
+}
+
+.yx-cartao:focus-visible .yx-visor::after {
+  opacity: 1;
+}
+
+.yx-cartao:focus-visible .yx-seta {
+  color: var(--jade-accent);
+}
+
+.yx-cartao:focus-visible .yx-frase {
+  color: var(--yx-txt-2);
+}
+
+.yx-cartao:focus-visible .yx-rota {
+  color: var(--yx-txt-3);
+}
+
+.yx-cartao:active {
+  transition: none;
+  transform: translateY(1px);
+  background: var(--yx-jade-tint);
+  border-color: var(--yx-fio-presso);
+}
+
+.yx-cartao:active .yx-visor {
+  transition: none;
+  background: var(--yx-visor-presso);
+}
+
+/* ---------- desenho esquemático dentro do visor ---------- */
+
+.yx-esq {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  --e: var(--yx-esq-est);
+  --c: var(--yx-esq-cont);
+  --j: var(--yx-esq-jade);
+}
+
+.yx-esq path,
+.yx-esq rect {
+  fill: none;
+  stroke-width: 1;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+}
+
+.yx-esq .est {
+  stroke: var(--e);
+  transition: stroke 0.16s ease;
+}
+
+.yx-esq .cont {
+  stroke: var(--c);
+  transition: stroke 0.16s ease;
+}
+
+.yx-esq .agora {
+  stroke: var(--j);
+  transition: stroke 0.16s ease;
+}
+
+.yx-esq .marca-e {
+  stroke: none;
+}
+
+.yx-esq .cheio-c {
+  fill: var(--c);
+  transition: fill 0.16s ease;
+}
+
+.yx-esq .cheio-j {
+  fill: var(--j);
+  transition: fill 0.16s ease;
+}
+
+.yx-esq .eco {
+  stroke: var(--j);
+  stroke-dasharray: 18 104;
+  stroke-dashoffset: 18;
+}
+
+.yx-esq .serie {
+  stroke-dasharray: 340;
+  stroke-dashoffset: 0;
+}
+
+.yx-cartao:hover .yx-esq,
+.yx-cartao:focus-visible .yx-esq {
+  --e: var(--yx-esq-est-alto);
+  --c: var(--yx-esq-cont-alto);
+  --j: var(--jade-accent);
+}
+
+/* um gesto por desenho, só sob atenção; começa e termina no mesmo estado */
+
+.yx-cartao:hover .fila,
+.yx-cartao:focus-visible .fila {
+  animation: yx-avanca 0.52s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes yx-avanca {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-72px);
+  }
+}
+
+.yx-cartao:hover .eco,
+.yx-cartao:focus-visible .eco {
+  animation: yx-eco 0.62s linear both;
+}
+
+@keyframes yx-eco {
+  from {
+    stroke-dashoffset: 18;
+  }
+  to {
+    stroke-dashoffset: -104;
+  }
+}
+
+.yx-cartao:hover .serie,
+.yx-cartao:focus-visible .serie {
+  animation: yx-tracar 0.6s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes yx-tracar {
+  from {
+    stroke-dashoffset: 340;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.yx-cartao:hover .ponta,
+.yx-cartao:focus-visible .ponta {
+  animation: yx-acende 0.6s ease both;
+}
+
+@keyframes yx-acende {
+  0%,
+  70% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ---------- barra fina ---------- */
+
+.yx-barra {
+  display: flex;
+  align-items: stretch;
+  height: 30px;
+  border-top: 1px solid var(--yx-linha);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  min-width: 0;
+}
+
+.yx-modo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 0 10px;
+  background: var(--jade-primary);
+  color: var(--yx-sobre-jade);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  flex: none;
+}
+
+.yx-vao {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.yx-pos {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  color: var(--yx-txt-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+  Celular. O protótipo usava @container porque tinha um alternador de revisão
+  que trocava a largura do palco sem trocar a da janela; sem ele, media query
+  é o idioma do resto do projeto. O limiar acompanha o antigo (720px de palco
+  + 36px de respiro lateral do .yx-root).
+*/
+@media (max-width: 760px) {
+  .yx-topo {
+    padding: 18px 18px 17px;
+  }
+
+  .yx-assinatura {
+    font-size: 11px;
+  }
+
+  /* dica de teclado não serve ao dedo */
+  .yx-dica {
+    display: none;
+  }
+
+  .yx-estagio {
+    padding: 22px 16px 30px;
+  }
+
+  /* uma coluna, mas o card continua EM PÉ: medida travada em 320px */
+  .yx-cards {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 320px;
+    gap: 16px;
+    --yx-h-cartao: 356px;
+    --yx-h-visor: 208px;
+    --yx-recuo: 20px;
+  }
+
+  .yx-visor {
+    padding: 16px;
+  }
+
+  .yx-faixa {
+    padding: 18px var(--yx-recuo) 20px;
+  }
+
+  .yx-nome {
+    font-size: 15.5px;
+  }
+
+  .yx-rota {
+    font-size: 11px;
+  }
+
+  .yx-frase {
+    font-size: 12.5px;
+  }
+
+  .yx-barra {
+    height: 44px;
+  }
+
+  .yx-modo {
+    min-width: 78px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* nada de "pular" para o quadro final: os gestos simplesmente não existem */
+  .yx-app,
+  .yx-cartao:hover .fila,
+  .yx-cartao:focus-visible .fila,
+  .yx-cartao:hover .eco,
+  .yx-cartao:focus-visible .eco,
+  .yx-cartao:hover .serie,
+  .yx-cartao:focus-visible .serie,
+  .yx-cartao:hover .ponta,
+  .yx-cartao:focus-visible .ponta {
+    animation: none !important;
+  }
+}

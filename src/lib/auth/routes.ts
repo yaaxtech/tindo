@@ -9,6 +9,16 @@ export const ROTAS_PUBLICAS = [
   '/recuperar-senha',
   '/nova-senha',
   '/harness',
+  // Vitrine da YaaX e os dois atalhos que ela anuncia.
+  //
+  // A vitrine é pública de propósito. `/tindo` e `/roadmapmind` viram 308 em
+  // `next.config.mjs`, que roda ANTES do middleware — na prática eles não
+  // chegam aqui. Ficam listados para que, se o roteamento mudar, o visitante
+  // deslogado caia em `/login?next=/cards` (o destino real) em vez de
+  // `/login?next=/tindo`. Os destinos continuam exigindo sessão de qualquer forma.
+  '/yaax',
+  '/tindo',
+  '/roadmapmind',
   '/manifest.webmanifest',
 ] as const;
 
