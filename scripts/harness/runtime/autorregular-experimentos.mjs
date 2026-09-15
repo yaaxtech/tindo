@@ -16,7 +16,7 @@ export function autorregular({ defaultsFile, auditFile, linhas, sessoes, agora =
     const decisoes = [];
     const mudancas = [];
     for (const exp of relatorio.experimentos) {
-      const rota = (exp.frente === 'codex' ? defaults.codex.terrenos : defaults.terrenos)[exp.terreno];
+      const rota = defaults.terrenos[exp.terreno];
       const cfg = rota.experimento;
       if (!cfg.ativo || exp.id !== cfg.id || exp.terreno === 'sql') continue;
       const decisao = decidirExperimento(exp, cfg);
@@ -26,7 +26,7 @@ export function autorregular({ defaultsFile, auditFile, linhas, sessoes, agora =
       // Compare-and-set protects owner edits and external policy changes.
       if (rota.modelo !== base.modelo || rota.effort !== base.effort) continue;
       const candidato = cfg.bracos.find(b => b.id === decisao.promover);
-      const reg = { ts: agora, acao: 'promoveu_experimento', rota: exp.frente, terreno: exp.terreno,
+      const reg = { ts: agora, acao: 'promoveu_experimento', terreno: exp.terreno,
         experiment_id: exp.id, de: { modelo: rota.modelo, effort: rota.effort },
         para: { modelo: candidato.modelo, effort: candidato.effort }, motivo: decisao.motivo,
         evidencia: exp.bracos };

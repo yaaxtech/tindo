@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { sortear } from './braco-experimental.mjs';
 
 const defaultsFixture = {
-  codex: {
+  canary_ignored: {
     terrenos: {
       rotina: {
         effort_por_modelo: { astra: 'low' },
@@ -16,6 +16,8 @@ const defaultsFixture = {
     },
   },
 };
+defaultsFixture.terrenos = defaultsFixture.canary_ignored.terrenos;
+defaultsFixture.codex = { terrenos: { rotina: { modelo: 'luna', effort: 'max' } } };
 
 test('rnd abaixo do limiar de amostragem sorteia o braço xhigh experimental', () => {
   assert.deepEqual(sortear('rotina', () => 0.05, defaultsFixture), {

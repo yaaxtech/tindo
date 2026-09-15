@@ -3,11 +3,6 @@ import { cn } from '@/lib/utils';
 import type { BenchmarkModelosPublicado, ExperimentosPublicados } from '@/types/harness';
 import { Card, corPill } from './ui';
 
-const FRENTE_LBL: Record<string, string> = {
-  claude: 'Claude',
-  codex: 'Codex',
-};
-
 const numero = (valor: number): string => valor.toLocaleString('pt-BR');
 
 function mediana(valor: number | null, unidade: string): string {
@@ -271,9 +266,7 @@ export function Experimentos({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm">
                     <span className="font-bold">{exp.id}</span>
-                    <span className="ml-2 text-text-muted">
-                      {FRENTE_LBL[exp.frente] ?? exp.frente} · {exp.terreno}
-                    </span>
+                    <span className="ml-2 text-text-muted">{exp.terreno}</span>
                   </div>
                   <span
                     className={cn(

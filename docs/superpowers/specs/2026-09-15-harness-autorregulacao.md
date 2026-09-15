@@ -8,7 +8,7 @@ trocas definitivas. Arena Agent Pareto por tokens de saída é a referência ext
 
 ## Causas verificadas
 
-- O painel publicava apenas `defaults.terrenos`, sem as rotas Codex.
+- A configuração tinha duas rotas por origem; isso contrariava a intenção de uma base comum.
 - A aba A/B/C continha textos estáticos; o sorteador não era chamado pelo executor.
 - O executor validava pares fixos, sem consumir mudanças dos defaults.
 - Registros manuais explicitamente classificados eram considerados ambíguos.
@@ -18,8 +18,14 @@ trocas definitivas. Arena Agent Pareto por tokens de saída é a referência ext
 
 ## Contrato de entrega
 
-1. Fonte operacional local comum: `~/.claude/orquestracao/defaults-terreno.json`.
+1. Fonte operacional local comum: `~/.claude/orquestracao/defaults-terreno.json`,
+   exclusivamente em `terrenos`. O dono corrigiu explicitamente: “é pra ser
+   uma rota so”, com fallback quando Claude ou ChatGPT falhar. A origem da
+   sessão serve apenas para telemetria, nunca escolhe outro titular.
 2. Resolver único para despacho; par efetivamente solicitado e braço registrados.
+   Ambos os pontos de entrada escolhem o mesmo par e sorteio. Todos os terrenos
+   têm alternativa do outro provedor; indisponibilidade de um elimina novas
+   tentativas nesse provedor. Promoção e amostra são compartilhadas entre origens.
 3. Experimentos configurados com identificador versionado e número arbitrário
    de braços; apenas execuções atribuídas ao teste entram em sua amostra.
 4. Promoção automática exige qualidade julgada, tokens e duração completos,
@@ -31,7 +37,7 @@ trocas definitivas. Arena Agent Pareto por tokens de saída é a referência ext
    ciclo, preservando o histórico e mantendo a avaliação do novo padrão.
 5. Falta de medição permanece nula. Sessões compartilhadas entre registros
    não têm seus tokens atribuídos a uma tarefa individual.
-6. Snapshot público recebe agregados de experimentos, rotas por frente,
+6. Snapshot público recebe agregados de experimentos, uma rota por terreno,
    estado do motor e benchmark datado; não recebe prompts, IDs de sessão ou segredos.
 7. Publicação horária existente avalia os testes; nenhum novo loop de LLM
    recorrente é necessário. O teste aproveita tarefas já autorizadas.

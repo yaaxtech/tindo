@@ -71,11 +71,6 @@ preparo_min() {
   awk -v v="$bruto" -v t="$teto" 'BEGIN{ if (v+0 >= 0 && v+0 <= t) printf "%.1f", v+0 }'
 }
 
-command -v "${HARNESS_CODEX_BIN:-codex}" >/dev/null 2>&1 || {
-  echo "codex CLI não encontrado no PATH." >&2
-  exit 1
-}
-
 # Extrai modelo/effort dos args SÓ para o registro (nada é alterado). Esta
 # leitura subiu para ANTES do preparo em 17/08/2026: a guarda de roteamento
 # abaixo precisa do modelo, e precisa decidir antes de o carimbo de preparo ser
@@ -148,6 +143,11 @@ if ! command -v node >/dev/null 2>&1 || [ ! -f "$ROTA_SCRIPT" ] || [ ! -f "$DEFA
   echo "run.sh: BLOQUEADO — resolver de rota/defaults indisponível no staging." >&2
   exit 3
 fi
+# Keep one assignment through resolver, wrapper, and common dispatcher.
+if [ -z "${HARNESS_RANDOM:-}" ]; then
+  HARNESS_RANDOM="$(node -e 'process.stdout.write(String(Math.random()))')"
+  export HARNESS_RANDOM
+fi
 ROTA_ARGS=(resolver --frente "${HARNESS_FRENTE:-codex}" --terreno "$TERRENO_ROTA" --papel "$LEDGER_PAPEL" --defaults "$DEFAULTS_FILE")
 [ -n "$MODELO" ] && ROTA_ARGS+=(--modelo "$MODELO")
 [ -n "$EFFORT" ] && ROTA_ARGS+=(--effort "$EFFORT")
@@ -174,8 +174,54 @@ ROTA_ORIGEM="$(rota_campo rota_origem)"
 ROTA_FALLBACK_MOTIVO="$(rota_campo fallback_motivo)"
 ROTA_OK="$(rota_campo roteamento_ok)"
 ROTA_MODELO_AUTOR="$(rota_campo modelo_autor)"
+ROTA_PROVIDER="$(rota_campo provider)"
 [ -n "$MODELO_CLI" ] || { echo "run.sh: BLOQUEADO — resolver retornou modelo CLI vazio." >&2; exit 3; }
 MODELO="${MODELO_CLI}"
+dispatch_alternativo() {
+  local motivo="$1" prompt_file
+  [ "${HARNESS_DISPATCH_DEPTH:-0}" = 0 ] || return 1
+  case "$ULTIMO_ARG" in -*) return 1 ;; esac
+  prompt_file="$(mktemp)"
+  printf '%s' "$ULTIMO_ARG" > "$prompt_file"
+  set +e
+  HARNESS_DISPATCH_DEPTH=1 node "$RUNTIME_DIR/despachar-harness.mjs" \
+    --frente "${HARNESS_FRENTE:-codex}" --terreno "$TERRENO_ROTA" \
+    --prompt-file "$prompt_file" --fallback-motivo "$motivo"
+  local rc=$?
+  set -e
+  rm -f "$prompt_file"
+  return "$rc"
+}
+
+# Legacy callers enter here even when the canonical terrain picks Claude.
+# Hand that choice to the common dispatcher once; it invokes only Claude and
+# records the original front. A nested Codex call never dispatches again.
+if [ "$ROTA_PROVIDER" = claude ]; then
+  if [ "$LEDGER_PAPEL" = revisor ]; then
+    echo 'run.sh: BLOQUEADO — revisão Claude exige o lançador de revisão explícito; dispatcher comum só constrói.' >&2
+    exit 3
+  fi
+  if [ "${HARNESS_DISPATCH_DEPTH:-0}" != 0 ]; then
+    echo 'run.sh: BLOQUEADO — dispatcher enviou rota Claude ao wrapper Codex.' >&2
+    exit 3
+  fi
+  case "$ULTIMO_ARG" in -*)
+    echo 'run.sh: BLOQUEADO — rota Claude exige prompt no último argumento.' >&2
+    exit 3 ;;
+  esac
+  PROMPT_ENCAMINHADO="$(mktemp)"
+  trap 'rm -f "$PROMPT_ENCAMINHADO"' EXIT
+  printf '%s' "$ULTIMO_ARG" > "$PROMPT_ENCAMINHADO"
+  HARNESS_DISPATCH_DEPTH=1 node "$RUNTIME_DIR/despachar-harness.mjs" \
+    --frente "${HARNESS_FRENTE:-codex}" --terreno "$TERRENO_ROTA" \
+    --prompt-file "$PROMPT_ENCAMINHADO" ${LEDGER_FALLBACK_MOTIVO:+--fallback-motivo "$LEDGER_FALLBACK_MOTIVO"}
+  exit $?
+fi
+command -v "${HARNESS_CODEX_BIN:-codex}" >/dev/null 2>&1 || {
+  echo "codex CLI não encontrado no PATH; tentando o provedor alternativo." >&2
+  dispatch_alternativo indisponivel_openai || exit $?
+  exit 0
+}
 
 # Replace explicit stale choices as well: defaults must reach the CLI.
 # Conscious escalations use the recorded fallback reason or ROTEAMENTO_OK.
@@ -574,7 +620,7 @@ if [ "${LEDGER_OFF:-0}" != "1" ] && command -v node >/dev/null 2>&1 && [ -f "$LE
   # despacho que terminou com rc=0 — 4 falsos positivos em 10/08/2026, que
   # entram direto no KPI de saturação usado para decidir assinatura.
   if [ "$RC" -ne 0 ] && \
-     grep -qiE "hit your usage limit|5-hour message limit" "$TMP_ERR" "$TMP_OUT"; then
+     grep -qiE "hit your usage limit|5-hour message limit|monthly spend limit" "$TMP_ERR" "$TMP_OUT"; then
     RESULTADO="quota"
   # O worker NUNCA RODOU: crash de invocação, flag errada, processo travado
   # antes de começar. Isso é bug do LANÇADOR, não qualidade do modelo — medido
@@ -657,15 +703,23 @@ if [ "${LEDGER_OFF:-0}" != "1" ] && command -v node >/dev/null 2>&1 && [ -f "$LE
     --dur "$(awk -v s="$DUR_SEG" 'BEGIN{printf "%.3f", s/60}')" --tarefa "$TAREFA" --nota "auto run.sh rc=$RC exec=${DUR_MIN}min$NOTA_TIMEOUT$NOTA_CAUSA$NOTA_EXCECAO" --auto >&2 || true
 fi
 
-# Existing callers also receive the configured alternate provider after quota.
+# Existing callers also receive the configured alternate provider after a
+# provider quota or CLI authentication failure. A task failure does not retry.
 # The common dispatcher sets depth=1 to avoid nested retries.
-if [ "${RESULTADO:-}" = quota ] && [ "${HARNESS_DISPATCH_DEPTH:-0}" = 0 ] && [ "$STDIN_EXPLICITO" = 0 ]; then
-  PROMPT_FALLBACK="$(mktemp)"
-  printf '%s' "$ULTIMO_ARG" > "$PROMPT_FALLBACK"
-  set +e
-  HARNESS_DISPATCH_DEPTH=1 node "$RUNTIME_DIR/despachar-harness.mjs" --frente "${HARNESS_FRENTE:-codex}" --terreno "$TERRENO_ROTA" --prompt-file "$PROMPT_FALLBACK" --fallback-motivo quota_openai
-  RC=$?
-  set -e
-  rm -f "$PROMPT_FALLBACK"
+if [ "$RC" -ne 0 ] && [ "${HARNESS_DISPATCH_DEPTH:-0}" = 0 ] && [ "$STDIN_EXPLICITO" = 0 ]; then
+  MOTIVO_RETRY=""
+  if grep -qiE "hit your usage limit|5-hour message limit|monthly spend limit" "$TMP_ERR" "$TMP_OUT"; then
+    MOTIVO_RETRY=quota_openai
+  elif [ ! -s "$TMP_OUT" ] && grep -qiE "not logged in|authentication|unauthorized|expired.*token|ENOENT|command not found" "$TMP_ERR"; then
+    MOTIVO_RETRY=indisponivel_openai
+  elif [ -s "$TMP_TIMEOUT" ] && [ ! -s "$TMP_OUT" ]; then
+    MOTIVO_RETRY=indisponivel_openai
+  fi
+  if [ -n "$MOTIVO_RETRY" ]; then
+    set +e
+    dispatch_alternativo "$MOTIVO_RETRY"
+    RC=$?
+    set -e
+  fi
 fi
 exit $RC

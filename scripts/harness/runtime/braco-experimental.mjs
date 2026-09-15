@@ -54,7 +54,7 @@ function validarExperimento(exp, terreno) {
 
 function parBase(terrenoCfg, defaults, base) {
   if (base?.modelo && base?.effort) return { modelo: familia(base.modelo), effort: base.effort };
-  const modelo = terrenoCfg.modelo || defaults?.codex?._meta?.thread_principal?.modelo ||
+  const modelo = terrenoCfg.modelo ||
     terrenoCfg.braco_experimental_xhigh?.modelo ||
     (terrenoCfg.effort_por_modelo?.astra ? 'astra' : null);
   const f = familia(modelo);
@@ -87,10 +87,10 @@ function escolherArm(exp, rnd) {
  */
 export function sortearDetalhado(terreno, rnd = Math.random, defaults, base) {
   const cfg = defaults ?? lerDefaults();
-  const terrenoCfg = cfg?.codex?.terrenos?.[terreno];
-  if (!terrenoCfg) throw new Error(`terreno desconhecido em codex.terrenos: ${terreno}`);
+  const terrenoCfg = cfg?.terrenos?.[terreno];
+  if (!terrenoCfg) throw new Error(`terreno desconhecido em terrenos: ${terreno}`);
   const current = parBase(terrenoCfg, cfg, base);
-  if (!current) throw new Error(`default incompleto em codex.terrenos.${terreno}`);
+  if (!current) throw new Error(`default incompleto em terrenos.${terreno}`);
   if (terreno === 'sql') return { arm: 'base', modelo: current.modelo, effort: current.effort };
 
   const exp = terrenoCfg.experimento;

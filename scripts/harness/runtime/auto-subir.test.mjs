@@ -31,7 +31,7 @@ function defaults() {
       dificil: {
         rotulo: 'Código difícil', modelo: 'sol', effort: 'high',
         cadeia_modelo: ['sol'], piso_modelo: 'sol', teto_modelo: 'sol',
-        effort_teto: 'high', alvo_ok1: 80, reforco: null,
+        effort_teto: 'xhigh', alvo_ok1: 80, reforco: null,
       },
     },
     codex: {
@@ -55,136 +55,40 @@ function preparar(linhas, cfg = defaults()) {
   return { ledger, defaultsFile, auditFile };
 }
 
-test('papel ausente ou inferido deixa a rota Codex sem amostra decisória', async () => {
-  const linhas = [
+test('origins share one quality sample and inferred work stays outside it', async () => {
+  const lines = [
     ...Array.from({ length: 10 }, () => linha({ papel: undefined })),
     ...Array.from({ length: 10 }, () => linha({ papel_inferido: true })),
+    ...Array.from({ length: 10 }, (_, i) => linha({ frente: i % 2 ? 'claude' : 'codex' })),
   ];
-  const files = preparar(linhas);
-  const resultado = await avaliar({ dias: 7, file: files.ledger, defaultsFile: files.defaultsFile });
-  assert.equal(resultado.codex.terrenos[0].n, 0);
-  assert.equal(resultado.codex.terrenos[0].estado, 'amostra');
+  const files = preparar(lines);
+  const result = await avaliar({ dias: 7, file: files.ledger, defaultsFile: files.defaultsFile });
+  assert.equal(result.terrenos[0].n, 10);
+  assert.equal(Object.hasOwn(result, 'codex'), false);
 });
 
-test('rota Codex aplica apenas effort permitido e registra trilha própria', async () => {
-  const linhas = [
-    ...Array.from({ length: 10 }, () => linha({ effort: 'high', resultado: 'ok1' })),
-    ...Array.from({ length: 10 }, () => linha({ effort: 'high', resultado: 'retrabalho' })),
-    ...Array.from({ length: 20 }, () => linha({ effort: 'xhigh', resultado: 'ok1' })),
+test('canonical effort promotion changes only terrenos and combines both origins', async () => {
+  const lines = [
+    ...Array.from({ length: 10 }, (_, i) => linha({ frente: i % 2 ? 'claude' : 'codex', effort: 'high', resultado: 'ok1' })),
+    ...Array.from({ length: 10 }, (_, i) => linha({ frente: i % 2 ? 'codex' : 'claude', effort: 'high', resultado: 'retrabalho' })),
+    ...Array.from({ length: 20 }, (_, i) => linha({ frente: i % 2 ? 'claude' : 'codex', effort: 'xhigh', resultado: 'ok1' })),
   ];
-  const files = preparar(linhas);
-  const antes = process.env.AUTO_SUBIR_ON;
+  const files = preparar(lines);
+  const previous = process.env.AUTO_SUBIR_ON;
   process.env.AUTO_SUBIR_ON = '1';
   try {
-    const resultado = await aplicar({
-      dias: 7,
-      file: files.ledger,
-      defaultsFile: files.defaultsFile,
-      auditFile: files.auditFile,
-    });
-    assert.equal(resultado.codex_aplicado.length, 1);
-    const depois = JSON.parse(readFileSync(files.defaultsFile, 'utf8'));
-    assert.equal(depois.codex.terrenos.dificil.effort, 'xhigh');
-    const audit = JSON.parse(readFileSync(files.auditFile, 'utf8').trim().split('\n').at(-1));
-    assert.equal(audit.rota, 'codex');
-    assert.equal(audit.tipo, 'effort');
-    assert.equal(audit.de, 'high');
-    assert.equal(audit.para, 'xhigh');
+    const result = await aplicar({ dias: 7, file: files.ledger, defaultsFile: files.defaultsFile, auditFile: files.auditFile });
+    assert.equal(result.aplicado.length, 1);
+    const after = JSON.parse(readFileSync(files.defaultsFile, 'utf8'));
+    assert.equal(after.terrenos.dificil.effort, 'xhigh');
+    assert.equal(after.codex.terrenos.dificil.effort, 'high');
   } finally {
-    if (antes === undefined) delete process.env.AUTO_SUBIR_ON;
-    else process.env.AUTO_SUBIR_ON = antes;
+    if (previous === undefined) delete process.env.AUTO_SUBIR_ON;
+    else process.env.AUTO_SUBIR_ON = previous;
   }
 });
 
-test('19 construções não recomendam nem alteram o effort', async () => {
-  const files = preparar(
-    Array.from({ length: 19 }, (_, i) => linha({ resultado: i < 8 ? 'ok1' : 'retrabalho' })),
-  );
-  const antes = process.env.AUTO_SUBIR_ON;
-  process.env.AUTO_SUBIR_ON = '1';
-  try {
-    const aval = await avaliar({ dias: 7, file: files.ledger, defaultsFile: files.defaultsFile });
-    assert.equal(aval.codex.propostas.length, 0);
-    assert.equal(aval.codex.terrenos[0].estado, 'amostra');
-    const resultado = await aplicar({
-      dias: 7,
-      file: files.ledger,
-      defaultsFile: files.defaultsFile,
-      auditFile: files.auditFile,
-    });
-    assert.equal(resultado.codex_aplicado.length, 0);
-    assert.equal(JSON.parse(readFileSync(files.defaultsFile, 'utf8')).codex.terrenos.dificil.effort, 'high');
-  } finally {
-    if (antes === undefined) delete process.env.AUTO_SUBIR_ON;
-    else process.env.AUTO_SUBIR_ON = antes;
-  }
-});
-
-test('rollback Codex preserva mudança manual e encerra a subida antiga', async () => {
-  const subidaTs = new Date(agora - 3_600_000).toISOString();
-  const cfg = defaults();
-  cfg.codex.terrenos.dificil.effort = 'max';
-  const files = preparar(
-    Array.from({ length: 20 }, () => linha({ effort: 'max', resultado: 'retrabalho' })),
-    cfg,
-  );
-  writeFileSync(
-    files.auditFile,
-    `${JSON.stringify({
-      ts: subidaTs,
-      rota: 'codex',
-      terreno: 'dificil',
-      acao: 'subiu',
-      tipo: 'effort',
-      de: 'high',
-      para: 'xhigh',
-      ok1_antes_pts: 50,
-    })}\n`,
-  );
-  const antes = process.env.AUTO_SUBIR_ON;
-  process.env.AUTO_SUBIR_ON = '1';
-  try {
-    const resultado = await aplicar({
-      dias: 7,
-      file: files.ledger,
-      defaultsFile: files.defaultsFile,
-      auditFile: files.auditFile,
-    });
-    assert.equal(resultado.codex_revertido.length, 0);
-    assert.equal(JSON.parse(readFileSync(files.defaultsFile, 'utf8')).codex.terrenos.dificil.effort, 'max');
-    const audit = readFileSync(files.auditFile, 'utf8')
-      .trim()
-      .split('\n')
-      .map((registro) => JSON.parse(registro));
-    assert.equal(audit.some((registro) => registro.acao === 'reversao_ignorada'), true);
-
-    const alteradoDepois = JSON.parse(readFileSync(files.defaultsFile, 'utf8'));
-    alteradoDepois.codex.terrenos.dificil.effort = 'xhigh';
-    writeFileSync(files.defaultsFile, `${JSON.stringify(alteradoDepois, null, 2)}\n`);
-    const segundaPassada = await aplicar({
-      dias: 7,
-      file: files.ledger,
-      defaultsFile: files.defaultsFile,
-      auditFile: files.auditFile,
-    });
-    assert.equal(segundaPassada.codex_revertido.length, 0);
-    assert.equal(
-      JSON.parse(readFileSync(files.defaultsFile, 'utf8')).codex.terrenos.dificil.effort,
-      'xhigh',
-    );
-    const auditFinal = readFileSync(files.auditFile, 'utf8')
-      .trim()
-      .split('\n')
-      .map((registro) => JSON.parse(registro));
-    assert.equal(auditFinal.filter((registro) => registro.acao === 'reversao_ignorada').length, 1);
-    assert.equal(auditFinal.some((registro) => registro.acao === 'reverteu'), false);
-  } finally {
-    if (antes === undefined) delete process.env.AUTO_SUBIR_ON;
-    else process.env.AUTO_SUBIR_ON = antes;
-  }
-});
-
-test('rollback Claude também encerra uma subida superada por mudança manual', async () => {
+test('canonical rollback preserves a manual change', async () => {
   const subidaTs = new Date(agora - 3_600_000).toISOString();
   const cfg = defaults();
   cfg.terrenos.dificil.effort = 'max';

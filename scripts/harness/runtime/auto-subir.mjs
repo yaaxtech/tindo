@@ -154,15 +154,14 @@ function ganhoModelo(atual, alvo, gap, ledgerDelta) {
 // Recorta o terreno em CARIMBADOS (não-ambíguos) — só eles medem tier. Devolve
 // ok1 e n dos carimbados, a razão de ambiguidade (gate), e ok1 por effort (para
 // o ganho de effort).
-function recorteTerreno(linhas, terreno, frentes = null) {
+function recorteTerreno(linhas, terreno) {
   // REVISÃO nunca mede degrau de CONSTRUÇÃO (26/08): num revisor, `retrabalho`
   // quer dizer "reprovei o artefato" — é o revisor acertando. Deixá-la na
   // amostra rebaixava o titular do terreno exatamente onde ele funcionava.
   const doTerreno = linhas.filter((r) =>
     r.terreno === terreno &&
     r.papel === 'construtor' &&
-    r.papel_inferido !== true &&
-    (!frentes || frentes.has(r.frente)));
+    r.papel_inferido !== true);
   const julgaveis = doTerreno.filter(julgavel);
   const carimbados = julgaveis.filter((r) => !terrenoAmbiguo(r));
   const ambiguos = julgaveis.length - carimbados.length;
@@ -198,8 +197,8 @@ function ledgerDeltaEffort(porEffort, effortAtual, effortAlvo) {
 
 // --- avaliação de um terreno -------------------------------------------------
 
-function avaliarTerreno(nome, cfg, linhas, frentes = null) {
-  const r = recorteTerreno(linhas, nome, frentes);
+function avaliarTerreno(nome, cfg, linhas) {
+  const r = recorteTerreno(linhas, nome);
   const alvo = cfg.alvo_ok1;
   const base = {
     terreno: nome,
@@ -318,63 +317,21 @@ function escreverDefaults(obj, path = DEFAULTS_FILE) {
   writeFileSync(path, `${JSON.stringify(obj, null, 2)}\n`);
 }
 
-function configCodex(defaults, nome, rota) {
-  const base = defaults.terrenos[nome] || {};
-  const cadeia = [rota.modelo, ...(rota.fallback || []), ...(rota.escalada_escrita || [])]
-    .filter((modelo, indice, todos) => modelo && todos.indexOf(modelo) === indice);
-  const escala = rota.escalada_effort || [];
-  return {
-    ...base,
-    ...rota,
-    rotulo: base.rotulo || nome,
-    alvo_ok1: base.alvo_ok1 ?? 80,
-    cadeia_modelo: cadeia,
-    piso_modelo: rota.modelo,
-    teto_modelo: cadeia[cadeia.length - 1] || rota.modelo,
-    effort_teto: escala[escala.length - 1] || rota.effort,
-    reforco: rota.revisao?.motivo || rota.revisor || base.reforco || null,
-  };
-}
-
-function avaliarCodex(defaults, linhas) {
-  const frentes = new Set(['codex']);
-  const terrenos = Object.entries(defaults.codex?.terrenos || {}).map(([nome, rota]) => {
-    const aval = avaliarTerreno(nome, configCodex(defaults, nome, rota), linhas, frentes);
-    // Trocar provider/perfil exige sincronizar invocação e não é alteração
-    // atômica. O motor propõe um canário; só effort listado na própria rota
-    // pode ser aplicado automaticamente.
-    if (aval.estado === 'sobe' && aval.proposta?.tipo === 'modelo') {
-      return {
-        ...aval,
-        estado: 'medir',
-        proposta: null,
-        para_ab: [aval.proposta, ...(aval.para_ab || [])],
-        motivo: `candidato ${aval.proposta.de}→${aval.proposta.para} exige canário e ` +
-          'sincronização de perfil/invocação — não aplicado no escuro',
-      };
-    }
-    return aval;
-  });
-  const propostas = terrenos.filter((t) => t.estado === 'sobe' && t.proposta?.tipo === 'effort');
-  return { terrenos, propostas };
-}
-
 export async function avaliar({ dias = 7, file = LEDGER_FILE, defaultsFile = DEFAULTS_FILE } = {}) {
   const defaults = lerDefaults(defaultsFile);
   if (defaults._meta?.governanca === 'experimentos-v1') {
     const report = construirExperimentos(defaults,loadJanela(file,90),await coletarTokensPorSessaoCodex({dias:90}));
     const sinais=report.experimentos.map(exp=>{
-      const cfg=(exp.frente==='codex'?defaults.codex.terrenos:defaults.terrenos)[exp.terreno].experimento;
-      return `${exp.frente}/${exp.terreno}: ${exp.bracos.map(b=>`${b.modelo}/${b.effort} ${b.ok1}/${b.julgados}`).join(' · ')} — ${decidirExperimento(exp,cfg).motivo}`;
+      const cfg=defaults.terrenos[exp.terreno].experimento;
+      return `${exp.terreno}: ${exp.bracos.map(b=>`${b.modelo}/${b.effort} ${b.ok1}/${b.julgados}`).join(' · ')} — ${decidirExperimento(exp,cfg).motivo}`;
     });
-    return {dias:90,auto_aplicar:defaults._meta.auto_aplicar,terrenos:[],propostas:[],codex:{terrenos:[],propostas:[]},experimentos:report,sinais};
+    return {dias:90,auto_aplicar:defaults._meta.auto_aplicar,terrenos:[],propostas:[],experimentos:report,sinais};
   }
   const linhas = loadJanela(file, dias);
   const mudo = avisoMudo(file);
 
   const terrenos = Object.entries(defaults.terrenos)
     .map(([nome, cfg]) => avaliarTerreno(nome, cfg, linhas));
-  const codex = avaliarCodex(defaults, linhas);
 
   const sinais = [];
   if (mudo) sinais.push(mudo);
@@ -391,23 +348,16 @@ export async function avaliar({ dias = 7, file = LEDGER_FILE, defaultsFile = DEF
       `ok1 ${pct(t.ok1_pct)} (n=${t.n}, alvo ${t.alvo}%): ${t.motivo}`);
   }
 
-  sinais.push('— rota Codex (papel e terreno explicitamente carimbados) —');
-  for (const t of codex.terrenos) {
-    sinais.push(`${emoji[t.estado] || '·'} Codex · ${t.rotulo} [${t.modelo}/${t.effort}] ` +
-      `ok1 ${pct(t.ok1_pct)} (n=${t.n}, alvo ${t.alvo}%): ${t.motivo}`);
-  }
-
   const propostas = terrenos.filter((t) => t.estado === 'sobe');
 
   return { dias, atualizado_ledger_mudo: !!mudo, auto_aplicar: defaults._meta?.auto_aplicar,
-    terrenos, propostas, codex, sinais };
+    terrenos, propostas, sinais };
 }
 
 /** Linhas prontas para o corpo do e-mail semanal da auditoria. */
 export function linhasParaEmail(resultado) {
   const cab = `Tier por terreno (${resultado.dias}d): ` +
-    `${resultado.propostas.length} subida(s) Claude · ` +
-    `${resultado.codex?.propostas?.length || 0} subida(s) Codex proposta(s)` +
+    `${resultado.propostas.length} subida(s) proposta(s)` +
     (resultado.auto_aplicar === false ? ' · modo PROPÕE (nada aplicado)' : '');
   return [cab, ...resultado.sinais];
 }
@@ -452,10 +402,7 @@ function registrarAvaliacao(auditFile, aval, ligado) {
     acao: 'avaliou',
     ligado,
     dias: aval.dias,
-    rotas: {
-      claude: compacto(aval.terrenos),
-      codex: compacto(aval.codex?.terrenos || []),
-    },
+    terrenos: compacto(aval.terrenos),
   });
 }
 
@@ -483,12 +430,12 @@ function revisarReversao(defaults, file, auditFile) {
   const revertidos = [];
   for (const [terreno, cfg] of Object.entries(defaults.terrenos)) {
     const subidas = audit.filter((a) => a.terreno === terreno && a.acao === 'subiu' &&
-      (a.rota || 'claude') === 'claude');
+      ['canonica', 'claude'].includes(a.rota || 'claude'));
     if (!subidas.length) continue;
     const ultima = subidas[subidas.length - 1];
     const jaEncerrada = audit.some((a) => a.terreno === terreno &&
       (a.acao === 'reverteu' || a.acao === 'reversao_ignorada') &&
-      (a.rota || 'claude') === 'claude' &&
+      ['canonica', 'claude'].includes(a.rota || 'claude') &&
       Date.parse(a.ts) > Date.parse(ultima.ts));
     if (jaEncerrada) continue;
 
@@ -500,7 +447,7 @@ function revisarReversao(defaults, file, auditFile) {
     const campo = ultima.tipo === 'modelo' ? 'modelo' : 'effort';
     if (cfg[campo] !== ultima.para) {
       registrarAudit(auditFile, {
-        ts: agoraIso(), rota: 'claude', terreno, acao: 'reversao_ignorada', tipo: ultima.tipo,
+        ts: agoraIso(), rota: 'canonica', terreno, acao: 'reversao_ignorada', tipo: ultima.tipo,
         esperado: ultima.para, atual: cfg[campo], ref_subida_ts: ultima.ts,
         motivo: 'configuração mudou depois da subida; preservada para não sobrescrever ajuste manual',
       });
@@ -515,7 +462,7 @@ function revisarReversao(defaults, file, auditFile) {
     cfg.atualizado_em = hojeData();
     cfg.motivo = `revertido: ${ultima.tipo} ${ultima.para}→${ultima.de} — subida não ` +
       `confirmou (ok1 pós ${pct(amostra.ok1_pct)} vs ${ultima.ok1_antes_pts}% antes, n=${amostra.n})`;
-    const reg = { ts: agoraIso(), rota: 'claude', terreno, acao: 'reverteu', tipo: ultima.tipo,
+    const reg = { ts: agoraIso(), rota: 'canonica', terreno, acao: 'reverteu', tipo: ultima.tipo,
       de: ultima.para, para: ultima.de,
       ok1_pos_pts: +(amostra.ok1_pct * 100).toFixed(1), n_pos: amostra.n,
       motivo: cfg.motivo, ref_subida_ts: ultima.ts };
@@ -529,7 +476,7 @@ function revisarReversao(defaults, file, auditFile) {
 function travadoAntiVaivem(audit, terreno, prop) {
   const limite = Date.now() - ANTITHRASH_DIAS * 864e5;
   return audit.some((a) => a.terreno === terreno && a.acao === 'reverteu' &&
-    (a.rota || 'claude') === 'claude' &&
+    ['canonica', 'claude'].includes(a.rota || 'claude') &&
     a.tipo === prop.tipo && a.de === prop.para && a.para === prop.de &&
     Date.parse(a.ts) >= limite);
 }
@@ -553,97 +500,10 @@ function aplicarSubida(cfg, terreno, prop) {
   }
   cfg.atualizado_em = hojeData();
   cfg.motivo = `auto-subiu: ${prop.tipo} ${de}→${prop.para} · ${prop.fonte} · valor ${num(prop.valor)}`;
-  return { ts: agoraIso(), rota: 'claude', terreno, acao: 'subiu', tipo: prop.tipo, de, para: prop.para,
+  return { ts: agoraIso(), rota: 'canonica', terreno, acao: 'subiu', tipo: prop.tipo, de, para: prop.para,
     effort_associado: effortAssociado,
     valor: prop.valor, ganho_pts: prop.ganho_pts, custo: prop.custo, fonte: prop.fonte,
     motivo: cfg.motivo };
-}
-
-function amostraCodexDesde(file, terreno, desdeIso) {
-  const desde = Date.parse(desdeIso);
-  const linhas = loadJanela(file, DIAS_REVISAO).filter((r) =>
-    r.frente === 'codex' &&
-    r.terreno === terreno &&
-    r.papel === 'construtor' &&
-    r.papel_inferido !== true &&
-    Date.parse(r.ts) >= desde &&
-    julgavel(r) &&
-    !terrenoAmbiguo(r));
-  const n = linhas.length;
-  const ok1 = linhas.filter((r) => r.resultado === 'ok1').length;
-  return { n, ok1_pct: n ? ok1 / n : null };
-}
-
-function revisarReversaoCodex(defaults, file, auditFile) {
-  const audit = lerAudit(auditFile);
-  const revertidos = [];
-  for (const [terreno, cfg] of Object.entries(defaults.codex?.terrenos || {})) {
-    const subidas = audit.filter((a) => a.rota === 'codex' && a.terreno === terreno &&
-      a.acao === 'subiu' && a.tipo === 'effort');
-    if (!subidas.length) continue;
-    const ultima = subidas[subidas.length - 1];
-    const jaEncerrada = audit.some((a) => a.rota === 'codex' && a.terreno === terreno &&
-      (a.acao === 'reverteu' || a.acao === 'reversao_ignorada') &&
-      Date.parse(a.ts) > Date.parse(ultima.ts));
-    if (jaEncerrada) continue;
-    const amostra = amostraCodexDesde(file, terreno, ultima.ts);
-    if (amostra.n < N_MIN) continue;
-    const ganho = amostra.ok1_pct * 100 - ultima.ok1_antes_pts;
-    if (ganho > GANHO_MIN_CONFIRMA) continue;
-    if (cfg.effort !== ultima.para) {
-      registrarAudit(auditFile, {
-        ts: agoraIso(), rota: 'codex', terreno, acao: 'reversao_ignorada', tipo: 'effort',
-        esperado: ultima.para, atual: cfg.effort, ref_subida_ts: ultima.ts,
-        motivo: 'effort mudou depois da subida; preservado para não sobrescrever ajuste manual',
-      });
-      continue;
-    }
-    cfg.effort = ultima.de;
-    cfg.atualizado_em = hojeData();
-    cfg.motivo = `revertido pela rota Codex: effort ${ultima.para}→${ultima.de} — ` +
-      `subida não confirmou (ok1 pós ${pct(amostra.ok1_pct)} vs ` +
-      `${ultima.ok1_antes_pts}% antes, n=${amostra.n})`;
-    const reg = {
-      ts: agoraIso(), rota: 'codex', terreno, acao: 'reverteu', tipo: 'effort',
-      de: ultima.para, para: ultima.de,
-      ok1_pos_pts: +(amostra.ok1_pct * 100).toFixed(1), n_pos: amostra.n,
-      motivo: cfg.motivo, ref_subida_ts: ultima.ts,
-    };
-    registrarAudit(auditFile, reg);
-    revertidos.push(reg);
-  }
-  return revertidos;
-}
-
-function aplicarSubidasCodex(defaults, propostas, auditFile, revertidos) {
-  const audit = lerAudit(auditFile);
-  const aplicados = [];
-  for (const p of propostas) {
-    if (p.proposta?.tipo !== 'effort' || p.terreno === 'sql') continue;
-    if (revertidos.some((r) => r.terreno === p.terreno)) continue;
-    const cfg = defaults.codex?.terrenos?.[p.terreno];
-    if (!cfg || cfg.effort !== p.proposta.de) continue;
-    if (!(cfg.escalada_effort || []).includes(p.proposta.para)) continue;
-    const limite = Date.now() - ANTITHRASH_DIAS * 864e5;
-    const travado = audit.some((a) => a.rota === 'codex' && a.terreno === p.terreno &&
-      a.acao === 'reverteu' && a.tipo === 'effort' && a.de === p.proposta.para &&
-      a.para === p.proposta.de && Date.parse(a.ts) >= limite);
-    if (travado) continue;
-    cfg.effort = p.proposta.para;
-    cfg.atualizado_em = hojeData();
-    cfg.motivo = `auto-subiu na rota Codex: effort ${p.proposta.de}→${p.proposta.para} · ` +
-      `${p.proposta.fonte} · valor ${num(p.proposta.valor)}`;
-    const reg = {
-      ts: agoraIso(), rota: 'codex', terreno: p.terreno, acao: 'subiu', tipo: 'effort',
-      de: p.proposta.de, para: p.proposta.para, valor: p.proposta.valor,
-      ganho_pts: p.proposta.ganho_pts, custo: p.proposta.custo, fonte: p.proposta.fonte,
-      ok1_antes_pts: +((p.ok1_pct ?? 0) * 100).toFixed(1), n_antes: p.n,
-      gap_antes: p.gap, motivo: cfg.motivo,
-    };
-    registrarAudit(auditFile, reg);
-    aplicados.push(reg);
-  }
-  return aplicados;
 }
 
 export async function aplicar({ dias = 7, file = LEDGER_FILE,
@@ -652,8 +512,8 @@ export async function aplicar({ dias = 7, file = LEDGER_FILE,
   if (defaults._meta?.governanca === 'experimentos-v1') {
     const result = autorregular({defaultsFile,auditFile,linhas:loadJanela(file,90),
       sessoes:await coletarTokensPorSessaoCodex({dias:90}),aplicar:true});
-    return {ligado:result.habilitada,aplicado:[],revertido:[],codex_aplicado:result.mudancas || [],
-      codex_revertido:[],sinais:[result.motivo],motivo:result.motivo};
+    return {ligado:result.habilitada,aplicado:result.mudancas || [],revertido:[],
+      sinais:[result.motivo],motivo:result.motivo};
   }
   const ligado = autoSubirOn() && defaults._meta?.auto_aplicar === true;
   const aval = await avaliar({ dias, file, defaultsFile });
@@ -663,17 +523,13 @@ export async function aplicar({ dias = 7, file = LEDGER_FILE,
     return { ligado: false, aplicado: [], revertido: [],
       motivo: `toggle OFF (AUTO_SUBIR_ON=${autoSubirOn()}, auto_aplicar=${defaults._meta?.auto_aplicar}) — nada escrito`,
       propostas_seriam: [
-        ...aval.propostas.map((p) => ({ rota: 'claude', terreno: p.terreno, ...p.proposta })),
-        ...(aval.codex?.propostas || []).map((p) => ({
-          rota: 'codex', terreno: p.terreno, ...p.proposta,
-        })),
+        ...aval.propostas.map((p) => ({ terreno: p.terreno, ...p.proposta })),
       ],
       sinais: aval.sinais };
   }
 
   // 1) reversões primeiro (desfaz o que não segurou antes de subir de novo)
   const revertido = revisarReversao(defaults, file, auditFile);
-  const codexRevertido = revisarReversaoCodex(defaults, file, auditFile);
   const auditPos = lerAudit(auditFile); // já com as reversões desta passada
 
   // 2) subidas
@@ -691,21 +547,11 @@ export async function aplicar({ dias = 7, file = LEDGER_FILE,
     aplicado.push(reg);
   }
 
-  // Na rota Codex, somente effort explicitamente listado em escalada_effort
-  // é mutação atômica segura. Troca de modelo/perfil sempre fica em canário.
-  const codexAplicado = aplicarSubidasCodex(
-    defaults,
-    aval.codex?.propostas || [],
-    auditFile,
-    codexRevertido,
-  );
-
-  if (revertido.length || aplicado.length || codexRevertido.length || codexAplicado.length) {
+  if (revertido.length || aplicado.length) {
     defaults._meta.atualizado_em = hojeData();
     escreverDefaults(defaults, defaultsFile);
   }
-  return { ligado: true, aplicado, revertido, codex_aplicado: codexAplicado,
-    codex_revertido: codexRevertido, sinais: aval.sinais };
+  return { ligado: true, aplicado, revertido, sinais: aval.sinais };
 }
 
 const executadoDiretamente = process.argv[1] &&
@@ -725,28 +571,20 @@ if (executadoDiretamente) {
           if (r.propostas_seriam?.length) {
             process.stdout.write('   FARIA:\n');
             for (const p of r.propostas_seriam) {
-                process.stdout.write(`     ${p.rota}/${p.terreno}: ${p.tipo} ${p.de}→${p.para} (valor ${num(p.valor)})\n`);
+                process.stdout.write(`     ${p.terreno}: ${p.tipo} ${p.de}→${p.para} (valor ${num(p.valor)})\n`);
             }
           } else {
             process.stdout.write('   (nenhuma subida proposta na janela)\n');
           }
           return;
         }
-        process.stdout.write(`✅ motor LIGADO — Claude ${r.aplicado.length} subida(s)/` +
-          `${r.revertido.length} reversão(ões) · Codex ${r.codex_aplicado.length} subida(s)/` +
-          `${r.codex_revertido.length} reversão(ões)\n`);
+        process.stdout.write(`✅ motor LIGADO — ${r.aplicado.length} subida(s)/` +
+          `${r.revertido.length} reversão(ões)\n`);
         for (const a of r.revertido) {
           process.stdout.write(`   🔻 ${a.terreno}: ${a.tipo} ${a.de}→${a.para} — ${a.motivo}\n`);
         }
         for (const a of r.aplicado) {
           process.stdout.write(`   🔺 ${a.terreno}: ${a.tipo} ${a.de}→${a.para} (valor ${num(a.valor)}, ${a.fonte})\n`);
-        }
-        for (const a of r.codex_revertido) {
-          process.stdout.write(`   🔻 Codex/${a.terreno}: effort ${a.de}→${a.para} — ${a.motivo}\n`);
-        }
-        for (const a of r.codex_aplicado) {
-          process.stdout.write(`   🔺 Codex/${a.terreno}: effort ${a.de}→${a.para} ` +
-            `(valor ${num(a.valor)}, ${a.fonte})\n`);
         }
       })
       .catch((erro) => { process.stderr.write(`${erro.message}\n`); process.exitCode = 1; });
