@@ -43,6 +43,8 @@ export interface LedgerLinha {
   papel?: 'construtor' | 'revisor';
   /** true = papel deduzido depois por texto; fica fora de decisões. */
   papel_inferido?: boolean;
+  /** Terreno e papel foram informados no lançamento; não é backfill histórico. */
+  classificacao?: 'declarada';
 }
 
 export interface KpiHistoricoLinha {
@@ -162,6 +164,75 @@ export interface CadeiaTerreno {
   effort?: string;
   effort_teto?: string;
   modelo_no_teto?: boolean;
+}
+
+export type FrenteRota = 'claude' | 'codex';
+
+/** Rotas publicadas separadamente para cada frente do harness. */
+export interface CadeiasPorFrente {
+  claude: Record<string, CadeiaTerreno>;
+  codex: Record<string, CadeiaTerreno>;
+}
+
+export interface ExperimentoBracoPublicado {
+  id: string;
+  modelo: string;
+  effort: string;
+  execucoes: number;
+  julgados: number;
+  ok1: number;
+  retrabalho: number;
+  quota: number;
+  infra: number;
+  tokens_mediana: number | null;
+  duracao_mediana_min: number | null;
+  /** Cobertura opcional da medição adicionada pelo publicador. */
+  tokens_medidos?: number | null;
+  modelos_confirmados?: number | null;
+  pendentes?: number | null;
+  falhas?: number | null;
+  duracoes_medidas?: number | null;
+}
+
+export interface ExperimentoPublicado {
+  id: string;
+  terreno: string;
+  frente: string;
+  status: string;
+  motivo: string;
+  bracos: ExperimentoBracoPublicado[];
+}
+
+export interface ExperimentosPublicados {
+  gerado_em: string;
+  experimentos: ExperimentoPublicado[];
+}
+
+export interface BenchmarkModeloPublicado {
+  id: string;
+  nome: string;
+  organizacao: string;
+  score: number;
+  score_margem: number | null;
+  sessoes: number;
+  output_tokens_mediana: number | null;
+  amostra_tokens: number;
+}
+
+export interface BenchmarkModelosPublicado {
+  fonte: string;
+  url: string;
+  consultado_em: string;
+  projecao: string;
+  nota: string;
+  modelos: BenchmarkModeloPublicado[];
+}
+
+export interface AutorregulacaoPublicada {
+  habilitada: boolean;
+  gerado_em: string;
+  motivo: string;
+  ultima_mudanca: string | null;
 }
 
 export interface AutonomiaDia {
@@ -344,6 +415,14 @@ export interface HarnessBlob {
   prs: PrSemana[];
   assinaturas: Assinatura[];
   cadeias: Record<string, CadeiaTerreno>;
+  /** Campo aditivo: snapshots antigos continuam usando `cadeias`. */
+  cadeias_por_frente?: CadeiasPorFrente;
+  /** Campo aditivo com resultados A/B medidos pelo publicador. */
+  experimentos?: ExperimentosPublicados;
+  /** Benchmark externo; contexto de modelo, separado da evidência local. */
+  benchmark_modelos?: BenchmarkModelosPublicado;
+  /** Campo aditivo com o estado da autorregulação publicada. */
+  autorregulacao?: AutorregulacaoPublicada;
   autonomia?: AutonomiaBlob | null;
   janela?: JanelaCampo;
 }

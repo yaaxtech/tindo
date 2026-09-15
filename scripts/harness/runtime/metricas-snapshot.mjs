@@ -178,6 +178,7 @@ const CAMPOS_PUBLICOS = [
   'terreno_inferido',
   'papel',
   'papel_inferido',
+  'classificacao',
 ];
 
 /** Mantém telemetria estruturada; remove tarefa, nota, IDs e qualquer campo livre. */
@@ -220,6 +221,10 @@ export function sanitizarLedger(ledger) {
     }
     if (linha.papel != null && !PAPEIS.has(linha.papel)) {
       rejeitar('papel_invalido');
+      continue;
+    }
+    if (linha.classificacao != null && !['declarada', 'ausente'].includes(linha.classificacao)) {
+      rejeitar('classificacao_invalida');
       continue;
     }
     if (

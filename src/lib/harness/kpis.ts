@@ -106,7 +106,7 @@ const INSTRUMENTACAO_TERRENO = Date.parse('2026-08-13T21:42:23Z');
 export function terrenoAmbiguo(r: LedgerLinha): boolean {
   if (r.papel !== 'construtor' || r.papel_inferido === true) return true;
   if (r.terreno_inferido) return true; // o próprio run.sh admitiu o default
-  if (!r.auto) return true; // rótulo digitado à mão ≠ classificação
+  if (!r.auto && r.classificacao !== 'declarada') return true; // sem carimbo de lançamento ≠ classificação
   return Date.parse(r.ts) < INSTRUMENTACAO_TERRENO; // antes do carimbo: indistinguível
 }
 

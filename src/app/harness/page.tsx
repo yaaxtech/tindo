@@ -2,6 +2,7 @@
 
 import { Assinaturas } from '@/app/harness/_components/Assinaturas';
 import { Autonomia } from '@/app/harness/_components/Autonomia';
+import { Autorregulacao } from '@/app/harness/_components/Autorregulacao';
 import { Experimentos } from '@/app/harness/_components/Experimentos';
 import { FaixaAlertas } from '@/app/harness/_components/FaixaAlertas';
 import { FiltroPeriodo } from '@/app/harness/_components/FiltroPeriodo';
@@ -36,6 +37,7 @@ import {
   recorte,
 } from '@/lib/harness/kpis';
 import { cn } from '@/lib/utils';
+import type { FrenteRota } from '@/types/harness';
 import { Gauge, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -47,6 +49,7 @@ export default function HarnessPage() {
   const { snap, githubRuns, actionsSnapshot, alertas, fontes, carregando, erro, atualizar } =
     useDadosHarness();
   const [janelaDias, setJanelaDias] = useState(7);
+  const [frenteRota, setFrenteRota] = useState<FrenteRota>('claude');
 
   // Disclosure do diagnóstico: fechado por padrão, abre se a URL já chegou
   // apontando para um bloco de dentro (link compartilhado, recarregar a página).
@@ -77,6 +80,18 @@ export default function HarnessPage() {
   );
   const publicadas = snap?.dados.metricas_periodos?.[String(janelaDias)];
   const linhasDecisorias = useMemo(() => (contratoValido ? atual : []), [contratoValido, atual]);
+  const linhasDaFrente = useMemo(
+    () => linhasDecisorias.filter((linha) => linha.frente === frenteRota),
+    [linhasDecisorias, frenteRota],
+  );
+  const linhasGeraisDaFrente = useMemo(
+    () => (contratoValido ? ledger.filter((linha) => linha.frente === frenteRota) : []),
+    [contratoValido, ledger, frenteRota],
+  );
+  const cadeiasDaFrente = useMemo(
+    () => snap?.dados.cadeias_por_frente?.[frenteRota] ?? snap?.dados.cadeias ?? {},
+    [snap, frenteRota],
+  );
   const gAtual = useMemo(
     () =>
       aplicarMetricasPublicadas(
@@ -237,6 +252,9 @@ export default function HarnessPage() {
             info="Divisão de papéis decidida pelo dono. O que cada modelo de fato executou está nos registros do ledger, não nesta configuração."
           >
             <Resumo />
+            <div className="mt-2.5">
+              <Autorregulacao dados={snap.dados.autorregulacao} />
+            </div>
           </Secao>
 
           {/* Faixa de alerta — o que o revisor de KPIs achou na última checagem.
@@ -300,7 +318,14 @@ export default function HarnessPage() {
             titulo="Configuração atual por terreno — titular, fallback e sinal"
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
-            <Terrenos linhas={linhasDecisorias} cadeias={snap.dados.cadeias} />
+            <Terrenos
+              linhas={linhasDaFrente}
+              linhasGeral={linhasGeraisDaFrente}
+              cadeias={cadeiasDaFrente}
+              cadeiasPorFrente={snap.dados.cadeias_por_frente}
+              frenteSelecionada={frenteRota}
+              onFrenteChange={setFrenteRota}
+            />
             {!contratoValido && (
               <p className="mt-2.5 text-xs text-warning">
                 Só a configuração declarada; os sinais ficam em “pouco dado” porque a leitura está
@@ -340,15 +365,17 @@ export default function HarnessPage() {
             </p>
           </Secao>
 
-          {/* Bloco 5 — experimentos A/B do plano; candidatos fixos, sem vencedor.
-              Não depende do filtro: nada aqui vem do ledger. */}
+          {/* Bloco 5 — resultados A/B publicados e histórico manual preservado. */}
           <Secao
             id="experimentos"
             titulo="Experimentos A/B/C"
-            info="Comparações previstas no plano do dono. O painel só lista os candidatos e o status do piloto, que roda fora dele em recibos separados. Registros históricos do ledger não são resultados pareados e não são contados aqui; a promoção depende dos critérios do teste."
-            escopo={{ tipo: 'fixo', rotulo: 'plano' }}
+            info="Resultados automáticos publicados pelo publicador, com contagens por braço e motivo do status. Pilotos históricos ficam separados e não são recalculados a partir do ledger; configurar ou sortear um braço sem executar uma tarefa não conta como teste."
+            escopo={{ tipo: 'fixo', rotulo: 'medição' }}
           >
-            <Experimentos />
+            <Experimentos
+              dados={snap.dados.experimentos}
+              benchmarkModelos={snap.dados.benchmark_modelos}
+            />
           </Secao>
 
           {/* Diagnóstico detalhado — tudo que é longo fica atrás deste

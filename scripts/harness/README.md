@@ -1,5 +1,40 @@
 # Runtime do Painel do Harness
 
+## Roteamento e experimentos (15/09/2026)
+
+A configuração operacional é `~/.claude/orquestracao/defaults-terreno.json`.
+O arquivo `defaults-terreno.example.json` é uma fixture pública de teste, sem
+contas ou credenciais; não substitui a configuração pessoal.
+
+- `rota-harness.mjs resolver --frente codex --terreno rotina`: resolve o par
+  para um novo despacho, com versão da configuração e atribuição experimental.
+- `despachar-harness.mjs --frente codex --terreno rotina --prompt-file /caminho/prompt.txt`:
+  executa a rota e tenta o outro provedor uma vez quando há indisponibilidade.
+- `codex-run.sh` é a versão revisável de `~/.claude/workers/codex/run.sh`.
+  Flags antigas do construtor são substituídas pelo default resolvido; escalada
+  consciente exige motivo de fallback ou `ROTEAMENTO_OK`, registrado no ledger.
+  Revisor continua explícito e sujeito à validação de autoria e provedor.
+- `codex-eventos.mjs` captura a sessão do evento `thread.started` desta
+  execução. Modelo/esforço só são confirmados com o `turn_context` dessa sessão.
+- `experimentos-harness.mjs` não transforma histórico comum em A/B. Conta
+  apenas registros atribuídos à mesma versão de protocolo; tokens ausentes,
+  sessões compartilhadas e modelos não confirmados não autorizam promoção.
+- `autorregular-experimentos.mjs` roda no publicador horário existente e
+  mantém registro anterior/posterior de cada mudança. Não lança tarefas de LLM.
+- `arena-benchmark.mjs` atualiza semanalmente a referência externa na mesma
+  publicação; falha de consulta preserva a amostra datada anterior.
+
+Instalação local exige backup dos arquivos substituídos: módulos em
+`~/.claude/orquestracao/`, wrapper em `~/.claude/workers/codex/run.sh`. A edição
+da configuração real é feita separadamente, preservando contas e credenciais.
+Executar `publicar-painel.mjs --dry-run --dump /tmp/snapshot.json` verifica o
+payload sem publicar nem aplicar decisões. O ciclo normal publica apenas
+telemetria estruturada, nunca prompts nem identificadores de sessão.
+
+Para subagentes nativos, o agente deve usar o par resolvido explicitamente e
+registrar o despacho. A ferramenta não consegue mudar retroativamente o modelo
+da conversa atual. Logs antigos sem classificação continuam fora das decisões.
+
 Os arquivos de `runtime/` são a versão revisável dos coletores instalados em
 `~/.claude/orquestracao/`. Eles usam as dependências operacionais já existentes
 naquele diretório (`painel.mjs`, `paridade-terrenos.mjs` e suas dependências).

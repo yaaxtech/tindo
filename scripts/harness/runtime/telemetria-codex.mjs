@@ -500,4 +500,82 @@ export async function coletarTelemetriaCodex({
   };
 }
 
+// Ponte tokens↔effort (2026-09-10): mesma leitura de telemetria acima, mas
+// agregada por SESSÃO (session_id do Codex) em vez de um único total global —
+// é a chave que consumo-por-effort.mjs usa para casar com o `session_id`
+// gravado pelo run.sh na linha do ledger. Reaproveita os helpers internos de
+// leitura/deduplicação já usados por coletarTelemetriaCodex.
+export async function coletarTokensPorSessaoCodex({
+  dias = 14,
+  agora = Date.now(),
+  dirs = DIRETORIOS_PADRAO,
+} = {}) {
+  const diasNumero = diasValidos(dias);
+  const agoraMs = agoraValido(agora);
+  const limite = agoraMs - diasNumero * DIA_MS;
+  const erros = { value: 0 };
+  const diretorios = Array.isArray(dirs)
+    ? dirs.filter((dir) => typeof dir === 'string' && dir)
+    : [];
+  const caminhos = [];
+  const caminhosVistos = new Set();
+  for (const diretorio of diretorios) {
+    for (const caminho of await listarJsonl(diretorio, erros, limite)) {
+      if (!caminhosVistos.has(caminho)) {
+        caminhosVistos.add(caminho);
+        caminhos.push(caminho);
+      }
+    }
+  }
+
+  const arquivos = [];
+  for (const caminho of caminhos) {
+    const arquivo = await analisarArquivo(caminho, erros, agoraMs);
+    if (arquivo.leu) arquivos.push(arquivo);
+  }
+
+  const grupos = new Map();
+  const tokensGlobaisVistos = new Set();
+  for (const arquivo of arquivos) {
+    const identidade = identidadeDoArquivo(arquivo);
+    const grupo = grupoDeFluxo(grupos, identidade);
+    grupo.contextos.push(...arquivo.contextos);
+    for (const token of arquivo.tokens) {
+      const chave = chaveToken(identidade.logica, token);
+      if (tokensGlobaisVistos.has(chave)) continue;
+      tokensGlobaisVistos.add(chave);
+      grupo.tokens.push(token);
+    }
+  }
+
+  const porSessao = new Map();
+  for (const grupo of grupos.values()) {
+    const tokens = [...grupo.tokens].filter((token) => token.ts <= agoraMs).sort(ordenar);
+    const acumulado = porSessao.get(grupo.logica) || {
+      session_id: grupo.logica,
+      chamadas: 0,
+      tokens: 0,
+      input: 0,
+      cache_read: 0,
+      output: 0,
+    };
+    let anterior = null;
+    for (const token of tokens) {
+      const mudou = usoMudou(token.uso, anterior);
+      const delta = deltaUso(token.uso, anterior);
+      if (mudou && token.ts >= limite) {
+        acumulado.chamadas += 1;
+        acumulado.tokens += delta.total;
+        acumulado.input += delta.input;
+        acumulado.cache_read += delta.cacheRead;
+        acumulado.output += delta.output;
+      }
+      anterior = token.uso;
+    }
+    porSessao.set(grupo.logica, acumulado);
+  }
+
+  return [...porSessao.values()].filter((s) => s.chamadas > 0);
+}
+
 export default coletarTelemetriaCodex;
