@@ -189,7 +189,8 @@ export interface ExperimentoBracoPublicado {
 export interface ExperimentoPublicado {
   id: string;
   terreno: string;
-  frente: string;
+  /** Metadado histórico; não separa rotas ou amostras atuais. */
+  frente?: string;
   status: string;
   motivo: string;
   bracos: ExperimentoBracoPublicado[];
@@ -407,7 +408,6 @@ export interface HarnessBlob {
   prs: PrSemana[];
   assinaturas: Assinatura[];
   cadeias: Record<string, CadeiaTerreno>;
-  /** Campo aditivo: snapshots antigos continuam usando `cadeias`. */
   /** Campo aditivo com resultados A/B medidos pelo publicador. */
   experimentos?: ExperimentosPublicados;
   /** Benchmark externo; contexto de modelo, separado da evidência local. */
