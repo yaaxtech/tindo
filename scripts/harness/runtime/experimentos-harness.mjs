@@ -15,11 +15,10 @@ export function construirExperimentos(defaults, linhas, sessoes = [], agora = ne
   const usos = new Map();
   for (const r of linhas) if (r.session_id) usos.set(r.session_id, (usos.get(r.session_id) || 0) + 1);
   const experimentos = [];
-  for (const [frente, rotas] of Object.entries({ claude: defaults.terrenos, codex: defaults.codex?.terrenos })) {
-    for (const [terreno, rota] of Object.entries(rotas || {})) {
+  for (const [terreno, rota] of Object.entries(defaults.terrenos || {})) {
       const exp = rota.experimento;
       if (!exp) continue;
-      const elegiveis = linhas.filter(r => r.frente === frente && r.terreno === terreno &&
+      const elegiveis = linhas.filter(r => r.terreno === terreno &&
         r.papel === 'construtor' && !r.papel_inferido && !r.terreno_inferido &&
         (r.auto === true || r.classificacao === 'declarada') && r.experiment_id === exp.id &&
         r.experiment_version === versaoExperimento(exp));
@@ -48,12 +47,11 @@ export function construirExperimentos(defaults, linhas, sessoes = [], agora = ne
         };
       });
       const total = bracos.reduce((s, b) => s + b.julgados, 0);
-      experimentos.push({ id: exp.id, terreno, frente,
+      experimentos.push({ id: exp.id, terreno,
         status: exp.ativo ? (total ? 'Em medição' : 'Ativo · aguardando execuções') : 'Encerrado',
         motivo: exp.motivo || 'Comparação aleatória em tarefas reais; sem promoção com amostra ou consumo incompletos.',
         bracos });
       experimentos.push(...(exp.historico || []));
-    }
   }
   return { gerado_em: agora, experimentos };
 }

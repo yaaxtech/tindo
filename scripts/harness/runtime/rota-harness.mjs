@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, realpathSync } from 'node:fs';
 /**
- * Resolve a rota Codex/Claude a partir dos defaults versionados.
+ * Resolve uma rota por terreno a partir dos defaults versionados.
  *
  * Este módulo é puro quando recebe `defaults`: não lê o HOME, não executa
  * modelo e não sorteia uma rota de revisor. O CLI só serializa o resultado.
@@ -144,7 +144,13 @@ function parIgual(a, b) {
 
 function fallbackEntries(cfg, motivo) {
   if (!motivo) return [];
-  const porMotivo = cfg.fallback_por_motivo?.[motivo];
+  const aliases = {
+    qualidade_ou_quota_openai: 'quota_openai',
+    qualidade_ou_quota_anthropic: 'quota_anthropic',
+    opus_indisponivel: 'indisponivel_anthropic',
+  };
+  const canonico = aliases[motivo] || motivo;
+  const porMotivo = cfg.fallback_por_motivo?.[canonico] || cfg.fallback_por_motivo?.[motivo];
   if (Array.isArray(porMotivo)) return porMotivo;
   if (motivo === 'qualidade' && Array.isArray(cfg.fallback)) {
     return cfg.fallback.map((modelo) => ({ modelo, effort: cfg.effort_por_modelo?.[modelo] }));
@@ -234,9 +240,10 @@ export function resolverRota({
     erro('FALLBACK_SEM_CAUSA','Revisão própria exige indisponibilidade ou saída inválida registrada');
   }
   const cfgRaiz = defaults || lerDefaults();
-  const rotas = frente === 'codex' ? cfgRaiz.codex?.terrenos : cfgRaiz.terrenos;
+  // A frente describes where the request came from; it never chooses a route.
+  const rotas = cfgRaiz.terrenos;
   if (!rotas || !Object.prototype.hasOwnProperty.call(rotas, terreno)) {
-    erro('TERRENO_DESCONHECIDO', `terreno desconhecido em ${frente}.terrenos: ${terreno}`);
+    erro('TERRENO_DESCONHECIDO', `terreno desconhecido em terrenos: ${terreno}`);
   }
   const cfg = rotas[terreno];
   const configVersion = versaoDefaults(cfgRaiz);
@@ -263,7 +270,7 @@ export function resolverRota({
       }
     }
     validarParConfigurado(cfg, escolhido, motivo, roteamentoOk, false);
-    const podeSortear = !motivo && !roteamentoOk && frente === 'codex' && terreno !== 'sql';
+    const podeSortear = !motivo && !roteamentoOk && terreno !== 'sql';
     if (podeSortear) {
       const sorteio = sortearDetalhado(terreno, random, cfgRaiz, escolhido);
       if (sorteio?.experiment_id) {
