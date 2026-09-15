@@ -660,6 +660,8 @@ if [ "${LEDGER_OFF:-0}" != "1" ] && command -v node >/dev/null 2>&1 && [ -f "$LE
   SESSION_ID="$(RECIBO="$RECIBO" node -e 'process.stdout.write(JSON.parse(process.env.RECIBO).session_id || "")')"
   TOKENS="$(RECIBO="$RECIBO" node -e 'const v=JSON.parse(process.env.RECIBO).tokens;process.stdout.write(v==null?"":String(v))')"
   EXPERIMENTO_ARGS=(--config-version "$ROTA_CONFIG_VERSION" --rota-origem "$ROTA_ORIGEM")
+  [ -z "$ROTA_FALLBACK_MOTIVO" ] || EXPERIMENTO_ARGS+=(--fallback-motivo "$ROTA_FALLBACK_MOTIVO")
+  [ -z "$ROTA_OK" ] || EXPERIMENTO_ARGS+=(--roteamento-ok "$ROTA_OK")
   if [ -n "$ROTA_EXPERIMENTO_ID" ]; then
     EXPERIMENTO_ARGS+=(--experiment-id "$ROTA_EXPERIMENTO_ID" --arm "$ROTA_ARM" --experiment-version "$ROTA_EXPERIMENT_VERSION")
   fi

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { realpathSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
@@ -21,8 +21,8 @@ export function executarDespacho({frente='codex',terreno,prompt,cwd=process.cwd(
     const resposta=invocar(rota,{prompt,cwd,sorteio,motivo});
     tentativas.push({provider:rota.provider,modelo:rota.modelo,effort:rota.effort,codigo:resposta.status});
     if(resposta.status===0) return {ok:true,tentativas,resposta};
-    const erro=`${resposta.stderr || ''}\n${resposta.stdout || ''}`;
-    if(!/usage limit|message limit|quota|rate.limit|limit reached|not logged in|authentication|unauthorized|expired.*token|sem_conta|sem.token|indispon.vel/i.test(erro)) {
+    const erro=`${resposta.stderr || ''}\n${resposta.stdout || ''}\n${resposta.error?.code || ''}`;
+    if(!/usage limit|message limit|quota|rate.limit|limit reached|not logged in|authentication|unauthorized|expired.*token|sem_conta|sem.token|indispon.vel|ENOENT/i.test(erro)) {
       return {ok:false,tentativas,resposta};
     }
     motivo=rota.provider==='codex'?'quota_openai':'quota_anthropic';
@@ -31,7 +31,7 @@ export function executarDespacho({frente='codex',terreno,prompt,cwd=process.cwd(
   return {ok:false,tentativas,resposta:{status:1,stderr:'Os provedores disponíveis não concluíram o despacho; nenhuma repetição automática adicional.'}};
 }
 
-if(process.argv[1] && import.meta.url===pathToFileURL(realpathSync(process.argv[1])).href) {
+if(process.argv[1] && existsSync(process.argv[1]) && import.meta.url===pathToFileURL(realpathSync(process.argv[1])).href) {
   const a=Object.fromEntries(process.argv.slice(2).reduce((out,x,i,all)=>{
     if(x.startsWith('--'))out.push([x.slice(2),all[i+1]]);return out;
   },[]));
@@ -53,6 +53,7 @@ if(process.argv[1] && import.meta.url===pathToFileURL(realpathSync(process.argv[
         const r=spawnSync(join(homedir(),'.claude/workers/claude/claude-por-modo.sh'),[
           '--print','--model',rota.modelo_cli,'--effort',rota.effort,'--output-format','json',prompt],
           {cwd,env,encoding:'utf8',timeout:90*60e3,maxBuffer:16*1024*1024});
+        try { if(JSON.parse(r.stdout || '{}').is_error===true) r.status=1; } catch { /* CLI may emit plain diagnostics. */ }
         const resultado=r.status===0?'pendente':/usage limit|quota|limit reached/i.test(`${r.stdout}\n${r.stderr}`)?'quota':'infra';
         spawnSync(process.execPath,[join(DIR,'ledger.mjs'),'log','--frente','claude',
           '--modelo',rota.modelo_log,'--effort',rota.effort,'--terreno',a.terreno,

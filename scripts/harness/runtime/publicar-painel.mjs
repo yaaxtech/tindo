@@ -140,6 +140,12 @@ async function main() {
   const autorregulacao = autorregular({defaultsFile, auditFile:join(DIR,'tier-mudancas.jsonl'),
     linhas:ledgerLocal, sessoes:tokensSessoes, agora:geradoEm, aplicar:!process.argv.includes('--dry-run')});
   const defaults = JSON.parse(readFileSync(defaultsFile,'utf8'));
+  const experimentos = construirExperimentos(defaults,ledgerLocal,tokensSessoes,geradoEm);
+  // Closed technical pilots remain explicitly separate from promotion input.
+  try {
+    const pilotos=JSON.parse(readFileSync(join(DIR,'pilotos-harness.json'),'utf8'));
+    if(Array.isArray(pilotos)) experimentos.experimentos.push(...pilotos);
+  } catch(e) { if(e.code!=='ENOENT') console.error('Pilotos não carregados:',e.message); }
   let benchmarkModelos = null;
   try { benchmarkModelos = JSON.parse(readFileSync(join(DIR,'arena-benchmark.json'),'utf8')); } catch { /* Visible absence, never invented scores. */ }
   if (!process.argv.includes('--dry-run') && (!benchmarkModelos ||
@@ -163,7 +169,7 @@ async function main() {
     assinaturas: ASSINATURAS,
     cadeias: construirCadeias(defaults),
     cadeias_por_frente: {claude:construirCadeias(defaults),codex:construirCadeias(defaults,'codex')},
-    experimentos: construirExperimentos(defaults,ledgerLocal,tokensSessoes,geradoEm),
+    experimentos,
     autorregulacao,
     benchmark_modelos: benchmarkModelos,
     // KPI de autonomia (§AUTONOMIA — 3 NÍVEIS): quanto o dono foi

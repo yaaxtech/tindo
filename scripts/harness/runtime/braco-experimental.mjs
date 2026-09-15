@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { realpathSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 /**
  * Seleção de braços experimentais para uma rota já resolvida.
  *
@@ -133,7 +133,7 @@ export function sortear(terreno, rnd = Math.random, defaults) {
   return { arm: resultado.arm, effort: resultado.effort };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const [cmd, terreno] = process.argv.slice(2);
   if (cmd !== 'sortear' || !terreno) {
     console.error('uso: node braco-experimental.mjs sortear <terreno>');

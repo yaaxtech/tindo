@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { realpathSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 /**
  * Resolve a rota Codex/Claude a partir dos defaults versionados.
  *
@@ -173,34 +173,16 @@ function escolherDefault(cfg, frente, terreno, papel, motivo) {
   if (!cfg.modelo || !cfg.effort) {
     erro('DEFAULT_INCOMPLETO', `default de ${frente}/${terreno} não tem modelo e effort`);
   }
-  const effort = effortConfigurado(cfg, cfg.modelo) || cfg.effort;
+  const effort = cfg.effort;
   if (!effort) erro('DEFAULT_INCOMPLETO', `default de ${frente}/${terreno} não tem effort configurado`);
   return { modelo: cfg.modelo, effort, origem: 'default' };
 }
 
-function validarRotaForte({ frente, terreno, papel, cfg, par, modeloAutor, fallbackProprio, fallbackMotivo, roteamentoOk }) {
-  const excecao = Boolean(roteamentoOk);
+function validarRotaForte({terreno,papel,par,modeloAutor}) {
   if (terreno !== 'sql') return;
-  const forte = (familiaAtual, effortAtual) =>
-    (familiaAtual === 'opus5' && effortAtual === 'high') ||
-    (familiaAtual === 'sol' && effortAtual === 'xhigh') ||
-    (familiaAtual === 'astra' && effortAtual === 'xhigh');
-  const quotaForte = fallbackMotivo === 'quota_openai' &&
-    familia(par.modelo) === 'opus5' && par.effort === 'high';
-  if (!forte(familia(par.modelo), par.effort) && !quotaForte && !excecao) {
-    erro('SQL_ROTA_FRACA', 'SQL exige Opus 5/high, Sol/xhigh ou Astra/xhigh');
-  }
-  if (papel === 'revisor') {
-    if (!forte(familia(par.modelo), par.effort) && !quotaForte) {
-      if (!excecao) erro('SQL_REVISOR_INVALIDO', 'revisão SQL exige Opus 5/high, Sol/xhigh ou Astra/xhigh');
-    }
-    if (!forte(familia(modeloAutor), modeloAutor && effortConfigurado(cfg, modeloAutor)) && !excecao) {
-      erro('SQL_AUTOR_INVALIDO', 'revisão SQL exige autor Opus 5/high, Sol/xhigh ou Astra/xhigh');
-    }
-  } else if (frente === 'codex' && provedor(par.modelo) !== 'codex' &&
-      !(fallbackMotivo === 'quota_openai' && familia(par.modelo) === 'opus5') && !excecao) {
-    erro('SQL_PROVEDOR_INVALIDO', 'SQL exige provedor Codex, ou Opus 5/high como fallback de quota_openai');
-  }
+  const fortes={opus5:'high',sol:'xhigh',astra:'xhigh'};
+  if (fortes[familia(par.modelo)] !== par.effort) erro('SQL_ROTA_FRACA','SQL exige Opus 5/high, Sol/xhigh ou Astra/xhigh');
+  if (papel==='revisor' && !fortes[familia(modeloAutor)]) erro('SQL_AUTOR_INVALIDO','Autor SQL sem modelo forte reconhecido');
 }
 
 function validarParConfigurado(cfg, par, motivo, roteamentoOk, experimento) {
@@ -220,7 +202,7 @@ function validarRevisor({ cfg, par, modeloAutor, fallbackProprio, roteamentoOk }
   if (!modeloAutor) erro('REVISOR_SEM_AUTOR', 'revisor exige modelo autor');
   const autor = familia(modeloAutor);
   const revisor = familia(par.modelo);
-  if (autor === revisor && !fallbackProprio && !roteamentoOk) {
+  if (provedor(modeloAutor) === provedor(par.modelo) && !fallbackProprio) {
     erro('REVISAO_NAO_CRUZADA', `revisor ${revisor} não pode aprovar autor ${autor} sem fallback próprio comprovado`);
   }
   const candidatos = cfg.revisao_por_modelo?.[autor] || (cfg.revisao?.modelo
@@ -248,6 +230,9 @@ export function resolverRota({
   if (!FRENTES.has(frente)) erro('FRENTE_DESCONHECIDA', `frente desconhecida: ${frente}`);
   if (!terreno) erro('TERRENO_OBRIGATORIO', 'terreno é obrigatório');
   if (!PAPEIS.has(papel)) erro('PAPEL_INVALIDO', `papel inválido: ${papel}`);
+  if (fallbackProprio && !['outro_harness_indisponivel','outro_harness_saida_invalida'].includes(fallbackMotivo)) {
+    erro('FALLBACK_SEM_CAUSA','Revisão própria exige indisponibilidade ou saída inválida registrada');
+  }
   const cfgRaiz = defaults || lerDefaults();
   const rotas = frente === 'codex' ? cfgRaiz.codex?.terrenos : cfgRaiz.terrenos;
   if (!rotas || !Object.prototype.hasOwnProperty.call(rotas, terreno)) {
@@ -340,7 +325,7 @@ function parseArgs(argv) {
   return args;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const [cmd, ...rest] = process.argv.slice(2);
   const args = parseArgs(rest);
   if (cmd !== 'resolver') {

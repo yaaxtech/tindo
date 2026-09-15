@@ -1,4 +1,4 @@
-import { realpathSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,7 +35,7 @@ export function confirmarModelo(root, id, modelo, effort) {
   return false;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   if (process.argv[2] === 'confirmar') console.log(confirmarModelo(...process.argv.slice(3))?'true':'false');
   else if (process.argv[2] === 'recibo') console.log(JSON.stringify(reciboEventos(readFileSync(process.argv[3],'utf8'))));
   else {

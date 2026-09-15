@@ -56,7 +56,7 @@
  *              de ~/.claude/hooks/marco-preparo.sh — não há comando a lembrar.
  *              null = não deu para medir (nunca estimado).
  */
-import { appendFileSync, existsSync, readFileSync, mkdirSync, writeFileSync, renameSync, rmdirSync, statSync } from 'node:fs';
+import { realpathSync, appendFileSync, existsSync, readFileSync, mkdirSync, writeFileSync, renameSync, rmdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { dirname, join } from 'node:path';
@@ -1010,7 +1010,7 @@ function cmdCobertura(args) {
 // Guarda de CLI: este arquivo também é importado como módulo (avisoMudo é
 // usado pela auditoria) — só roda comandos quando executado diretamente.
 import { pathToFileURL } from 'node:url';
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const [cmd, ...rest] = process.argv.slice(2);
   const args = parseArgs(rest);
   if (cmd === 'log') cmdLog(args);
