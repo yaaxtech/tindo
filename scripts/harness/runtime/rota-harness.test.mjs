@@ -10,7 +10,6 @@ import { executarDespacho } from './despachar-harness.mjs';
 import { reciboEventos } from './codex-eventos.mjs';
 const dir=dirname(fileURLToPath(import.meta.url));
 const cfg=JSON.parse(readFileSync(join(dir,'defaults-terreno.example.json'),'utf8'));
-cfg.terrenos={...cfg.terrenos,...cfg.codex.terrenos};
 for (const terreno of Object.values(cfg.terrenos)) {
  terreno.fallback_por_motivo ||= {};
  for (const [motivo,modelo,effort] of [
@@ -36,7 +35,7 @@ test('origin never changes the same terrain, experiment arm, or cross-provider f
  shared.terrenos.sql.modelo='opus5';shared.terrenos.sql.effort='high';
  for(const reason of ['quota_anthropic','indisponivel_anthropic'])
   shared.terrenos.sql.fallback_por_motivo[reason]=[{modelo:'sol',effort:'xhigh'}];
- shared.codex.terrenos.rotina.modelo='astra'; // stale source is ignored
+ shared.codex={terrenos:{rotina:{modelo:'astra',effort:'high'}}}; // stale source is ignored
  for(const [terreno,config] of Object.entries(shared.terrenos)){
   for(const random of [0.1,0.9]){
    const a=resolverRota({defaults:shared,frente:'codex',terreno,random:()=>random});
@@ -108,7 +107,7 @@ test('fake executor proves effective arguments -> output -> ledger trial metadat
  const claude=spawnSync('bash',[join(dir,'codex-run.sh'),'-m','opus','Build the user interface requested in this isolated fixture.'],{
   env:{...process.env,HARNESS_CODEX_BIN:bin,HARNESS_CLAUDE_WRAPPER:fakeClaude,HARNESS_RUNTIME_DIR:dir,
    HARNESS_DEFAULTS_FILE:claudeCfgFile,HARNESS_LEDGER_FILE:join(temp,'claude-ledger.jsonl'),
-   HARNESS_MARCOS_DIR:join(temp,'marcos'),HARNESS_RANDOM:'0.1',LEDGER_TERRENO:'ui',LEDGER_PAPEL:'construtor',
+   HARNESS_MARCOS_DIR:join(temp,'marcos'),LEDGER_TERRENO:'ui',LEDGER_PAPEL:'construtor',
    HARNESS_RANDOM:'',CLAUDE_ARGUMENT_FILE:join(temp,'claude-args.json'),CLAUDE_RANDOM_FILE:join(temp,'claude-random.txt')},encoding:'utf8',timeout:20000});
  assert.equal(claude.status,0,claude.stderr);
  const claudeArgs=JSON.parse(readFileSync(join(temp,'claude-args.json')));
