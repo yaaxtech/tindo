@@ -710,7 +710,7 @@ if [ "$RC" -ne 0 ] && [ "${HARNESS_DISPATCH_DEPTH:-0}" = 0 ] && [ "$STDIN_EXPLIC
   MOTIVO_RETRY=""
   if grep -qiE "hit your usage limit|5-hour message limit|monthly spend limit" "$TMP_ERR" "$TMP_OUT"; then
     MOTIVO_RETRY=quota_openai
-  elif grep -qiE "not logged in|authentication|unauthorized|expired.*token|ENOENT|command not found" "$TMP_ERR" "$TMP_OUT"; then
+  elif [ ! -s "$TMP_OUT" ] && grep -qiE "not logged in|authentication|unauthorized|expired.*token|ENOENT|command not found" "$TMP_ERR"; then
     MOTIVO_RETRY=indisponivel_openai
   elif [ -s "$TMP_TIMEOUT" ] && [ ! -s "$TMP_OUT" ]; then
     MOTIVO_RETRY=indisponivel_openai

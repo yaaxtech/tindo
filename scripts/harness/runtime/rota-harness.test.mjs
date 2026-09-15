@@ -77,6 +77,14 @@ test('spend limit, authentication and missing CLI switch provider; task output a
   transportCalls.push(rota.provider);return {status:1,stderr:'503 service unavailable',stdout:'task already started'};}});
  assert.deepEqual(transportCalls,['codex']);
 });
+test('task diagnostics cannot trigger a provider fallback after partial output',()=>{
+ for(const erro of ['task assertion: no such file','command not found','unauthorized']) {
+  const calls=[];
+  const result=executarDespacho({terreno:'rotina',defaults:cfg,random:()=>0.1,
+   invocar:rota=>{calls.push(rota.provider);return {status:1,stdout:'Applied update\n',stderr:erro};}});
+  assert.equal(result.ok,false);assert.deepEqual(calls,['codex']);
+ }
+});
 test('session receipt belongs to this process, not latest concurrent file',()=>{
  assert.deepEqual(reciboEventos('{"type":"thread.started","thread_id":"abc"}\n{"type":"turn.completed","usage":{"input_tokens":100,"cached_input_tokens":80,"output_tokens":20}}'),{session_id:'abc',tokens:120});
  assert.equal(reciboEventos('{"type":"thread.started","thread_id":"a"}\n{"type":"thread.started","thread_id":"b"}').session_id,null);
@@ -101,6 +109,7 @@ test('fake executor proves effective arguments -> output -> ledger trial metadat
  assert.ok(readFileSync(join(temp,'ui-args.json'),'utf8').includes('gpt-5.6-sol'));
 
  const claudeCfg=structuredClone(cfg);claudeCfg.terrenos.ui={modelo:'fable',effort:'low',fallback_por_motivo:cfg.terrenos.rotina.fallback_por_motivo};
+ claudeCfg.terrenos.ui.experimento={id:'claude-fixture',ativo:true,base:'fable-low',bracos:[{id:'fable-low',modelo:'fable',effort:'low',peso:0.5},{id:'fable-high',modelo:'fable',effort:'high',peso:0.5}]};
  const claudeCfgFile=join(temp,'claude.json');writeFileSync(claudeCfgFile,JSON.stringify(claudeCfg));
  const fakeClaude=join(temp,'fake-claude');
  writeFileSync(fakeClaude,`#!/usr/bin/env node\nconst fs=require('node:fs');fs.writeFileSync(process.env.CLAUDE_ARGUMENT_FILE,JSON.stringify(process.argv.slice(2)));fs.writeFileSync(process.env.CLAUDE_RANDOM_FILE,process.env.HARNESS_RANDOM||'');console.log(JSON.stringify({result:'DONE'}));\n`);chmodSync(fakeClaude,0o700);
@@ -112,6 +121,11 @@ test('fake executor proves effective arguments -> output -> ledger trial metadat
  assert.equal(claude.status,0,claude.stderr);
  const claudeArgs=JSON.parse(readFileSync(join(temp,'claude-args.json')));
  assert.equal(claudeArgs[claudeArgs.indexOf('--model')+1],'fable');
+ const claudeRow=JSON.parse(readFileSync(join(temp,'claude-ledger.jsonl'),'utf8').trim());
+ assert.equal(claudeRow.experiment_id,'claude-fixture');assert.ok(['fable-low','fable-high'].includes(claudeRow.arm));
+ assert.equal(claudeRow.experiment_version,versaoExperimento(claudeCfg.terrenos.ui.experimento));
+ assert.equal(claudeRow.modelo_confirmado,false); // receipt does not confirm effort: never invent it
+
  const forwardedSeed=readFileSync(join(temp,'claude-random.txt'),'utf8');
  assert.ok(forwardedSeed && Number(forwardedSeed)>=0 && Number(forwardedSeed)<1);
  assert.equal(existsSync(join(temp,'ui-args.json')),true);
@@ -124,4 +138,19 @@ test('fake executor proves effective arguments -> output -> ledger trial metadat
  assert.equal(review.status,3);assert.match(review.stderr,/revisão Claude exige/);
  assert.equal(existsSync(join(temp,'review-args.json')),false);
 
+});
+
+test('legacy wrapper does not replay partial work after an ambiguous task error',()=>{
+ const temp=mkdtempSync(join(tmpdir(),'harness-partial-'));
+ const config=join(temp,'defaults.json');writeFileSync(config,JSON.stringify(cfg));
+ const bin=join(temp,'fake-codex');
+ writeFileSync(bin,`#!/usr/bin/env node
+console.log(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:'Applied update'}}));console.error('task command not found');process.exit(1);
+`);chmodSync(bin,0o700);
+ const marker=join(temp,'replayed');const alternate=join(temp,'fake-claude');
+ writeFileSync(alternate,`#!/usr/bin/env node
+require('node:fs').writeFileSync(process.env.REPLAY_MARKER,'yes');console.log('{}');
+`);chmodSync(alternate,0o700);
+ const r=spawnSync('bash',[join(dir,'codex-run.sh'),'Implement a pure change in the isolated fixture.'],{env:{...process.env,HARNESS_CODEX_BIN:bin,HARNESS_CLAUDE_WRAPPER:alternate,HARNESS_RUNTIME_DIR:dir,HARNESS_DEFAULTS_FILE:config,HARNESS_RANDOM:'0.1',LEDGER_TERRENO:'rotina',LEDGER_PAPEL:'construtor',LEDGER_OFF:'1',CODEX_TIMEOUT_MIN:'0',REPLAY_MARKER:marker},encoding:'utf8',timeout:20000});
+ assert.notEqual(r.status,0);assert.match(r.stdout,/Applied update/);assert.equal(existsSync(marker),false);
 });

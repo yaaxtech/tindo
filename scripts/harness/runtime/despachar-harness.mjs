@@ -16,7 +16,7 @@ export function classificarFalha(resposta, provider) {
   try { if (JSON.parse(resposta.stdout || '{}').is_error===true) saidaDeTarefa=false; } catch { /* plain CLI output */ }
   if (/monthly spend limit|usage limit|message limit|quota|rate.limit|limit reached|credit balance is too low/i.test(diagnostico))
     return `quota_${sufixo}`;
-  if (/not logged in|authentication|unauthorized|expired.*token|sem_conta|sem.token|ENOENT|command not found|no such file|not authenticated/i.test(diagnostico))
+  if (!saidaDeTarefa && /not logged in|authentication|unauthorized|expired.*token|sem_conta|sem.token|ENOENT|command not found|no such file|not authenticated/i.test(diagnostico))
     return `indisponivel_${sufixo}`;
   if (!saidaDeTarefa && /\b503\b|overloaded|service unavailable|temporarily unavailable|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|fetch failed|network error/i.test(diagnostico))
     return `indisponivel_${sufixo}`;
@@ -79,7 +79,10 @@ if(process.argv[1] && existsSync(process.argv[1]) && import.meta.url===pathToFil
           '--modelo',rota.modelo_log,'--effort',rota.effort,'--terreno',a.terreno,
           '--papel','construtor','--resultado',resultado,'--tarefa','Despacho pelo resolver comum',
           '--dur',String((Date.now()-start)/60000),'--rota-origem',a.frente || 'codex',
-          '--config-version',rota.config_version,'--auto'],{env,encoding:'utf8'});
+          '--config-version',rota.config_version,
+          ...(rota.experiment_id ? ['--experiment-id',rota.experiment_id,'--arm',rota.arm,
+            '--experiment-version',rota.experiment_version] : []),
+          '--auto'],{env,encoding:'utf8'});
         return r;
       }});
     if(result.resposta?.stdout)process.stdout.write(result.resposta.stdout);

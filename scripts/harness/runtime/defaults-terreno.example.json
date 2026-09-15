@@ -3,24 +3,14 @@
     "governanca": "experimentos-v1",
     "auto_aplicar": true,
     "rota_unica": true,
-    "escala_effort": [
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max"
-    ]
+    "escala_effort": ["low", "medium", "high", "xhigh", "max"]
   },
   "terrenos": {
     "rotina": {
       "rotulo": "Codigo rotineiro",
       "modelo": "sol",
       "effort": "low",
-      "cadeia_modelo": [
-        "sol",
-        "luna",
-        "sonnet"
-      ],
+      "cadeia_modelo": ["sol", "luna", "sonnet"],
       "piso_modelo": "luna",
       "teto_modelo": "sonnet",
       "effort_teto": "max",
@@ -137,16 +127,18 @@
         "motivo": "Amostragem em tarefas reais; ao menos 20 julgadas por braço, cobertura completa de tokens/tempo e incerteza de qualidade controlada antes de promoção."
       },
       "evidencia_modelo": "Titular Sol/low por ordem do dono; Artificial Analysis e a referencia externa para futuras mudancas de LLM, combinada ao ledger local.",
-      "evidencia_effort": "Effort muda somente por A/B local representativo; Sol/low esta em teste com criterio de reversao explicito."
+      "evidencia_effort": "Effort muda somente por A/B local representativo; Sol/low esta em teste com criterio de reversao explicito.",
+      "alvo_ok1": 80,
+      "teto_custo_tarefa": 1.5,
+      "reforco": "revisao cruzada obrigatoria: o modelo que constroi nunca aprova",
+      "atualizado_em": "2026-08-31",
+      "motivo": "dono 2026-08-31 (2a ordem, mesmo dia): Sol/low vira TITULAR de rotina — stack do post aplicado como default, ciente da medicao contraria (Sol x rotina 52% n=32 em 17/08; achatada no Sol derrubou ok1 81->68). O ledger mede e o criterio de reversao fica registrado."
     },
     "dificil": {
       "rotulo": "Codigo dificil",
       "modelo": "sol",
       "effort": "high",
-      "cadeia_modelo": [
-        "sol",
-        "opus5"
-      ],
+      "cadeia_modelo": ["sol", "opus5"],
       "piso_modelo": "sol",
       "teto_modelo": "opus5",
       "effort_teto": "xhigh",
@@ -237,17 +229,18 @@
         "motivo": "Amostragem em tarefas reais; ao menos 20 julgadas por braço, cobertura completa de tokens/tempo e incerteza de qualidade controlada antes de promoção."
       },
       "evidencia_modelo": "Sol e titular de codigo dificil; futuras mudancas de LLM consultam Artificial Analysis e o ledger local.",
-      "evidencia_effort": "Sol/high e o default medido; Sol/xhigh fica so para escalada. Opus5/medium em construcao continua A/B; revisao de risco usa Opus5/high."
+      "evidencia_effort": "Sol/high e o default medido; Sol/xhigh fica so para escalada. Opus5/medium em construcao continua A/B; revisao de risco usa Opus5/high.",
+      "alvo_ok1": 80,
+      "teto_custo_tarefa": 4,
+      "reforco": "cerebro revisa integral",
+      "atualizado_em": "2026-08-24",
+      "motivo": "dono 2026-08-24: manter o Codex titular do dificil (77% em 30d, onde ele vai bem) e testar Opus 5 em medium na escada. SQL/dinheiro NAO entra neste teste."
     },
     "ui": {
       "rotulo": "Frontend / UI / design",
       "modelo": "fable",
       "effort": "low",
-      "cadeia_modelo": [
-        "fable",
-        "sol",
-        "sonnet"
-      ],
+      "cadeia_modelo": ["fable", "sol", "sonnet"],
       "piso_modelo": "sol",
       "teto_modelo": "sonnet",
       "effort_teto": "max",
@@ -344,17 +337,18 @@
         ]
       },
       "evidencia_modelo": "Sol e o titular de UI por decisao do dono; Sonnet e fallback de construcao. Kimi K3 saiu em 29/08 e o ledger confirma: 0% ok1 (n=4) em ui nos 30d.",
-      "evidencia_effort": "Effort muda somente por A/B local representativo."
+      "evidencia_effort": "Effort muda somente por A/B local representativo.",
+      "alvo_ok1": 80,
+      "teto_custo_tarefa": 2,
+      "reforco": "revisao cruzada + prova visual",
+      "atualizado_em": "2026-08-31",
+      "motivo": "dono 2026-08-31 (2a ordem, mesmo dia): Fable 5/low vira TITULAR de design/UI (sem Kimi — 0% ok1 em n=4). Sol/high passa a fallback e revisor cruzado."
     },
     "mecanico": {
       "rotulo": "Mecanico (grep/rename/inventario)",
       "modelo": "luna",
       "effort": "low",
-      "cadeia_modelo": [
-        "luna",
-        "sol",
-        "sonnet"
-      ],
+      "cadeia_modelo": ["luna", "sol", "sonnet"],
       "piso_modelo": "luna",
       "teto_modelo": "sonnet",
       "effort_teto": "medium",
@@ -450,16 +444,18 @@
         ]
       },
       "evidencia_modelo": "Ledger do terreno mecanico favorece Luna; Sol e fallback de qualidade, nao titular.",
-      "evidencia_effort": "Luna/low teve 100% em n=7 na medicao que originou a guarda; Sol/high e Sonnet/medium seguem perfis vigentes."
+      "evidencia_effort": "Luna/low teve 100% em n=7 na medicao que originou a guarda; Sol/high e Sonnet/medium seguem perfis vigentes.",
+      "alvo_ok1": 80,
+      "teto_custo_tarefa": 0.5,
+      "reforco": "prova deterministica + revisao de LLM diferente",
+      "atualizado_em": "2026-08-27",
+      "motivo": "dono 2026-08-29: manter Luna/low e revisao pelo outro harness primeiro"
     },
     "sql": {
       "rotulo": "SQL / migrations / dinheiro",
       "modelo": "opus5",
       "effort": "high",
-      "cadeia_modelo": [
-        "opus5",
-        "sol"
-      ],
+      "cadeia_modelo": ["opus5", "sol"],
       "piso_modelo": "sol",
       "teto_modelo": "opus5",
       "effort_teto": "max",
@@ -520,21 +516,21 @@
           }
         ]
       },
-      "modelos_permitidos": [
-        "opus5",
-        "sol"
-      ],
+      "modelos_permitidos": ["opus5", "sol"],
       "evidencia_modelo": "Fallback forte Opus5/high ↔ Sol/xhigh autorizado pelo dono em 15/09/2026.",
-      "evidencia_effort": "Piso de risco preservado; não é resultado de calibração A/B."
+      "evidencia_effort": "Piso de risco preservado; não é resultado de calibração A/B.",
+      "alvo_ok1": 90,
+      "teto_custo_tarefa": 12,
+      "reforco": "Autor e revisor fortes; outro provedor primeiro, indisponibilidade documentada permite revisão própria de contexto fresco.",
+      "nunca_externo": false,
+      "atualizado_em": "2026-09-15",
+      "motivo": "Dono exige continuidade forte entre provedores, mantendo gates de produção."
     },
     "analise": {
       "rotulo": "Analise de dados / pesquisa",
       "modelo": "opus5",
       "effort": "high",
-      "cadeia_modelo": [
-        "opus5",
-        "sol"
-      ],
+      "cadeia_modelo": ["opus5", "sol"],
       "piso_modelo": "sol",
       "teto_modelo": "opus5",
       "effort_teto": "xhigh",
@@ -607,7 +603,12 @@
         ]
       },
       "evidencia_modelo": "Titular Opus 5/high por ordem do dono em 2026-08-31 (stack do post: research = Opus 5 High); a medicao de 26/08 favorecia Sol e fica como criterio de comparacao. No lancador Codex o caminho nativo segue Sol/high; Opus roda pelo harness Claude (perfil pesquisador).",
-      "evidencia_effort": "Ledger de 7d favorece Sol/high; xhigh teve 0/5 conclusoes e 7/8 eventos de quota, portanto so entra por risco ou falha comprovada do high."
+      "evidencia_effort": "Ledger de 7d favorece Sol/high; xhigh teve 0/5 conclusoes e 7/8 eventos de quota, portanto so entra por risco ou falha comprovada do high.",
+      "alvo_ok1": 80,
+      "teto_custo_tarefa": 4,
+      "reforco": "cerebro confere a conclusao e uma amostra do dado bruto",
+      "atualizado_em": "2026-08-31",
+      "motivo": "dono 2026-08-31: pesquisa/analise passa a Opus 5/high (stack do post), revogando o titular Sol de 26/08. Sol/high vira fallback e revisor cruzado. Effort segue high; xhigh mantem a prova contra de 27/08 (0/5 conclusoes, 7/8 quotas)."
     }
   }
 }
