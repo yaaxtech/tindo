@@ -100,7 +100,7 @@ export function Terrenos({
         </div>
       </div>
 
-      <p className="text-xs leading-relaxed text-text-secondary">
+      <p className="text-xs leading-relaxed text-text-muted">
         {rotaPublicada
           ? `Rota ${nomeFrente} publicada separadamente no snapshot. Os números abaixo usam somente despachos desta frente.`
           : `Rota ${nomeFrente} específica ainda não foi publicada; a configuração legada é mostrada como referência. Os números abaixo usam somente despachos desta frente.`}
@@ -152,7 +152,7 @@ export function Terrenos({
               </p>
             )}
             {c.effort && (
-              <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-text-secondary">
+              <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-text-muted">
                 esforço
                 <span className="rounded-md bg-bg-surface px-2 py-0.5 font-semibold text-text-primary">
                   {c.effort}
@@ -172,7 +172,7 @@ export function Terrenos({
                 )}
               </div>
             )}
-            <div className="text-xs leading-relaxed text-text-secondary">
+            <div className="text-xs leading-relaxed text-text-muted">
               ✍ escreve o titular · ✔ revisa: {c.revisor}
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] tabular-nums text-text-secondary">
@@ -199,7 +199,7 @@ export function Terrenos({
                 </span>
               )}
             </div>
-            <div className="text-[12.5px] text-text-secondary">
+            <div className="text-[12.5px] text-text-muted">
               {t?.sinal.texto ?? 'sem dados — nenhum despacho neste terreno no período'}
             </div>
             {t?.ambiguo && (

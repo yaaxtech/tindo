@@ -1,5 +1,5 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import {
   HARNESS_METRIC_VERSION,
   construirPeriodos,
@@ -145,4 +145,11 @@ test('saúde do snapshot explicita cobertura e versão', () => {
   assert.equal(saude.duracao_preenchida, 1);
   assert.equal(saude.eventos_rejeitados, 2);
   assert.equal(saude.eventos_recebidos, 4);
+});
+
+test('preserva Kimi como frente histórica sem publicar texto livre', () => {
+  const r = sanitizarLedger([linha({ frente: 'kimi', modelo: 'k3-256k' })]);
+  assert.equal(r.rejeitados, 0);
+  assert.equal(r.publicados[0].frente, 'kimi');
+  assert.equal('tarefa' in r.publicados[0], false);
 });
