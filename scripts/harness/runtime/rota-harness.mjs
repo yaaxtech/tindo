@@ -49,7 +49,7 @@ export function versaoDefaults(defaults) {
 export function versaoExperimento(experimento) {
   if (!objeto(experimento)) erro('EXPERIMENTO_INVALIDO', 'experimento deve ser um objeto');
   const protocolo = Object.fromEntries(Object.entries(experimento)
-    .filter(([k]) => !['ativo', 'status', 'motivo', 'desde', 'atualizado_em', 'promovido_em'].includes(k)));
+    .filter(([k]) => !['ativo', 'status', 'motivo', 'desde', 'atualizado_em', 'promovido_em', 'historico'].includes(k)));
   return `sha256:${createHash('sha256').update(JSON.stringify(ordenar(protocolo))).digest('hex')}`;
 }
 

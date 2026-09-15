@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync,writeFileSync,mkdtempSync,chmodSync,mkdirSync } from 'node:fs';
+import { readFileSync,writeFileSync,mkdtempSync,chmodSync,mkdirSync,existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname,join } from 'node:path';
@@ -39,4 +39,13 @@ test('fake executor proves effective arguments -> output -> ledger trial metadat
  assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/DONE/);
  const argv=JSON.parse(readFileSync(join(temp,'args.json')));assert.equal(argv[argv.indexOf('-m')+1],'gpt-5.6-sol');assert.ok(argv.includes('model_reasoning_effort="low"'));
  const row=JSON.parse(readFileSync(ledger,'utf8').trim());assert.equal(row.modelo,'gpt-5.6-sol');assert.equal(row.arm,'sol-low');assert.equal(row.session_id,'fixture-session');assert.equal(row.tokens,120);assert.equal(row.classificacao,'declarada');assert.equal(row.experiment_version,versaoExperimento(cfg.codex.terrenos.rotina.experimento));
+ const uiCfg=structuredClone(cfg);uiCfg.codex.terrenos.ui={modelo:'sol',effort:'high'};
+ const configFile=join(temp,'ui.json');writeFileSync(configFile,JSON.stringify(uiCfg));
+ mkdirSync(join(temp,'scripts/loops'),{recursive:true});
+ const marker=join(temp,'legacy-used');
+ writeFileSync(join(temp,'scripts/loops/construcao-multillm.mjs'),"import {writeFileSync} from 'node:fs'; writeFileSync(process.env.LEGACY_MARKER,'used');");
+ const ui=spawnSync('bash',[join(dir,'codex-run.sh'),'Implement the UI requested in the isolated fixture.'],{cwd:temp,env:{...process.env,HARNESS_CODEX_BIN:bin,HARNESS_RUNTIME_DIR:dir,HARNESS_DEFAULTS_FILE:configFile,HARNESS_LEDGER_FILE:join(temp,'ui-ledger.jsonl'),HARNESS_MARCOS_DIR:join(temp,'marcos'),LEDGER_TERRENO:'ui',LEDGER_PAPEL:'construtor',CODEX_TIMEOUT_MIN:'0',CODEX_CONSTRUCAO_CROSS_HARNESS:'1',ARGUMENT_FILE:join(temp,'ui-args.json'),LEGACY_MARKER:marker},encoding:'utf8',timeout:20000});
+ assert.equal(ui.status,0,ui.stderr);assert.equal(existsSync(marker),false,'legacy bridge bypassed selected provider');
+ assert.ok(readFileSync(join(temp,'ui-args.json'),'utf8').includes('gpt-5.6-sol'));
+
 });

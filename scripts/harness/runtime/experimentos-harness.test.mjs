@@ -17,4 +17,6 @@ test('small samples and missing telemetry cannot promote; strong complete eviden
  assert.equal(decidirExperimento({bracos:[arm('a',8,100),arm('b',8,50)]},exp).promover,null);
  assert.equal(decidirExperimento({bracos:[arm('a',100,100),arm('b',100,50)]},exp).promover,'b');
  assert.equal(decidirExperimento({bracos:[arm('a',100,100),{...arm('b',100,50),tokens_medidos:99}]},exp).promover,null);
+ const baseRuim={...arm('a',100,100),ok1:50};
+ assert.equal(decidirExperimento({bracos:[baseRuim,arm('b',100,150)]},exp).promover,'b');
 });

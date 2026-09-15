@@ -398,44 +398,8 @@ $a")
   esac
 fi
 
-# PONTE DE CONSTRUÇÃO CODEX → CLAUDE (2026-08-31) — terrenos ui/analise têm
-# titular GERAL num modelo Claude (Fable/Opus) que este Codex não invoca
-# nativamente (ver spec
-# docs/superpowers/specs/2026-08-31-ponte-construcao-codex-claude-design.md).
-# Ligada por default desde 31/08 (dono, pós-merge do PR #1799) — a primeira
-# prova ao vivo de `--model fable`/`--model opus` ainda não rodou; o
-# fallback abaixo cai no Sol nativo se a ponte falhar/indisponível, então o
-# risco fica contido. Reversão: `CODEX_CONSTRUCAO_CROSS_HARNESS=0`.
-# Só tenta para CONSTRUÇÃO (papel construtor) — revisão continua no
-# revisao-multillm.mjs existente.
-#
-# Posição (corrigida 31/08): DEPOIS do disjuntor de repetição, do guard de
-# despacho vazio e da injeção de CONTEXTO DA FRENTE. A ponte gasta quota
-# Anthropic de verdade, então passa pelos MESMOS freios do caminho nativo — e
-# usa `"${@: -1}"` (o último argumento ATUAL) para receber o prompt já
-# enriquecido pelo CTX, igual ao `codex exec "$@"` lá embaixo.
-if [ "${CODEX_CONSTRUCAO_CROSS_HARNESS:-1}" = "1" ] \
-   && { [ "${LEDGER_TERRENO:-}" = "ui" ] || [ "${LEDGER_TERRENO:-}" = "analise" ]; } \
-   && [ "${LEDGER_PAPEL:-construtor}" = "construtor" ] \
-   && [ "$PROMPT_PELO_STDIN" = 0 ]; then
-  PROMPT_PONTE="${@: -1}"
-  case "$PROMPT_PONTE" in
-    -*) ;; # último argumento é flag: o prompt veio noutro lugar — segue nativo
-    *)
-      PONTE="scripts/loops/construcao-multillm.mjs"
-      if [ -f "$PONTE" ] && command -v node >/dev/null 2>&1; then
-        echo "run.sh: tentando a ponte de construção Codex→Claude (${LEDGER_TERRENO})..." >&2
-        if node "$PONTE" --terreno "$LEDGER_TERRENO" -- "$PROMPT_PONTE" 2>&2; then
-          echo "run.sh: ponte de construção concluiu — revise o diff antes de fechar." >&2
-          exit 0
-        fi
-        echo "run.sh: ponte de construção falhou/indisponível — caindo no titular nativo (Sol)." >&2
-      else
-        echo "run.sh: ponte de construção pedida, mas $PONTE não existe neste checkout — seguindo no Sol nativo (worktree pode estar desatualizado)." >&2
-      fi
-      ;;
-  esac
-fi
+# Provider selection belongs to the resolver/common dispatcher.
+# A legacy checkout bridge cannot override the recorded model/effort.
 
 # Só depois de saber que o despacho vai mesmo acontecer — o carimbo é consumido
 # na leitura e não deve ser gasto por uma chamada que aborta antes de começar.

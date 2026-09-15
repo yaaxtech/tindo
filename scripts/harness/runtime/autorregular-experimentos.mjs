@@ -18,7 +18,7 @@ export function autorregular({ defaultsFile, auditFile, linhas, sessoes, agora =
     for (const exp of relatorio.experimentos) {
       const rota = (exp.frente === 'codex' ? defaults.codex.terrenos : defaults.terrenos)[exp.terreno];
       const cfg = rota.experimento;
-      if (!cfg.ativo || exp.terreno === 'sql') continue;
+      if (!cfg.ativo || exp.id !== cfg.id || exp.terreno === 'sql') continue;
       const decisao = decidirExperimento(exp, cfg);
       decisoes.push({ id: exp.id, ...decisao });
       if (!aplicar || !habilitada || !decisao.promover) continue;
@@ -35,8 +35,15 @@ export function autorregular({ defaultsFile, auditFile, linhas, sessoes, agora =
       rota.effort_por_modelo ||= {};
       rota.effort_por_modelo[candidato.modelo] = candidato.effort;
       rota.atualizado_em = agora.slice(0, 10);
-      cfg.ativo = false;
-      cfg.motivo = decisao.motivo;
+      // A fresh protocol keeps learning after a promotion without mixing
+      // old observations with the performance of the new default.
+      const anterior = {...exp,status:'Ciclo concluído',motivo:decisao.motivo};
+      cfg.historico = [...(cfg.historico || []),anterior].slice(-4);
+      cfg.ciclo = (cfg.ciclo || 1) + 1;
+      cfg.id = `${cfg.id.replace(/-ciclo-\d+$/,'')}-ciclo-${cfg.ciclo}`;
+      cfg.base = candidato.id;
+      for(const b of cfg.bracos) b.peso=b.id===candidato.id ? 0.8 : 0.2/(cfg.bracos.length-1);
+      cfg.motivo = `Ciclo ${cfg.ciclo}: acompanhar o novo padrão com novas execuções; dados do ciclo anterior ficam no histórico.`;
       cfg.promovido_em = agora;
       mudancas.push(reg);
     }

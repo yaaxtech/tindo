@@ -24,8 +24,11 @@ trocas definitivas. Arena Agent Pareto por tokens de saída é a referência ext
    de braços; apenas execuções atribuídas ao teste entram em sua amostra.
 4. Promoção automática exige qualidade julgada, tokens e duração completos,
    ao menos 20 amostras por braço, incerteza de não inferioridade limitada a
-   5 pontos, economia de pelo menos 20% e tempo não pior. Amostra pequena é
-   exibida sem virar decisão. SQL preserva piso forte e fica fora do sorteio.
+   5 pontos, economia de pelo menos 20% e tempo não pior. Quando a qualidade
+   está comprovadamente abaixo do piso, pode priorizar um candidato que supere
+   o piso com IC95, limitando consumo e tempo a 2× a referência. Amostra pequena é
+   exibida sem virar decisão. SQL preserva piso forte e fica fora do sorteio. Cada promoção abre um novo
+   ciclo, preservando o histórico e mantendo a avaliação do novo padrão.
 5. Falta de medição permanece nula. Sessões compartilhadas entre registros
    não têm seus tokens atribuídos a uma tarefa individual.
 6. Snapshot público recebe agregados de experimentos, rotas por frente,

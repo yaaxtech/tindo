@@ -52,6 +52,7 @@ export function construirExperimentos(defaults, linhas, sessoes = [], agora = ne
         status: exp.ativo ? (total ? 'Em medição' : 'Ativo · aguardando execuções') : 'Encerrado',
         motivo: exp.motivo || 'Comparação aleatória em tarefas reais; sem promoção com amostra ou consumo incompletos.',
         bracos });
+      experimentos.push(...(exp.historico || []));
     }
   }
   return { gerado_em: agora, experimentos };
@@ -68,6 +69,12 @@ export function decidirExperimento(exp, cfg) {
     b.duracoes_medidas === b.julgados && b.pendentes === 0 && b.tokens_mediana > 0;
   if (!completo(base)) return { promover: null, motivo: 'Referência sem amostra completa de qualidade, tempo e consumo' };
   const a = intervaloWilson(base.ok1, base.julgados);
+  const piso = (cfg.alvo_ok1 || 80) / 100;
+  const recuperacao = exp.bracos.filter(b => b.id !== base.id && completo(b) && b.falhas === 0)
+    .filter(b => a.max < piso && intervaloWilson(b.ok1,b.julgados).min >= piso &&
+      b.tokens_mediana <= base.tokens_mediana * 2 && b.duracao_mediana_min <= base.duracao_mediana_min * 2)
+    .sort((a,b)=>b.ok1/b.julgados-a.ok1/a.julgados || a.tokens_mediana-b.tokens_mediana);
+  if(recuperacao.length) return {promover:recuperacao[0].id,motivo:'Recuperar qualidade comprovadamente abaixo do piso; candidato supera o piso com IC95 e custo/tempo limitados a 2×'};
   const aprovados = exp.bracos.filter(b => b.id !== base.id && completo(b)).filter(b => {
     const ci = intervaloWilson(b.ok1, b.julgados);
     return b.falhas === 0 && b.ok1 / b.julgados >= base.ok1 / base.julgados &&

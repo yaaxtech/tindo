@@ -19,6 +19,9 @@ test('no mutation without evidence; complete trial changes real default once and
  assert.equal(autorregular({defaultsFile,auditFile,linhas,sessoes,aplicar:false}).mudancas.length,0);
  assert.equal(autorregular({defaultsFile,auditFile,linhas,sessoes,aplicar:true}).mudancas.length,1);
  assert.equal(JSON.parse(readFileSync(defaultsFile)).codex.terrenos.rotina.modelo,'luna');
+ const novo=JSON.parse(readFileSync(defaultsFile)).codex.terrenos.rotina.experimento;
+ assert.equal(novo.ativo,true);assert.equal(novo.base,'b');assert.equal(novo.ciclo,2);
+ assert.equal(novo.historico[0].bracos[0].julgados,100);
  assert.equal(autorregular({defaultsFile,auditFile,linhas,sessoes,aplicar:true}).mudancas.length,0);
  assert.match(readFileSync(auditFile,'utf8'),/promoveu_experimento/);
 });
