@@ -563,6 +563,17 @@ describe('terrenoAmbiguo', () => {
     expect(terrenoAmbiguo(linha({ ts: TS_CLASSIFICADO, terreno: 'dificil' }))).toBe(true);
   });
 
+  it('aceita linha sem auto quando a classificação foi declarada no lançamento', () => {
+    expect(
+      terrenoAmbiguo(
+        linha({ ts: TS_CLASSIFICADO, auto: false, classificacao: 'declarada', terreno: 'dificil' }),
+      ),
+    ).toBe(false);
+    expect(terrenoAmbiguo(linha({ ts: TS_CLASSIFICADO, auto: false, terreno: 'dificil' }))).toBe(
+      true,
+    );
+  });
+
   it('não marca o único caso classificado: automático pós-instrumentação sem a marca', () => {
     expect(terrenoAmbiguo(classificada({ frente: 'codex', terreno: 'rotina' }))).toBe(false);
     expect(terrenoAmbiguo(classificada({ frente: 'kimi', terreno: 'sql' }))).toBe(false);

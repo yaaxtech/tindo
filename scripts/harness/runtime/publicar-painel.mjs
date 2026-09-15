@@ -30,6 +30,11 @@ import { normModelo } from './modelos.mjs';
 import { ASSINATURAS, CADEIAS, janela, lerJsonl, prVelocidade, volumeCodigo } from './painel.mjs';
 import { verificarParidade } from './paridade-terrenos.mjs';
 import { coletarTelemetriaCodex } from './telemetria-codex.mjs';
+import { coletarTokensPorSessaoCodex } from './telemetria-codex.mjs';
+import { construirCadeias } from './painel-config.mjs';
+import { construirExperimentos } from './experimentos-harness.mjs';
+import { autorregular } from './autorregular-experimentos.mjs';
+import { consultarArena } from './arena-benchmark.mjs';
 
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -48,7 +53,7 @@ import { fileURLToPath } from 'node:url';
   }
 }
 
-const DIR = join(homedir(), '.claude', 'orquestracao');
+const DIR = process.env.HARNESS_DIR || join(homedir(), '.claude', 'orquestracao');
 const LEDGER = join(DIR, 'ledger.jsonl');
 const HISTORY = join(DIR, 'kpi-history.jsonl');
 const RESUMO_MD = join(DIR, 'harness-resumo.md');
@@ -77,7 +82,8 @@ async function main() {
   // inteiro (ledger/janela/autonomia perderiam a atualização horária). O
   // bloqueio duro fica no `node paridade-terrenos.mjs` (exit 1) e no e-mail
   // semanal da auditoria.
-  const par = verificarParidade();
+  const configInicial = JSON.parse(readFileSync(join(DIR,'defaults-terreno.json'),'utf8'));
+  const par = verificarParidade({defaults:configInicial,cadeias:construirCadeias(configInicial)});
   if (!par.ok) {
     console.error(
       `⚠ paridade de terrenos QUEBRADA (${par.problemas.length}) — publicando mesmo assim:`,
@@ -129,6 +135,26 @@ async function main() {
     }));
   const codex90 = await lerCodex(90);
   const codex14 = await lerCodex(14);
+  const tokensSessoes = await coletarTokensPorSessaoCodex({dias:90,agora:Date.parse(geradoEm)});
+  const defaultsFile = join(DIR, 'defaults-terreno.json');
+  const autorregulacao = autorregular({defaultsFile, auditFile:join(DIR,'tier-mudancas.jsonl'),
+    linhas:ledgerLocal, sessoes:tokensSessoes, agora:geradoEm, aplicar:!process.argv.includes('--dry-run')});
+  const defaults = JSON.parse(readFileSync(defaultsFile,'utf8'));
+  const experimentos = construirExperimentos(defaults,ledgerLocal,tokensSessoes,geradoEm);
+  // Closed technical pilots remain explicitly separate from promotion input.
+  try {
+    const pilotos=JSON.parse(readFileSync(join(DIR,'pilotos-harness.json'),'utf8'));
+    if(Array.isArray(pilotos)) experimentos.experimentos.push(...pilotos);
+  } catch(e) { if(e.code!=='ENOENT') console.error('Pilotos não carregados:',e.message); }
+  let benchmarkModelos = null;
+  try { benchmarkModelos = JSON.parse(readFileSync(join(DIR,'arena-benchmark.json'),'utf8')); } catch { /* Visible absence, never invented scores. */ }
+  if (!process.argv.includes('--dry-run') && (!benchmarkModelos ||
+      Date.parse(geradoEm)-Date.parse(benchmarkModelos.consultado_em)>7*864e5)) {
+    try {
+      benchmarkModelos = await consultarArena();
+      writeFileSync(join(DIR,'arena-benchmark.json'),JSON.stringify(benchmarkModelos,null,2)+'\n',{mode:0o600});
+    } catch(e) { console.error('Benchmark não atualizado:',e.message); }
+  }
   const blob = {
     schema_version: HARNESS_SCHEMA_VERSION,
     metric_version: HARNESS_METRIC_VERSION,
@@ -141,7 +167,11 @@ async function main() {
     volume_codigo: volumeCodigo(),
     prs: prVelocidade() || [],
     assinaturas: ASSINATURAS,
-    cadeias: CADEIAS,
+    cadeias: construirCadeias(defaults),
+    cadeias_por_frente: {claude:construirCadeias(defaults),codex:construirCadeias(defaults,'codex')},
+    experimentos,
+    autorregulacao,
+    benchmark_modelos: benchmarkModelos,
     // KPI de autonomia (§AUTONOMIA — 3 NÍVEIS): quanto o dono foi
     // interrompido e o quanto a interrupção valeu. Falha aqui não derruba a
     // publicação do resto do painel.

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "smoke-intervalos-20260915",
+    "terreno": "rotina",
+    "frente": "codex",
+    "status": "Piloto técnico concluído · não decide padrão",
+    "motivo": "15/09/2026: mesma função sintética, 12 verificações congeladas por braço. Uma execução por modelo, com modelo/esforço confirmados. Amostra não representativa: nenhum vencedor nem promoção. Recibo A recuperado da sessão única do diretório; B registrado automaticamente pelo executor.",
+    "bracos": [
+      {
+        "id": "sol-low",
+        "modelo": "sol",
+        "effort": "low",
+        "execucoes": 1,
+        "julgados": 1,
+        "ok1": 1,
+        "retrabalho": 0,
+        "falhas": 0,
+        "quota": 0,
+        "infra": 0,
+        "pendentes": 0,
+        "modelos_confirmados": 1,
+        "tokens_medidos": 1,
+        "tokens_mediana": 86043,
+        "duracoes_medidas": 1,
+        "duracao_mediana_min": 0.3088666666666667
+      },
+      {
+        "id": "luna-max",
+        "modelo": "luna",
+        "effort": "max",
+        "execucoes": 1,
+        "julgados": 1,
+        "ok1": 1,
+        "retrabalho": 0,
+        "falhas": 0,
+        "quota": 0,
+        "infra": 0,
+        "pendentes": 0,
+        "modelos_confirmados": 1,
+        "tokens_medidos": 1,
+        "tokens_mediana": 162369,
+        "duracoes_medidas": 1,
+        "duracao_mediana_min": 1.4
+      }
+    ]
+  }
+]

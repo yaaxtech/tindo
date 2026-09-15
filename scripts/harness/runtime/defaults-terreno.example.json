@@ -1,0 +1,305 @@
+{
+  "_meta": {
+    "governanca": "experimentos-v1",
+    "auto_aplicar": true
+  },
+  "terrenos": {
+    "rotina": {
+      "rotulo": "Codigo rotineiro",
+      "modelo": "sol",
+      "effort": "low",
+      "cadeia_modelo": [
+        "sol",
+        "luna",
+        "sonnet"
+      ],
+      "piso_modelo": "luna",
+      "teto_modelo": "sonnet",
+      "effort_teto": "max",
+      "alvo_ok1": 80,
+      "teto_custo_tarefa": 1.5,
+      "reforco": "revisao cruzada obrigatoria: o modelo que constroi nunca aprova",
+      "effort_por_modelo": {
+        "sol": "low",
+        "luna": "max",
+        "sonnet": "medium"
+      },
+      "fallback_por_motivo": {
+        "qualidade": [
+          {
+            "modelo": "luna",
+            "effort": "max"
+          },
+          {
+            "modelo": "sonnet",
+            "effort": "medium"
+          }
+        ],
+        "quota_openai": [
+          {
+            "modelo": "sonnet",
+            "effort": "medium"
+          }
+        ]
+      },
+      "revisao_por_modelo": {
+        "luna": [
+          {
+            "modelo": "sonnet",
+            "effort": "medium",
+            "outro_harness_primeiro": true
+          },
+          {
+            "modelo": "sol",
+            "effort": "high",
+            "fallback_proprio": true
+          }
+        ],
+        "sol": [
+          {
+            "modelo": "sonnet",
+            "effort": "medium",
+            "outro_harness_primeiro": true
+          },
+          {
+            "modelo": "sol",
+            "effort": "high",
+            "fallback_proprio": true
+          }
+        ],
+        "sonnet": [
+          {
+            "modelo": "sol",
+            "effort": "high",
+            "outro_harness_primeiro": true
+          },
+          {
+            "modelo": "sonnet",
+            "effort": "medium",
+            "fallback_proprio": true
+          }
+        ]
+      },
+      "evidencia_modelo": "Titular Sol/low por ordem do dono; Artificial Analysis e a referencia externa para futuras mudancas de LLM, combinada ao ledger local.",
+      "evidencia_effort": "Effort muda somente por A/B local representativo; Sol/low esta em teste com criterio de reversao explicito.",
+      "atualizado_em": "2026-08-31",
+      "motivo": "dono 2026-08-31 (2a ordem, mesmo dia): Sol/low vira TITULAR de rotina — stack do post aplicado como default, ciente da medicao contraria (Sol x rotina 52% n=32 em 17/08; achatada no Sol derrubou ok1 81->68). O ledger mede e o criterio de reversao fica registrado.",
+      "teste_ativo": {
+        "o_que": "DEFAULT APLICADO em teste: Sol/low e o titular de rotina; Luna/max virou fallback de qualidade. O run.sh foi atualizado para aceitar o titular novo (effort low na construcao; high segue na revisao/fallback). Todo despacho continua carimbado.",
+        "candidato": {
+          "modelo": "sol",
+          "effort": "low"
+        },
+        "desde": "2026-08-31",
+        "pedido_por": "dono",
+        "criterio_de_parada": "n>=8 carimbados em sol/low x rotina construtor; comparar ok1 e custo com luna/max (ok1 45%, n=13 nos 30d ate 31/08) e com o historico sol/high x rotina (52%, n=32 em 17/08)",
+        "reverter_se": "ok1 de sol/low < 45% (luna/max atual) com n>=8, ou quota >=3/janela no Sol — nesse caso PROPOR a reversao ao dono com o numero, nunca reverter calado"
+      }
+    },
+    "sql": {
+      "rotulo": "SQL / migrations / dinheiro",
+      "modelo": "opus5",
+      "effort": "high",
+      "cadeia_modelo": [
+        "opus5",
+        "sol"
+      ],
+      "piso_modelo": "sol",
+      "teto_modelo": "opus5",
+      "effort_teto": "max",
+      "alvo_ok1": 90,
+      "teto_custo_tarefa": 12,
+      "reforco": "Autor e revisor fortes; outro provedor primeiro, indisponibilidade documentada permite revisão própria de contexto fresco.",
+      "nunca_externo": false,
+      "modelos_permitidos": [
+        "opus5",
+        "sol"
+      ],
+      "effort_por_modelo": {
+        "opus5": "high",
+        "sol": "xhigh"
+      },
+      "fallback_por_motivo": {
+        "quota_anthropic": [
+          {
+            "modelo": "sol",
+            "effort": "xhigh"
+          }
+        ],
+        "opus_indisponivel": [
+          {
+            "modelo": "sol",
+            "effort": "xhigh"
+          }
+        ]
+      },
+      "revisao_por_modelo": {
+        "opus5": [
+          {
+            "modelo": "sol",
+            "effort": "xhigh",
+            "somente_revisao": true,
+            "outro_harness_primeiro": true
+          },
+          {
+            "modelo": "opus5",
+            "effort": "high",
+            "fallback_proprio": true
+          }
+        ],
+        "sol": [
+          {
+            "modelo": "opus5",
+            "effort": "high",
+            "outro_harness_primeiro": true
+          },
+          {
+            "modelo": "sol",
+            "effort": "xhigh",
+            "fallback_proprio": true
+          }
+        ]
+      },
+      "evidencia_modelo": "Fallback forte Opus5/high ↔ Sol/xhigh autorizado pelo dono em 15/09/2026.",
+      "evidencia_effort": "Piso de risco preservado; não é resultado de calibração A/B.",
+      "atualizado_em": "2026-09-15",
+      "motivo": "Dono exige continuidade forte entre provedores, mantendo gates de produção."
+    }
+  },
+  "codex": {
+    "terrenos": {
+      "rotina": {
+        "modelo": "sol",
+        "effort": "low",
+        "fallback": [
+          "luna"
+        ],
+        "effort_por_modelo": {
+          "sol": "low",
+          "luna": "max",
+          "astra": "low"
+        },
+        "fallback_por_motivo": {
+          "qualidade": [
+            {
+              "modelo": "luna",
+              "effort": "max"
+            }
+          ],
+          "quota_openai": [
+            {
+              "modelo": "sonnet",
+              "effort": "medium"
+            }
+          ]
+        },
+        "revisao_por_modelo": {
+          "astra": [
+            {
+              "modelo": "opus5",
+              "effort": "high",
+              "outro_harness_primeiro": true
+            },
+            {
+              "modelo": "sol",
+              "effort": "high",
+              "fallback_proprio": true
+            }
+          ],
+          "luna": [
+            {
+              "modelo": "opus5",
+              "effort": "high",
+              "outro_harness_primeiro": true
+            },
+            {
+              "modelo": "sol",
+              "effort": "high",
+              "fallback_proprio": true
+            }
+          ],
+          "sol": [
+            {
+              "modelo": "opus5",
+              "effort": "high",
+              "outro_harness_primeiro": true
+            },
+            {
+              "modelo": "sol",
+              "effort": "high",
+              "fallback_proprio": true
+            }
+          ]
+        },
+        "teste_ativo_astra": {
+          "desde": "2026-09-07",
+          "criterio_reversao": "ok1 abaixo do Sol no mesmo terreno com n>=8 -> propor ao dono com o numero"
+        },
+        "braco_experimental_xhigh": {
+          "modelo": "astra",
+          "effort": "xhigh",
+          "amostragem": 0.2,
+          "desde": "2026-09-10",
+          "criterio": "comparar consumo(tokens) e ok1 de xhigh vs effort-base do mesmo terreno; n>=8 por braco antes de concluir"
+        },
+        "experimento": {
+          "id": "rotina-sol-luna-20260915",
+          "ativo": true,
+          "base": "sol-low",
+          "min_amostras": 20,
+          "bracos": [
+            {
+              "id": "sol-low",
+              "modelo": "sol",
+              "effort": "low",
+              "peso": 0.8
+            },
+            {
+              "id": "luna-max",
+              "modelo": "luna",
+              "effort": "max",
+              "peso": 0.2
+            }
+          ],
+          "motivo": "Amostragem em tarefas reais; ao menos 20 julgadas por braço, cobertura completa de tokens/tempo e incerteza de qualidade controlada antes de promoção."
+        }
+      },
+      "sql": {
+        "modelo": "sol",
+        "effort": "xhigh",
+        "orquestrador": "thread_principal",
+        "revisao": {
+          "modelo": "opus5",
+          "effort": "high",
+          "outro_harness_primeiro": true,
+          "fallback_proprio": {
+            "modelo": "sol",
+            "effort": "xhigh"
+          }
+        },
+        "parar_se_quota_openai": false,
+        "effort_por_modelo": {
+          "astra": "xhigh",
+          "sol": "xhigh",
+          "opus5": "high"
+        },
+        "teste_ativo_astra": {
+          "desde": "2026-09-07",
+          "criterio_reversao": "ok1 abaixo do Sol no mesmo terreno com n>=8 -> propor ao dono com o numero"
+        },
+        "fallback_por_motivo": {
+          "quota_openai": [
+            {
+              "modelo": "opus5",
+              "effort": "high"
+            }
+          ]
+        },
+        "modelos_permitidos": [
+          "sol",
+          "opus5"
+        ]
+      }
+    }
+  }
+}

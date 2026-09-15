@@ -1,0 +1,439 @@
+{
+  "fonte": "Arena Agent Pareto",
+  "url": "https://arena.ai/leaderboard/agent/pareto?projection=output-tokens",
+  "consultado_em": "2026-09-15T16:27:43.225Z",
+  "projecao": "output-tokens",
+  "nota": "Referência externa de capacidade e tokens de saída; não mede nossa cota nem calibra esforço local.",
+  "modelos": [
+    {
+      "id": "contenders/claude-fable-5.1-max-agent",
+      "nome": "Claude Fable 5.1 (Max)",
+      "organizacao": "Anthropic",
+      "score": 0.13899425076614103,
+      "score_margem": 0.019861057665421088,
+      "sessoes": 12800,
+      "output_tokens_mediana": 53382,
+      "amostra_tokens": 12724
+    },
+    {
+      "id": "contenders/gpt-6-astra-max-agent",
+      "nome": "GPT 6 Astra (Max)",
+      "organizacao": "OpenAI",
+      "score": 0.11899056658172263,
+      "score_margem": 0.027667933058977467,
+      "sessoes": 9958,
+      "output_tokens_mediana": 32726,
+      "amostra_tokens": 10047
+    },
+    {
+      "id": "contenders/claude-opus-5-max-agent",
+      "nome": "Claude Opus 5 (Max)",
+      "organizacao": "Anthropic",
+      "score": 0.11086069328842946,
+      "score_margem": 0.018136263859941132,
+      "sessoes": 19552,
+      "output_tokens_mediana": 48374,
+      "amostra_tokens": 2448
+    },
+    {
+      "id": "contenders/claude-opus-5-high-agent",
+      "nome": "Claude Opus 5 (High)",
+      "organizacao": "Anthropic",
+      "score": 0.10492670584357632,
+      "score_margem": 0.016626354559282228,
+      "sessoes": 24228,
+      "output_tokens_mediana": 27732,
+      "amostra_tokens": 2908
+    },
+    {
+      "id": "contenders/claude-fable-5-agent",
+      "nome": "Claude Fable 5 (High)",
+      "organizacao": "Anthropic",
+      "score": 0.09033584358598461,
+      "score_margem": 0.013789891487138897,
+      "sessoes": 37473,
+      "output_tokens_mediana": 14176,
+      "amostra_tokens": 2628
+    },
+    {
+      "id": "contenders/claude-opus-4-8-thinking-agent",
+      "nome": "Claude Opus 4.8 (High)",
+      "organizacao": "Anthropic",
+      "score": 0.07747952017830152,
+      "score_margem": 0.014033074698050582,
+      "sessoes": 39491,
+      "output_tokens_mediana": 16005,
+      "amostra_tokens": 2479
+    },
+    {
+      "id": "contenders/gpt-5.6-sol-xhigh-agent",
+      "nome": "GPT 5.6 Sol (xHigh)",
+      "organizacao": "OpenAI",
+      "score": 0.07397908286307728,
+      "score_margem": 0.01432581074445513,
+      "sessoes": 31390,
+      "output_tokens_mediana": 17049,
+      "amostra_tokens": 2917
+    },
+    {
+      "id": "contenders/kivine-wxzc-agent",
+      "nome": "Kimi K3 (Max)",
+      "organizacao": "Moonshot",
+      "score": 0.06385617425850419,
+      "score_margem": 0.006831466050510757,
+      "sessoes": 104470,
+      "output_tokens_mediana": 24915,
+      "amostra_tokens": 11655
+    },
+    {
+      "id": "contenders/claude-sonnet-5-agent",
+      "nome": "Claude Sonnet 5 (High)",
+      "organizacao": "Anthropic",
+      "score": 0.0544778238019492,
+      "score_margem": 0.017339637732922623,
+      "sessoes": 30281,
+      "output_tokens_mediana": 20325,
+      "amostra_tokens": 2684
+    },
+    {
+      "id": "contenders/gpt-5.5-xhigh-agent",
+      "nome": "GPT 5.5 (xHigh)",
+      "organizacao": "OpenAI",
+      "score": 0.05179736836798211,
+      "score_margem": 0.010708828455124133,
+      "sessoes": 52622,
+      "output_tokens_mediana": 15996,
+      "amostra_tokens": 2486
+    },
+    {
+      "id": "contenders/phoenix-qcs2-agent",
+      "nome": "Hy4 preview",
+      "organizacao": "Tencent",
+      "score": 0.049638668731611296,
+      "score_margem": 0.011306191035674984,
+      "sessoes": 29877,
+      "output_tokens_mediana": 27570,
+      "amostra_tokens": 25859
+    },
+    {
+      "id": "contenders/deepseek-v4.1-flash-max-20260910-agent",
+      "nome": "Deepseek V4.1 Flash (Max)",
+      "organizacao": "DeepSeek",
+      "score": 0.0487140198372219,
+      "score_margem": 0.018435498893581356,
+      "sessoes": 8444,
+      "output_tokens_mediana": 52658,
+      "amostra_tokens": 16679
+    },
+    {
+      "id": "contenders/glm-5.2-agent",
+      "nome": "GLM 5.2 (Max)",
+      "organizacao": "Z.ai",
+      "score": 0.04516589111940497,
+      "score_margem": 0.0073859644094078705,
+      "sessoes": 75109,
+      "output_tokens_mediana": 43495,
+      "amostra_tokens": 10099
+    },
+    {
+      "id": "contenders/muse-spark-1-3-max-agent",
+      "nome": "Muse Spark 1.3 (Max)",
+      "organizacao": "Meta",
+      "score": 0.04126762414978472,
+      "score_margem": 0.01054499690090132,
+      "sessoes": 23122,
+      "output_tokens_mediana": 19567,
+      "amostra_tokens": 28842
+    },
+    {
+      "id": "contenders/deepseek-v4-pro-high-20260813-agent",
+      "nome": "DeepSeek V4 Pro (High) (0813)",
+      "organizacao": "DeepSeek",
+      "score": 0.04087529145319099,
+      "score_margem": 0.00843295692273946,
+      "sessoes": 45597,
+      "output_tokens_mediana": 31761,
+      "amostra_tokens": 19895
+    },
+    {
+      "id": "contenders/paisley-n9x0",
+      "nome": "Qwen3.8 Max",
+      "organizacao": "Alibaba",
+      "score": 0.03571090535665953,
+      "score_margem": 0.009335069384332359,
+      "sessoes": 27651,
+      "output_tokens_mediana": 26773,
+      "amostra_tokens": 11448
+    },
+    {
+      "id": "contenders/grok-4.5-agent",
+      "nome": "Grok 4.5",
+      "organizacao": "SpaceXAI",
+      "score": 0.03410548643790262,
+      "score_margem": 0.011030034077367627,
+      "sessoes": 37369,
+      "output_tokens_mediana": 13008,
+      "amostra_tokens": 3620
+    },
+    {
+      "id": "contenders/glm-5.3-agent",
+      "nome": "GLM 5.3 (Max)",
+      "organizacao": "Z.ai",
+      "score": 0.030822415607518572,
+      "score_margem": 0.006492363148523991,
+      "sessoes": 70938,
+      "output_tokens_mediana": 35440,
+      "amostra_tokens": 27839
+    },
+    {
+      "id": "contenders/gpt-5.5-agent",
+      "nome": "GPT 5.5",
+      "organizacao": "OpenAI",
+      "score": 0.026229064272959294,
+      "score_margem": 0.009299323272697153,
+      "sessoes": 80741,
+      "output_tokens_mediana": 8763,
+      "amostra_tokens": 2853
+    },
+    {
+      "id": "contenders/grok-4.6-xhigh-public-agent",
+      "nome": "Grok 4.6 (xHigh)",
+      "organizacao": "SpaceXAI",
+      "score": 0.025718391407610033,
+      "score_margem": 0.011497932415366407,
+      "sessoes": 21720,
+      "output_tokens_mediana": 22550,
+      "amostra_tokens": 6380
+    },
+    {
+      "id": "contenders/deepseek-v4-flash-high-20260730-agent",
+      "nome": "Deepseek V4 Flash (High) (20260731)",
+      "organizacao": "DeepSeek",
+      "score": 0.019895622959973228,
+      "score_margem": 0.007747781459135166,
+      "sessoes": 64169,
+      "output_tokens_mediana": 42186,
+      "amostra_tokens": 10731
+    },
+    {
+      "id": "contenders/gpt-5.6-terra-xhigh-agent",
+      "nome": "GPT 5.6 Terra (xHigh)",
+      "organizacao": "OpenAI",
+      "score": 0.01580584117278766,
+      "score_margem": 0.011932366181417808,
+      "sessoes": 19636,
+      "output_tokens_mediana": 12921,
+      "amostra_tokens": 2926
+    },
+    {
+      "id": "contenders/glm-5.3-flash-agent",
+      "nome": "GLM 5.3 Flash",
+      "organizacao": "Z.ai",
+      "score": 0.013347448006758366,
+      "score_margem": 0.007344654795401348,
+      "sessoes": 39177,
+      "output_tokens_mediana": 32625,
+      "amostra_tokens": 29404
+    },
+    {
+      "id": "contenders/gpt-5.4-high-code-arena-harness-agent",
+      "nome": "GPT 5.4 (High)",
+      "organizacao": "OpenAI",
+      "score": 0.012637908825147292,
+      "score_margem": 0.009133516426546095,
+      "sessoes": 79888,
+      "output_tokens_mediana": 16123,
+      "amostra_tokens": 2830
+    },
+    {
+      "id": "contenders/gpt-5.6-luna-xhigh-agent",
+      "nome": "GPT 5.6 Luna (xHigh)",
+      "organizacao": "OpenAI",
+      "score": 0.0021591713424240714,
+      "score_margem": 0.009744720215957072,
+      "sessoes": 25545,
+      "output_tokens_mediana": 12375,
+      "amostra_tokens": 10711
+    },
+    {
+      "id": "contenders/farris-ees5-agent",
+      "nome": "Qwen3.8 Flash Next",
+      "organizacao": "Alibaba",
+      "score": 0.0005508892650884626,
+      "score_margem": 0.008543195338804176,
+      "sessoes": 46907,
+      "output_tokens_mediana": 42412,
+      "amostra_tokens": 42172
+    },
+    {
+      "id": "contenders/deepseek-v4-pro-thinking-first-party",
+      "nome": "DeepSeek V4 Pro",
+      "organizacao": "DeepSeek",
+      "score": -0.0014523987572491628,
+      "score_margem": 0.011001860127604672,
+      "sessoes": 34861,
+      "output_tokens_mediana": 33869,
+      "amostra_tokens": 3733
+    },
+    {
+      "id": "contenders/qwen3.8-27b-code-agent",
+      "nome": "Qwen 3.8 27B",
+      "organizacao": "Alibaba",
+      "score": -0.004435308771468192,
+      "score_margem": 0.008043493929600324,
+      "sessoes": 33246,
+      "output_tokens_mediana": 37590,
+      "amostra_tokens": 18357
+    },
+    {
+      "id": "contenders/claude-sonnet-4-6-agent",
+      "nome": "Claude Sonnet 4.6",
+      "organizacao": "Anthropic",
+      "score": -0.01560874750461323,
+      "score_margem": 0.013413170047549054,
+      "sessoes": 39399,
+      "output_tokens_mediana": 8891,
+      "amostra_tokens": 653
+    },
+    {
+      "id": "contenders/muse-spark-1.2-xhigh-agent",
+      "nome": "Muse Spark 1.2 (xHigh)",
+      "organizacao": "Meta",
+      "score": -0.016460641226510624,
+      "score_margem": 0.011012782595808537,
+      "sessoes": 28452,
+      "output_tokens_mediana": 17886,
+      "amostra_tokens": 13300
+    },
+    {
+      "id": "contenders/super-nova-ext-3tam-agent",
+      "nome": "Muse Spark 1.1",
+      "organizacao": "Meta",
+      "score": -0.03027472211593958,
+      "score_margem": 0.0060876617992516886,
+      "sessoes": 102651,
+      "output_tokens_mediana": 13404,
+      "amostra_tokens": 19093
+    },
+    {
+      "id": "contenders/qwen3.7-max-agent",
+      "nome": "Qwen3.7 Max",
+      "organizacao": "Alibaba",
+      "score": -0.03372331589122062,
+      "score_margem": 0.009912319360627789,
+      "sessoes": 37923,
+      "output_tokens_mediana": 12574,
+      "amostra_tokens": 2824
+    },
+    {
+      "id": "contenders/hy3-tencent-cloud-agent",
+      "nome": "Hy3",
+      "organizacao": "Tencent",
+      "score": -0.04861171868166408,
+      "score_margem": 0.013000087222497729,
+      "sessoes": 26901,
+      "output_tokens_mediana": 21461,
+      "amostra_tokens": 3401
+    },
+    {
+      "id": "contenders/gemini-3.6-flash-agent",
+      "nome": "Gemini 3.6 Flash (High)",
+      "organizacao": "Google",
+      "score": -0.054483869816685127,
+      "score_margem": 0.011243854018150826,
+      "sessoes": 20191,
+      "output_tokens_mediana": 26002,
+      "amostra_tokens": 3269
+    },
+    {
+      "id": "contenders/qwen3.7-plus-agent",
+      "nome": "Qwen3.7 Plus",
+      "organizacao": "Alibaba",
+      "score": -0.05502713943941064,
+      "score_margem": 0.01303241091208036,
+      "sessoes": 20734,
+      "output_tokens_mediana": 14147,
+      "amostra_tokens": 1852
+    },
+    {
+      "id": "contenders/mimo-v2.5-pro-agent",
+      "nome": "Mimo V2.5 Pro",
+      "organizacao": "Xiaomi",
+      "score": -0.05518297778624617,
+      "score_margem": 0.009779807834446319,
+      "sessoes": 39850,
+      "output_tokens_mediana": 9270,
+      "amostra_tokens": 3837
+    },
+    {
+      "id": "contenders/minimax-m3-first-party",
+      "nome": "Minimax M3",
+      "organizacao": "MiniMax",
+      "score": -0.056276826776121364,
+      "score_margem": 0.009602222067283755,
+      "sessoes": 38415,
+      "output_tokens_mediana": 9547,
+      "amostra_tokens": 3084
+    },
+    {
+      "id": "contenders/gemini-3.1-pro-preview-agent",
+      "nome": "Gemini 3.1 Pro Preview",
+      "organizacao": "Google",
+      "score": -0.057607212255110805,
+      "score_margem": 0.00968298719106011,
+      "sessoes": 85766,
+      "output_tokens_mediana": 10036,
+      "amostra_tokens": 2330
+    },
+    {
+      "id": "contenders/inkling-small",
+      "nome": "Inkling Small",
+      "organizacao": "Thinky",
+      "score": -0.0784344310018624,
+      "score_margem": 0.01550917349786067,
+      "sessoes": 12521,
+      "output_tokens_mediana": 15733,
+      "amostra_tokens": 2141
+    },
+    {
+      "id": "contenders/inkling-agent",
+      "nome": "Inkling",
+      "organizacao": "Thinky",
+      "score": -0.09551853922684615,
+      "score_margem": 0.01062262481378555,
+      "sessoes": 42135,
+      "output_tokens_mediana": 10773,
+      "amostra_tokens": 2282
+    },
+    {
+      "id": "contenders/mistral-medium-3.5-v2-agent",
+      "nome": "Mistral Medium 3.5",
+      "organizacao": "Mistral",
+      "score": -0.10272780966814117,
+      "score_margem": 0.014510429735307862,
+      "sessoes": 9986,
+      "output_tokens_mediana": 12106,
+      "amostra_tokens": 2059
+    },
+    {
+      "id": "contenders/deep-octo-first-party",
+      "nome": "Minimax M2.7",
+      "organizacao": "MiniMax",
+      "score": -0.13594746700837695,
+      "score_margem": 0.012381427096859937,
+      "sessoes": 37515,
+      "output_tokens_mediana": 7438,
+      "amostra_tokens": 1529
+    },
+    {
+      "id": "contenders/gemini-3.5-flash-lite-agent",
+      "nome": "Gemini 3.5 Flash Lite",
+      "organizacao": "Google",
+      "score": -0.1416241018036129,
+      "score_margem": 0.0148496432747518,
+      "sessoes": 23216,
+      "output_tokens_mediana": 8905,
+      "amostra_tokens": 553
+    }
+  ]
+}

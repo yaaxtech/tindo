@@ -1,10 +1,8 @@
 /**
- * Experimentos A/B do plano do dono — candidatos FIXOS, escritos aqui, nunca
- * derivados do ledger. O painel NÃO conta registros por braço: o ledger
- * histórico não é resultado pareado (tarefas diferentes, épocas diferentes),
- * e o nome logado nem sempre separa versões de modelo. O piloto real roda
- * fora do painel, em recibos separados; o resumo de cada rodada é escrito
- * aqui à mão, pelo cérebro, como string — nunca calculado pela tela.
+ * Histórico manual dos experimentos A/B do plano do dono. Os resultados
+ * publicados pelo coletor chegam em `HarnessBlob.experimentos`; estes
+ * candidatos continuam aqui para preservar os pilotos anteriores. O painel
+ * nunca deriva vitória do ledger, que não é resultado pareado.
  * Promoção de candidato depende dos critérios do teste, nunca de leitura
  * visual de taxas. O titular de cada terreno continua sendo o de `cadeias`.
  */

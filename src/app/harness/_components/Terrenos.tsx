@@ -1,7 +1,13 @@
 import { type TerrenoKpi, kpisTerreno } from '@/lib/harness/kpis';
 import { cn } from '@/lib/utils';
-import type { CadeiaTerreno, LedgerLinha } from '@/types/harness';
+import type { CadeiaTerreno, CadeiasPorFrente, FrenteRota, LedgerLinha } from '@/types/harness';
+import { useState } from 'react';
 import { Card, PopoverInfo, type Status, corPill, pc } from './ui';
+
+const FRENTE_LBL: Record<FrenteRota, string> = {
+  claude: 'Claude',
+  codex: 'Codex',
+};
 
 const SINAL: Record<TerrenoKpi['sinal']['tipo'], { st: Status; ico: string; label: string }> = {
   ok: { st: 'acc', ico: '✓', label: 'manter' },
@@ -34,15 +40,73 @@ const COMO_TERRENO =
 
 export function Terrenos({
   linhas,
+  linhasGeral,
   cadeias,
+  cadeiasPorFrente,
+  frenteSelecionada,
+  onFrenteChange,
 }: {
+  /** Linhas do período selecionado; a frente é filtrada abaixo. */
   linhas: LedgerLinha[];
+  /** Linhas da frente em todos os períodos publicados, para contextualizar janela vazia. */
+  linhasGeral?: LedgerLinha[];
+  /** Configuração legada, preservada enquanto o publicador não enviar rotas separadas. */
   cadeias: Record<string, CadeiaTerreno>;
+  cadeiasPorFrente?: CadeiasPorFrente;
+  frenteSelecionada?: FrenteRota;
+  onFrenteChange?: (frente: FrenteRota) => void;
 }) {
-  const por = kpisTerreno(linhas, cadeias);
+  const [frenteLocal, setFrenteLocal] = useState<FrenteRota>('claude');
+  const frente = frenteSelecionada ?? frenteLocal;
+  const chains = cadeiasPorFrente?.[frente] ?? cadeias;
+  const rotaPublicada = cadeiasPorFrente?.[frente] != null;
+  const linhasDaFrente = linhas.filter((linha) => linha.frente === frente);
+  const linhasGeraisDaFrente = (linhasGeral ?? linhas).filter((linha) => linha.frente === frente);
+  const por = kpisTerreno(linhasDaFrente, chains);
+
+  const trocarFrente = (novaFrente: FrenteRota) => {
+    setFrenteLocal(novaFrente);
+    onFrenteChange?.(novaFrente);
+  };
+
+  const nomeFrente = FRENTE_LBL[frente];
+
   return (
     <div className="flex flex-col gap-2.5">
-      {Object.entries(cadeias).map(([key, c]) => {
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-text-secondary">Frente da rota</span>
+        <div
+          className="inline-flex rounded-full border border-border-strong bg-bg-surface p-0.5"
+          role="tablist"
+          aria-label="Frente da rota"
+        >
+          {(Object.keys(FRENTE_LBL) as FrenteRota[]).map((opcao) => (
+            <button
+              key={opcao}
+              type="button"
+              role="tab"
+              aria-selected={frente === opcao}
+              onClick={() => trocarFrente(opcao)}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+                frente === opcao
+                  ? 'bg-jade/20 text-jade-accent'
+                  : 'text-text-secondary hover:text-text-primary',
+              )}
+            >
+              {FRENTE_LBL[opcao]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs leading-relaxed text-text-muted">
+        {rotaPublicada
+          ? `Rota ${nomeFrente} publicada separadamente no snapshot. Os números abaixo usam somente despachos desta frente.`
+          : `Rota ${nomeFrente} específica ainda não foi publicada; a configuração legada é mostrada como referência. Os números abaixo usam somente despachos desta frente.`}
+      </p>
+
+      {Object.entries(chains).map(([key, c]) => {
         const t = por[key];
         const s = SINAL[t?.sinal.tipo ?? 'vazio'];
         return (
@@ -63,17 +127,16 @@ export function Terrenos({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-[12.5px]">
-              {[c.default, ...c.fallback].map((m, i) => (
+              <span className="flex items-center gap-1.5">
+                <span className="text-[11px] text-text-secondary">Titular</span>
+                <span className="rounded-md bg-jade/20 px-2 py-0.5 font-semibold text-jade-accent">
+                  {c.default}
+                </span>
+              </span>
+              {c.fallback.map((m, i) => (
                 <span key={m} className="flex items-center gap-1.5">
-                  {i > 0 && <span className="text-[11px] text-text-muted">→</span>}
-                  <span
-                    className={cn(
-                      'rounded-md px-2 py-0.5',
-                      i === 0
-                        ? 'bg-jade/20 font-semibold text-jade-accent'
-                        : 'bg-bg-surface text-text-muted',
-                    )}
-                  >
+                  <span className="text-[11px] text-text-secondary">Fallback {i + 1}</span>
+                  <span className="rounded-md bg-bg-surface px-2 py-0.5 text-text-secondary">
                     {m}
                   </span>
                 </span>
@@ -82,6 +145,12 @@ export function Terrenos({
                 <span className="ml-1 text-[11px] text-danger">nunca sai do Claude</span>
               )}
             </div>
+            {c.fallback.length > 0 && (
+              <p className="text-[11.5px] leading-relaxed text-text-secondary">
+                Fallbacks são alternativas de contingência: cada um entra quando o modelo anterior
+                falha ou bate quota. A tela não afirma que todos rodaram nesta ordem.
+              </p>
+            )}
             {c.effort && (
               <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-text-muted">
                 esforço
@@ -91,7 +160,7 @@ export function Terrenos({
                 {c.effort_teto && c.effort_teto !== c.effort && (
                   <>
                     <span className="text-[11px]">até</span>
-                    <span className="rounded-md bg-bg-surface px-2 py-0.5 text-text-muted">
+                    <span className="rounded-md bg-bg-surface px-2 py-0.5 text-text-secondary">
                       {c.effort_teto}
                     </span>
                   </>
@@ -106,7 +175,7 @@ export function Terrenos({
             <div className="text-xs leading-relaxed text-text-muted">
               ✍ escreve o titular · ✔ revisa: {c.revisor}
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] tabular-nums text-text-muted">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] tabular-nums text-text-secondary">
               <span>
                 <b className="text-text-primary">{t?.n ?? 0}</b> despachos
               </span>
@@ -144,6 +213,15 @@ export function Terrenos({
           </Card>
         );
       })}
+      {linhasDaFrente.length === 0 && (
+        <p className="text-xs leading-relaxed text-warning">
+          Sem dados da frente {nomeFrente} no período selecionado. Isso não significa que o modelo
+          esteja sem evidência geral:{' '}
+          {linhasGeraisDaFrente.length > 0
+            ? `há ${linhasGeraisDaFrente.length} registro(s) desta frente em outras janelas.`
+            : 'ainda não há registros gerais publicados para esta frente.'}
+        </p>
+      )}
     </div>
   );
 }
