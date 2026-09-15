@@ -2,7 +2,12 @@
 
 ## Roteamento e experimentos (15/09/2026)
 
-A configuração operacional é `~/.claude/orquestracao/defaults-terreno.json`.
+A configuração operacional é `~/.claude/orquestracao/defaults-terreno.json`,
+na chave única `terrenos`. Claude e ChatGPT usam os mesmos titulares,
+experimentos e fallbacks. `--frente` registra apenas de onde veio o pedido.
+A chave antiga `codex.terrenos` não participa da decisão.
+`unificar-rotas.mjs` prepara a conversão sem gravar arquivos; o responsável
+pela instalação preserva backup e outras configurações pessoais.
 O arquivo `defaults-terreno.example.json` é uma fixture pública de teste, sem
 contas ou credenciais; não substitui a configuração pessoal.
 

@@ -40,3 +40,9 @@ test('preserves all six legacy KPI piso values independently of active model', (
   const terrenos=Object.fromEntries(Object.keys(expected).map(k=>[k,{modelo:'sol',effort:'high',piso_modelo:'sol',teto_modelo:'sol'}]));
   assert.deepEqual(Object.fromEntries(Object.entries(construirCadeias({terrenos})).map(([k,v])=>[k,v.piso])),expected);
 });
+
+test('one canonical route ignores obsolete provider-specific defaults', () => {
+  const defaults={terrenos:{ui:{modelo:'fable',effort:'low'}},codex:{terrenos:{ui:{modelo:'sol',effort:'high'}}}};
+  assert.deepEqual(construirCadeias(defaults,'codex'),construirCadeias(defaults,'claude'));
+  assert.equal(construirCadeias(defaults).ui.default,'Fable 5 (low)');
+});

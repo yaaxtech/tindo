@@ -37,7 +37,6 @@ import {
   recorte,
 } from '@/lib/harness/kpis';
 import { cn } from '@/lib/utils';
-import type { FrenteRota } from '@/types/harness';
 import { Gauge, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -49,7 +48,6 @@ export default function HarnessPage() {
   const { snap, githubRuns, actionsSnapshot, alertas, fontes, carregando, erro, atualizar } =
     useDadosHarness();
   const [janelaDias, setJanelaDias] = useState(7);
-  const [frenteRota, setFrenteRota] = useState<FrenteRota>('claude');
 
   // Disclosure do diagnóstico: fechado por padrão, abre se a URL já chegou
   // apontando para um bloco de dentro (link compartilhado, recarregar a página).
@@ -80,18 +78,6 @@ export default function HarnessPage() {
   );
   const publicadas = snap?.dados.metricas_periodos?.[String(janelaDias)];
   const linhasDecisorias = useMemo(() => (contratoValido ? atual : []), [contratoValido, atual]);
-  const linhasDaFrente = useMemo(
-    () => linhasDecisorias.filter((linha) => linha.frente === frenteRota),
-    [linhasDecisorias, frenteRota],
-  );
-  const linhasGeraisDaFrente = useMemo(
-    () => (contratoValido ? ledger.filter((linha) => linha.frente === frenteRota) : []),
-    [contratoValido, ledger, frenteRota],
-  );
-  const cadeiasDaFrente = useMemo(
-    () => snap?.dados.cadeias_por_frente?.[frenteRota] ?? snap?.dados.cadeias ?? {},
-    [snap, frenteRota],
-  );
   const gAtual = useMemo(
     () =>
       aplicarMetricasPublicadas(
@@ -319,12 +305,9 @@ export default function HarnessPage() {
             escopo={{ tipo: 'filtro', dias: janelaDias }}
           >
             <Terrenos
-              linhas={linhasDaFrente}
-              linhasGeral={linhasGeraisDaFrente}
-              cadeias={cadeiasDaFrente}
-              cadeiasPorFrente={snap.dados.cadeias_por_frente}
-              frenteSelecionada={frenteRota}
-              onFrenteChange={setFrenteRota}
+              linhas={linhasDecisorias}
+              linhasGeral={contratoValido ? ledger : []}
+              cadeias={snap.dados.cadeias}
             />
             {!contratoValido && (
               <p className="mt-2.5 text-xs text-warning">

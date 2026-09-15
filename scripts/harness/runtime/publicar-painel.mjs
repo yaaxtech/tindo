@@ -168,7 +168,6 @@ async function main() {
     prs: prVelocidade() || [],
     assinaturas: ASSINATURAS,
     cadeias: construirCadeias(defaults),
-    cadeias_por_frente: {claude:construirCadeias(defaults),codex:construirCadeias(defaults,'codex')},
     experimentos,
     autorregulacao,
     benchmark_modelos: benchmarkModelos,

@@ -9,6 +9,8 @@ const CAUSAS = {
   qualidade_ou_quota_openai: 'qualidade ou limite OpenAI',
   qualidade_ou_quota_anthropic: 'qualidade ou limite Claude',
   opus_indisponivel: 'Opus indisponível',
+  indisponivel_openai: 'falha ou limite ChatGPT',
+  indisponivel_anthropic: 'falha ou limite Claude',
 };
 // Legacy KPI eligibility, not a model rank. Preserve these values until
 // the KPI contract itself is migrated; model/effort labels remain derived.
@@ -16,16 +18,11 @@ const PISO_SINAL = { rotina: true, dificil: false, analise: false, ui: true, mec
 function par(passo) {
   return `${NOMES[passo.modelo] || passo.modelo} (${passo.effort || 'esforço não informado'})`;
 }
-export function construirCadeias(defaults, frente = 'claude') {
+export function construirCadeias(defaults) {
   if (!defaults.terrenos || !Object.keys(defaults.terrenos).length) {
     throw new Error('Registro de terrenos ausente ou vazio');
   }
-  const rotas = frente === 'codex' ? defaults.codex?.terrenos : defaults.terrenos;
-  return Object.fromEntries(Object.entries(rotas || {}).map(([chave, rota]) => {
-    const d = frente === 'codex' ? {
-      ...rota, rotulo: defaults.terrenos[chave]?.rotulo || chave,
-      effort_teto: rota.escalada_effort?.at(-1) || rota.effort,
-    } : rota;
+  return Object.fromEntries(Object.entries(defaults.terrenos).map(([chave, d]) => {
     if (!d.modelo || !d.effort) throw new Error(`Rota ${chave} sem titular/effort`);
     const revisores = d.revisao_por_modelo?.[d.modelo] || (d.revisao
       ? [d.revisao, ...(d.revisao.fallback_proprio ? [{...d.revisao.fallback_proprio, fallback_proprio:true}] : [])] : []);
@@ -35,7 +32,12 @@ export function construirCadeias(defaults, frente = 'claude') {
         throw new Error(`Fallback inválido em ${chave}/${causa}`);
       }
     }
-    const fallback = Object.entries(d.fallback_por_motivo || {}).map(([causa, passos]) =>
+    const fallback = Object.entries(d.fallback_por_motivo || {})
+      .filter(([causa, passos]) => {
+        const equivalente = causa === 'quota_openai' ? 'indisponivel_openai'
+          : causa === 'quota_anthropic' ? 'indisponivel_anthropic' : null;
+        return !equivalente || JSON.stringify(passos) !== JSON.stringify(d.fallback_por_motivo[equivalente]);
+      }).map(([causa, passos]) =>
       `${CAUSAS[causa] || causa}: ${passos.length ? passos.map(par).join(' → ') : 'parar; sem substituto autorizado'}`,
     );
     return [chave, {

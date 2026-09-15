@@ -39,6 +39,8 @@ const DIR = dirname(fileURLToPath(import.meta.url));
 // novo entrar numa cadeia.
 const NOME_MODELO = {
   luna: 'Luna',
+  astra: 'Astra',
+  terra: 'Terra',
   sol: 'Sol',
   fable: 'Fable',
   opus5: 'Opus 5',
@@ -169,6 +171,16 @@ export function verificarParidade({defaults, cadeias} = {}) {
     if (!porMotivo || typeof porMotivo !== 'object' || Array.isArray(porMotivo)) {
       push(t, 'fallback_por_motivo ausente ou inválido');
     } else {
+      for (const [motivo, provider] of [
+        ['quota_openai', 'anthropic'], ['indisponivel_openai', 'anthropic'],
+        ['quota_anthropic', 'openai'], ['indisponivel_anthropic', 'openai'],
+      ]) {
+        const passos = porMotivo[motivo];
+        if (!Array.isArray(passos) || !passos.length ||
+            passos.some(passo => MODELO[passo?.modelo]?.provider !== provider)) {
+          push(t, `${motivo} exige fallback no outro provedor (${provider})`);
+        }
+      }
       for (const [motivo, passos] of Object.entries(porMotivo)) {
         if (!Array.isArray(passos)) {
           push(t, `fallback_por_motivo.${motivo} precisa ser array`);

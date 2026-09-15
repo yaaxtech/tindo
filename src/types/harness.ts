@@ -166,14 +166,6 @@ export interface CadeiaTerreno {
   modelo_no_teto?: boolean;
 }
 
-export type FrenteRota = 'claude' | 'codex';
-
-/** Rotas publicadas separadamente para cada frente do harness. */
-export interface CadeiasPorFrente {
-  claude: Record<string, CadeiaTerreno>;
-  codex: Record<string, CadeiaTerreno>;
-}
-
 export interface ExperimentoBracoPublicado {
   id: string;
   modelo: string;
@@ -416,7 +408,6 @@ export interface HarnessBlob {
   assinaturas: Assinatura[];
   cadeias: Record<string, CadeiaTerreno>;
   /** Campo aditivo: snapshots antigos continuam usando `cadeias`. */
-  cadeias_por_frente?: CadeiasPorFrente;
   /** Campo aditivo com resultados A/B medidos pelo publicador. */
   experimentos?: ExperimentosPublicados;
   /** Benchmark externo; contexto de modelo, separado da evidência local. */

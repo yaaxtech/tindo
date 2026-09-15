@@ -304,3 +304,9 @@ Pedido do dono: painel confuso, uso atual misturado com modelos em teste.
       avaliação por terreno; cadastro não é execução nem prova de economia.
 - [ ] Vincular sessões nativas a despachos avaliados por identificador explícito;
       telemetria de uso não autoriza inferir conclusão ou qualidade de tarefas.
+
+## Harness — rota única (2026-09-15)
+
+- [x] Uma rota por terreno para Claude e ChatGPT; origem serve só para telemetria.
+- [x] Fallback cruzado, experimento e promoção ligados à mesma configuração.
+- [x] Painel sem seletor de frente; contagens abrangem os dois provedores.

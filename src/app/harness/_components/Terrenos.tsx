@@ -1,13 +1,7 @@
 import { type TerrenoKpi, kpisTerreno } from '@/lib/harness/kpis';
 import { cn } from '@/lib/utils';
-import type { CadeiaTerreno, CadeiasPorFrente, FrenteRota, LedgerLinha } from '@/types/harness';
-import { useState } from 'react';
+import type { CadeiaTerreno, LedgerLinha } from '@/types/harness';
 import { Card, PopoverInfo, type Status, corPill, pc } from './ui';
-
-const FRENTE_LBL: Record<FrenteRota, string> = {
-  claude: 'Claude',
-  codex: 'Codex',
-};
 
 const SINAL: Record<TerrenoKpi['sinal']['tipo'], { st: Status; ico: string; label: string }> = {
   ok: { st: 'acc', ico: '✓', label: 'manter' },
@@ -42,71 +36,25 @@ export function Terrenos({
   linhas,
   linhasGeral,
   cadeias,
-  cadeiasPorFrente,
-  frenteSelecionada,
-  onFrenteChange,
 }: {
-  /** Linhas do período selecionado; a frente é filtrada abaixo. */
+  /** Despachos de todos os provedores no período selecionado. */
   linhas: LedgerLinha[];
-  /** Linhas da frente em todos os períodos publicados, para contextualizar janela vazia. */
+  /** Todos os períodos publicados, para contextualizar uma janela vazia. */
   linhasGeral?: LedgerLinha[];
-  /** Configuração legada, preservada enquanto o publicador não enviar rotas separadas. */
+  /** Uma configuração por terreno, compartilhada pelos provedores. */
   cadeias: Record<string, CadeiaTerreno>;
-  cadeiasPorFrente?: CadeiasPorFrente;
-  frenteSelecionada?: FrenteRota;
-  onFrenteChange?: (frente: FrenteRota) => void;
 }) {
-  const [frenteLocal, setFrenteLocal] = useState<FrenteRota>('claude');
-  const frente = frenteSelecionada ?? frenteLocal;
-  const chains = cadeiasPorFrente?.[frente] ?? cadeias;
-  const rotaPublicada = cadeiasPorFrente?.[frente] != null;
-  const linhasDaFrente = linhas.filter((linha) => linha.frente === frente);
-  const linhasGeraisDaFrente = (linhasGeral ?? linhas).filter((linha) => linha.frente === frente);
-  const por = kpisTerreno(linhasDaFrente, chains);
-
-  const trocarFrente = (novaFrente: FrenteRota) => {
-    setFrenteLocal(novaFrente);
-    onFrenteChange?.(novaFrente);
-  };
-
-  const nomeFrente = FRENTE_LBL[frente];
+  const por = kpisTerreno(linhas, cadeias);
+  const gerais = linhasGeral ?? linhas;
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-text-secondary">Frente da rota</span>
-        <div
-          className="inline-flex rounded-full border border-border-strong bg-bg-surface p-0.5"
-          role="tablist"
-          aria-label="Frente da rota"
-        >
-          {(Object.keys(FRENTE_LBL) as FrenteRota[]).map((opcao) => (
-            <button
-              key={opcao}
-              type="button"
-              role="tab"
-              aria-selected={frente === opcao}
-              onClick={() => trocarFrente(opcao)}
-              className={cn(
-                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-                frente === opcao
-                  ? 'bg-jade/20 text-jade-accent'
-                  : 'text-text-secondary hover:text-text-primary',
-              )}
-            >
-              {FRENTE_LBL[opcao]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-xs leading-relaxed text-text-muted">
-        {rotaPublicada
-          ? `Rota ${nomeFrente} publicada separadamente no snapshot. Os números abaixo usam somente despachos desta frente.`
-          : `Rota ${nomeFrente} específica ainda não foi publicada; a configuração legada é mostrada como referência. Os números abaixo usam somente despachos desta frente.`}
+      <p className="text-xs leading-relaxed text-text-secondary">
+        Uma rota por tipo de tarefa. Se Claude ou ChatGPT falhar ou ficar indisponível, o outro
+        provedor assume pelo fallback configurado.
       </p>
 
-      {Object.entries(chains).map(([key, c]) => {
+      {Object.entries(cadeias).map(([key, c]) => {
         const t = por[key];
         const s = SINAL[t?.sinal.tipo ?? 'vazio'];
         return (
@@ -141,14 +89,10 @@ export function Terrenos({
                   </span>
                 </span>
               ))}
-              {c.nunca_externo && (
-                <span className="ml-1 text-[11px] text-danger">nunca sai do Claude</span>
-              )}
             </div>
             {c.fallback.length > 0 && (
               <p className="text-[11.5px] leading-relaxed text-text-secondary">
-                Fallbacks são alternativas de contingência: cada um entra quando o modelo anterior
-                falha ou bate quota. A tela não afirma que todos rodaram nesta ordem.
+                O motivo indicado define qual fallback assume a tarefa.
               </p>
             )}
             {c.effort && (
@@ -213,13 +157,13 @@ export function Terrenos({
           </Card>
         );
       })}
-      {linhasDaFrente.length === 0 && (
+      {linhas.length === 0 && (
         <p className="text-xs leading-relaxed text-warning">
-          Sem dados da frente {nomeFrente} no período selecionado. Isso não significa que o modelo
-          esteja sem evidência geral:{' '}
-          {linhasGeraisDaFrente.length > 0
-            ? `há ${linhasGeraisDaFrente.length} registro(s) desta frente em outras janelas.`
-            : 'ainda não há registros gerais publicados para esta frente.'}
+          Sem dados no período selecionado. Isso não significa que o modelo esteja sem evidência
+          geral:{' '}
+          {gerais.length > 0
+            ? `há ${gerais.length} registro(s) em outras janelas.`
+            : 'ainda não há registros gerais publicados.'}
         </p>
       )}
     </div>
