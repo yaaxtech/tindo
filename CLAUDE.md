@@ -2,6 +2,7 @@
 
 > Fonte de verdade sobre como o AI deve se comportar neste projeto.
 > Projeto: **TinDo** (Tinder + ToDo) — app de produtividade com priorização por IA, gamificação e neurociência.
+> Critérios gerais de colaboração do grupo: `CONTEXTO_GRUPO.md` (não substitui os docs deste produto).
 
 ---
 
