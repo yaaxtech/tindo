@@ -25,6 +25,19 @@ describe('classificarAcessoRota', () => {
     },
   );
 
+  it.each(['/yaax', '/tindo', '/roadmapmind'])(
+    'abre %s: vitrine da YaaX e os atalhos que ela anuncia',
+    (rota) => {
+      expect(classificarAcessoRota(rota)).toBe('publica');
+    },
+  );
+
+  it('mantém protegidos os destinos por trás dos atalhos da vitrine', () => {
+    // `/tindo` e `/roadmapmind` só redirecionam; quem exige sessão é o destino.
+    expect(classificarAcessoRota('/cards')).toBe('autenticada');
+    expect(classificarAcessoRota('/docs')).toBe('autenticada');
+  });
+
   it('não torna rotas parecidas públicas por prefixo', () => {
     expect(classificarAcessoRota('/login-falso')).toBe('autenticada');
     expect(classificarAcessoRota('/api/cron/diario/falso')).toBe('autenticada');
