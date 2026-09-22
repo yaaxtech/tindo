@@ -1,0 +1,672 @@
+{
+  "versao": 2,
+  "gerado_em": "2026-09-22T14:00:00.000Z",
+  "periodo": {
+    "de": "2026-09-15T14:00:00.000Z",
+    "ate": "2026-09-22T14:00:00.000Z",
+    "dias": 7
+  },
+  "nota": {
+    "valor": 72.4,
+    "qualidade": 93.8,
+    "economia": 37.5,
+    "confianca": 85.9,
+    "meta": 80,
+    "historico": [
+      {
+        "semana": "2026-W32",
+        "valor": 52,
+        "qualidade": 61.2,
+        "economia": 25.0,
+        "confianca": 40.1
+      },
+      {
+        "semana": "2026-W33",
+        "valor": 55,
+        "qualidade": 63.0,
+        "economia": 25.0,
+        "confianca": 48.3
+      },
+      {
+        "semana": "2026-W34",
+        "valor": 58,
+        "qualidade": 66.4,
+        "economia": 37.5,
+        "confianca": 52.0
+      },
+      {
+        "semana": "2026-W35",
+        "valor": 61,
+        "qualidade": 70.3,
+        "economia": 37.5,
+        "confianca": 58.8
+      },
+      {
+        "semana": "2026-W36",
+        "valor": 64,
+        "qualidade": 74.0,
+        "economia": 37.5,
+        "confianca": 66.1
+      },
+      {
+        "semana": "2026-W37",
+        "valor": 67,
+        "qualidade": 79.9,
+        "economia": 37.5,
+        "confianca": 72.5
+      },
+      {
+        "semana": "2026-W38",
+        "valor": 70,
+        "qualidade": 83.1,
+        "economia": 37.5,
+        "confianca": 81.2
+      },
+      {
+        "semana": "2026-W39",
+        "valor": 72.4,
+        "qualidade": 93.8,
+        "economia": 37.5,
+        "confianca": 85.9
+      }
+    ]
+  },
+  "atencao": [
+    {
+      "id": "P-3",
+      "tipo": "proposta_subir",
+      "titulo": "Código difícil quer subir para Opus 5.5 medium",
+      "detalhe": "Sol high acertou 72,7% de primeira em 22 tarefas; a meta é 80%.",
+      "acao": "Diga \"aprova P-3\" no chat para subir."
+    },
+    {
+      "id": "A-12",
+      "tipo": "alerta_dado",
+      "titulo": "Planejamento sem dados confiáveis",
+      "detalhe": "Só 41,7% das tarefas têm veredito e modelo registrados.",
+      "acao": "Nada a fazer agora: o coletor tenta de novo a cada hora."
+    }
+  ],
+  "areas": [
+    {
+      "id": "mecanico",
+      "nome": "Mecânico",
+      "descricao": "Trocas repetitivas, renomear, formatar.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "high",
+        "rotulo": "Luna high"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "Opus 5.5 low"
+      },
+      "teto": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "max",
+        "rotulo": "Luna max"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "medium",
+          "rotulo": "Luna medium"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "high",
+          "rotulo": "Luna high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "max",
+          "rotulo": "Luna max"
+        }
+      ],
+      "estado": "comprovado_mais_barato",
+      "n": 34,
+      "julgados": 31,
+      "ok1": 93.5,
+      "tokens_saida_mediana": 4210,
+      "duracao_mediana_s": 212.4,
+      "confianca": 96.2,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": "2026-09-18: barateou de Luna max para Luna high"
+    },
+    {
+      "id": "rotina",
+      "nome": "Rotina",
+      "descricao": "Bug comum, feature pequena, refactor local.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "max",
+        "rotulo": "Luna max"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "Opus 5.5 low"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "Opus 5.5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "high",
+          "rotulo": "Luna high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "max",
+          "rotulo": "Luna max"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "Opus 5.5 medium"
+        }
+      ],
+      "estado": "testando_mais_barato",
+      "n": 41,
+      "julgados": 38,
+      "ok1": 92.1,
+      "tokens_saida_mediana": 9870,
+      "duracao_mediana_s": 538.2,
+      "confianca": 91.4,
+      "teste": "T-7",
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "analise",
+      "nome": "Pesquisa e análise",
+      "descricao": "Ler, comparar e resumir.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "max",
+        "rotulo": "Luna max"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "Opus 5.5 low"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "Opus 5.5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "high",
+          "rotulo": "Luna high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "max",
+          "rotulo": "Luna max"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "Opus 5.5 medium"
+        }
+      ],
+      "estado": "juntando_dado",
+      "n": 9,
+      "julgados": 7,
+      "ok1": 85.7,
+      "tokens_saida_mediana": 15320,
+      "duracao_mediana_s": 901.0,
+      "confianca": 88.0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "dificil",
+      "nome": "Código difícil",
+      "descricao": "Mudança grande ou sutil.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "high",
+        "rotulo": "Sol high"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "Opus 5.5 medium"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "Opus 5.5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "medium",
+          "rotulo": "Sol medium"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "high",
+          "rotulo": "Sol high"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "Opus 5.5 medium"
+        }
+      ],
+      "estado": "quer_subir",
+      "n": 23,
+      "julgados": 22,
+      "ok1": 72.7,
+      "tokens_saida_mediana": 22140,
+      "duracao_mediana_s": 1624.5,
+      "confianca": 90.9,
+      "teste": null,
+      "proposta": "P-3",
+      "ultima_decisao": null
+    },
+    {
+      "id": "ui",
+      "nome": "Frontend / UI",
+      "descricao": "Telas, estilo, responsivo.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "Opus 5.5 low"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "high",
+        "rotulo": "Sol high"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "Opus 5.5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "Opus 5.5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "Opus 5.5 medium"
+        }
+      ],
+      "estado": "passa",
+      "n": 21,
+      "julgados": 20,
+      "ok1": 85.0,
+      "tokens_saida_mediana": 7310,
+      "duracao_mediana_s": 720.0,
+      "confianca": 95.0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "cerebro",
+      "nome": "Planejamento / cérebro",
+      "descricao": "Plano, decisão e síntese.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "Opus 5.5 medium"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-astra",
+        "effort": "medium",
+        "rotulo": "Astra medium"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "high",
+        "rotulo": "Opus 5.5 high"
+      },
+      "escada": [
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "Opus 5.5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "Opus 5.5 medium"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "high",
+          "rotulo": "Opus 5.5 high"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 12,
+      "julgados": 4,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 41.7,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "revisao",
+      "nome": "Revisão",
+      "descricao": "Revisor de outra família.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "Opus 5.5 low"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "high",
+        "rotulo": "Sol high"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "Opus 5.5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "Opus 5.5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "Opus 5.5 medium"
+        }
+      ],
+      "estado": "falhando",
+      "n": 20,
+      "julgados": 20,
+      "ok1": 70.0,
+      "tokens_saida_mediana": 3120,
+      "duracao_mediana_s": 305.3,
+      "confianca": 85.0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "sql",
+      "nome": "SQL / dinheiro",
+      "descricao": "Migrations, dinheiro, produção.",
+      "risco": true,
+      "meta_ok1": 90,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "high",
+        "rotulo": "Opus 5.5 high"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "xhigh",
+        "rotulo": "Sol xhigh"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "max",
+        "rotulo": "Opus 5.5 max"
+      },
+      "escada": [
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "high",
+          "rotulo": "Opus 5.5 high"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "max",
+          "rotulo": "Opus 5.5 max"
+        }
+      ],
+      "estado": "juntando_dado",
+      "n": 6,
+      "julgados": 6,
+      "ok1": 100.0,
+      "tokens_saida_mediana": 11800,
+      "duracao_mediana_s": 1403.0,
+      "confianca": 100.0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    }
+  ],
+  "testes": [
+    {
+      "id": "T-7",
+      "area": "rotina",
+      "desde": "2026-09-17T10:00:00.000Z",
+      "bracos": [
+        {
+          "rotulo": "Titular · Luna max",
+          "modelo": "gpt-6-luna",
+          "effort": "max",
+          "n": 14,
+          "julgados": 13,
+          "ok1": 92.3,
+          "meta_n": 20
+        },
+        {
+          "rotulo": "Candidato · Luna high",
+          "modelo": "gpt-6-luna",
+          "effort": "high",
+          "n": 6,
+          "julgados": 5,
+          "ok1": 80.0,
+          "meta_n": 20
+        }
+      ]
+    }
+  ],
+  "assinaturas": [
+    {
+      "id": "claude_max_5x",
+      "conta": "emanuelsilveiramaia@gmail.com",
+      "tarefas": 62,
+      "tokens_saida": 1843200,
+      "quota_bateu": 1,
+      "fallback_acionado": 2
+    },
+    {
+      "id": "chatgpt_pro_20x",
+      "conta": "falecomseucamarao@gmail.com",
+      "tarefas": 104,
+      "tokens_saida": 2917450,
+      "quota_bateu": 0,
+      "fallback_acionado": null
+    }
+  ],
+  "aderencia": [
+    {
+      "conta": "emanuelsilveiramaia@gmail.com",
+      "provedor": "claude",
+      "sessoes": 48,
+      "na_rota": 44,
+      "pct": 91.7
+    },
+    {
+      "conta": "falecomseucamarao@gmail.com",
+      "provedor": "codex",
+      "sessoes": 87,
+      "na_rota": 71,
+      "pct": 81.6
+    }
+  ],
+  "decisoes": [
+    {
+      "em": "2026-09-21T09:00:00.000Z",
+      "area": "dificil",
+      "tipo": "proposta",
+      "de": "Sol high",
+      "para": "Opus 5.5 medium",
+      "motivo": "ok1 72,7% abaixo da meta de 80% com 22 tarefas."
+    },
+    {
+      "em": "2026-09-18T15:00:00.000Z",
+      "area": "mecanico",
+      "tipo": "barateou",
+      "de": "Luna max",
+      "para": "Luna high",
+      "motivo": "Candidato 93% contra 95% do titular, com 20 tarefas em cada."
+    },
+    {
+      "em": "2026-09-17T10:00:00.000Z",
+      "area": "rotina",
+      "tipo": "teste_aberto",
+      "de": "Luna max",
+      "para": "Luna high",
+      "motivo": "Titular com folga de 12 pontos acima da meta."
+    },
+    {
+      "em": "2026-09-16T08:00:00.000Z",
+      "area": "cerebro",
+      "tipo": "sem_decisao",
+      "de": "",
+      "para": "",
+      "motivo": "Confiança da área abaixo de 80%."
+    }
+  ],
+  "saude": {
+    "ultima_coleta": "2026-09-22T13:55:00.000Z",
+    "cobertura": {
+      "modelo": 98.2,
+      "effort": 91.0,
+      "tokens": 97.5,
+      "duracao": 99.1,
+      "area_declarada": 76.4,
+      "veredito": 68.3
+    },
+    "por_fonte": {
+      "claude": {
+        "modelo": 100.0,
+        "effort": 95.2,
+        "tokens": 100.0,
+        "duracao": 100.0,
+        "area_declarada": 82.3,
+        "veredito": 71.0
+      },
+      "codex": {
+        "modelo": 97.1,
+        "effort": 88.5,
+        "tokens": 96.0,
+        "duracao": 98.6,
+        "area_declarada": 72.8,
+        "veredito": null
+      }
+    },
+    "erros": [
+      {
+        "em": "2026-09-22T11:02:00.000Z",
+        "onde": "coletor/codex · sessions/2026/09/22",
+        "msg": "Arquivo de sessão truncado; 1 tarefa ignorada."
+      }
+    ]
+  },
+  "benchmark": {
+    "fonte": "Artificial Analysis + Arena",
+    "data": "2026-09-22",
+    "modelos": [
+      {
+        "modelo": "gpt-6-luna",
+        "effort": "high",
+        "indice": 61.0,
+        "custo_tarefa_usd": 0.08,
+        "tokens_saida_tarefa": 5200
+      },
+      {
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "indice": 68.5,
+        "custo_tarefa_usd": 0.21,
+        "tokens_saida_tarefa": 6100
+      }
+    ]
+  },
+  "regras": [
+    "Baratear é automático; subir exige OK do dono.",
+    "Teste abre quando o titular passa a meta com folga de 10 pontos e n≥20.",
+    "Candidato vence com ok1 ≥ meta e no máximo 5 pontos abaixo do titular.",
+    "Degrau recém-promovido que falha volta sozinho ao anterior comprovado.",
+    "SQL/dinheiro nunca barateia sozinho."
+  ]
+}

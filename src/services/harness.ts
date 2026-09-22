@@ -142,3 +142,19 @@ export async function getHarnessAlertas(quantas = 12): Promise<HistoricoAlertas>
     })),
   };
 }
+
+/**
+ * Lê o blob cru do snapshot (qualquer versão). A página v2 checa `versao === 2`
+ * antes de confiar no formato. null = tabela vazia; erro de leitura → throw.
+ */
+export async function getHarnessDadosCru(): Promise<unknown | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('harness_snapshot')
+    .select('dados')
+    .eq('id', 'singleton')
+    .maybeSingle();
+
+  if (error) throw falhaLeitura('snapshot', error);
+  return data ? (data.dados as unknown) : null;
+}
