@@ -284,7 +284,9 @@ function Nota({ s }: { s: HarnessV2 }) {
 }
 
 function Atencao({ s, r }: { s: HarnessV2; r?: RespostasDonoProps }) {
-  const itens = s.atencao.slice(0, 3);
+  const [verTodos, setVerTodos] = useState(false);
+  const resto = Math.max(0, s.atencao.length - 3);
+  const itens = verTodos ? s.atencao : s.atencao.slice(0, 3);
   return (
     <Secao id="atencao" titulo="Precisa de você">
       {itens.length === 0 ? (
@@ -311,6 +313,21 @@ function Atencao({ s, r }: { s: HarnessV2; r?: RespostasDonoProps }) {
               </Cartao>
             </li>
           ))}
+          {resto > 0 && (
+            <li>
+              <button
+                type="button"
+                data-testid="atencao-mais"
+                aria-expanded={verTodos}
+                onClick={() => setVerTodos((v) => !v)}
+                className="text-sm font-medium text-jade-accent hover:underline"
+              >
+                {verTodos
+                  ? 'Mostrar só os 3 primeiros'
+                  : `+${resto} ${resto === 1 ? 'item' : 'itens'}`}
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </Secao>

@@ -193,18 +193,3 @@ export async function getRespostasDono(): Promise<RespostaDono[]> {
   if (error) throw falhaLeitura('respostas_dono', error);
   return (data ?? []) as RespostaDono[];
 }
-
-/**
- * Grava (ou troca) a resposta do dono. Recebe o client de servidor da server
- * action; a RLS garante que só o dono escreve. Uma resposta por (tipo, alvo).
- */
-export async function gravarRespostaDono(
-  // biome-ignore lint/suspicious/noExplicitAny: client de servidor sem a tabela no Database gerado
-  supabase: any,
-  r: { tipo: TipoRespostaDono; alvo_id: string; valor: -1 | 1 },
-): Promise<void> {
-  const { error } = await supabase
-    .from('harness_respostas_dono')
-    .upsert({ ...r, aplicado_em: null }, { onConflict: 'tipo,alvo_id' });
-  if (error) throw falhaLeitura('respostas_dono', error);
-}

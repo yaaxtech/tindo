@@ -2,6 +2,7 @@ import { PaginaHarness } from '@/app/harness/_components/PaginaHarness';
 import type { HarnessV2 } from '@/types/harness';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import fixtureReal from './__fixtures__/snapshot-v2-real.json';
 import fixture from './__fixtures__/snapshot-v2.json';
 
 const base = fixture as unknown as HarnessV2;
@@ -91,5 +92,20 @@ describe('respostas do dono', () => {
     );
     expect(screen.queryByRole('button', { name: 'Aprovar' })).toBeNull();
     expect(screen.getByTestId(`resposta-${id}`).textContent).toMatch(/Recusado/);
+  });
+});
+
+describe('snapshot real (muitos nulos, 9 itens de atenção)', () => {
+  const real = fixtureReal as unknown as HarnessV2;
+
+  it('mostra 3 itens, "+6 itens" expande, e não quebra com nulos', () => {
+    renderV2(real);
+    expect(screen.getByTestId('nota-valor').textContent).toBe('18');
+    const lista = screen.getByTestId('atencao-mais').closest('ul') as HTMLElement;
+    expect(within(lista).getAllByRole('listitem')).toHaveLength(4);
+    expect(screen.getByTestId('atencao-mais').textContent).toBe('+6 itens');
+    fireEvent.click(screen.getByTestId('atencao-mais'));
+    expect(within(lista).getAllByRole('listitem')).toHaveLength(10);
+    expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });
 });
