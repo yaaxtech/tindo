@@ -558,3 +558,153 @@ export interface ActionsSnapshot {
   dados: ActionsBlob;
   geradoEm: string;
 }
+
+// ── Snapshot v2 (harness_snapshot.dados com versao: 2) ──────────────────────
+// Contrato: ~/.claude/orquestracao/references/harness-v2-contrato.md, seção 6.
+// Percentuais 0–100; ausente = null (nunca 0 inventado).
+
+export type ProvedorV2 = 'codex' | 'claude';
+
+export interface DegrauV2 {
+  provedor: ProvedorV2;
+  modelo: string;
+  effort: string;
+  rotulo: string;
+}
+
+export type EstadoAreaV2 =
+  | 'comprovado_mais_barato'
+  | 'passa'
+  | 'testando_mais_barato'
+  | 'quer_subir'
+  | 'falhando'
+  | 'juntando_dado'
+  | 'sem_confianca';
+
+export interface NotaSemanaV2 {
+  semana: string;
+  valor: number | null;
+  qualidade: number | null;
+  economia: number | null;
+  confianca: number | null;
+}
+
+export interface AtencaoV2 {
+  id: string;
+  tipo: 'proposta_subir' | 'alerta_dado' | 'cota' | 'pendente';
+  titulo: string;
+  detalhe: string;
+  acao: string;
+}
+
+export interface AreaV2 {
+  id: string;
+  nome: string;
+  descricao: string;
+  risco: boolean;
+  meta_ok1: number;
+  titular: DegrauV2;
+  fallback: DegrauV2 | null;
+  teto: DegrauV2 | null;
+  escada: DegrauV2[];
+  estado: EstadoAreaV2;
+  n: number;
+  julgados: number;
+  ok1: number | null;
+  tokens_saida_mediana: number | null;
+  duracao_mediana_s: number | null;
+  confianca: number | null;
+  teste: string | null;
+  proposta: string | null;
+  ultima_decisao: string | null;
+}
+
+export interface BracoV2 {
+  rotulo: string;
+  modelo: string;
+  effort: string;
+  n: number;
+  julgados: number;
+  ok1: number | null;
+  meta_n: number;
+}
+
+export interface TesteV2 {
+  id: string;
+  area: string;
+  desde: string;
+  bracos: BracoV2[];
+}
+
+export interface AssinaturaV2 {
+  id: 'claude_max_5x' | 'chatgpt_pro_20x' | string;
+  conta: string;
+  tarefas: number | null;
+  tokens_saida: number | null;
+  quota_bateu: number | null;
+  fallback_acionado: number | null;
+}
+
+export interface AderenciaV2 {
+  conta: string;
+  provedor: string;
+  sessoes: number | null;
+  na_rota: number | null;
+  pct: number | null;
+}
+
+export interface DecisaoV2 {
+  em: string;
+  area: string;
+  tipo: string;
+  de: string;
+  para: string;
+  motivo: string;
+}
+
+export interface CoberturaV2 {
+  modelo: number | null;
+  effort: number | null;
+  tokens: number | null;
+  duracao: number | null;
+  area_declarada: number | null;
+  veredito: number | null;
+}
+
+export interface HarnessV2 {
+  versao: 2;
+  gerado_em: string;
+  periodo: { de: string; ate: string; dias: number };
+  nota: {
+    valor: number | null;
+    qualidade: number | null;
+    economia: number | null;
+    confianca: number | null;
+    meta: number;
+    historico: NotaSemanaV2[];
+  };
+  atencao: AtencaoV2[];
+  areas: AreaV2[];
+  testes: TesteV2[];
+  assinaturas: AssinaturaV2[];
+  aderencia: AderenciaV2[];
+  decisoes: DecisaoV2[];
+  saude: {
+    ultima_coleta: string | null;
+    cobertura: CoberturaV2;
+    por_fonte: Record<string, Partial<CoberturaV2>>;
+    erros: { em: string; onde: string; msg: string }[];
+  };
+  benchmark?: {
+    fonte: string;
+    data: string;
+    modelos: {
+      modelo: string;
+      effort: string;
+      indice: number | null;
+      custo_tarefa_usd: number | null;
+      tokens_saida_tarefa: number | null;
+    }[];
+  };
+  regras: string[];
+}

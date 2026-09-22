@@ -142,3 +142,54 @@ export async function getHarnessAlertas(quantas = 12): Promise<HistoricoAlertas>
     })),
   };
 }
+
+/**
+ * Lê o blob cru do snapshot (qualquer versão). A página v2 checa `versao === 2`
+ * antes de confiar no formato. null = tabela vazia; erro de leitura → throw.
+ */
+export async function getHarnessDadosCru(): Promise<unknown | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('harness_snapshot')
+    .select('dados')
+    .eq('id', 'singleton')
+    .maybeSingle();
+
+  if (error) throw falhaLeitura('snapshot', error);
+  return data ? (data.dados as unknown) : null;
+}
+
+// ── Respostas do dono (tabela harness_respostas_dono) ──────────────────────
+
+/** E-mail que o app trata como dono (mesmo critério de src/lib/auth/routes.ts). */
+export const EMAIL_DONO_HARNESS = 'falecomseucamarao@gmail.com';
+
+export type TipoRespostaDono = 'aprovacao' | 'voto';
+
+export interface RespostaDono {
+  tipo: TipoRespostaDono;
+  alvo_id: string;
+  valor: -1 | 1;
+  criado_em: string;
+  aplicado_em: string | null;
+}
+
+export function ehEmailDono(email: string | null | undefined): boolean {
+  return email?.toLowerCase() === EMAIL_DONO_HARNESS;
+}
+
+/** true quando a sessão atual (navegador) é do dono — só decide o que a tela mostra. */
+export async function souDonoHarness(): Promise<boolean> {
+  const { data } = await createClient().auth.getUser();
+  return ehEmailDono(data.user?.email);
+}
+
+/** Aprovações já dadas. Sem sessão ou tabela ausente → erro (a tela só mostra status). */
+export async function getRespostasDono(): Promise<RespostaDono[]> {
+  // biome-ignore lint/suspicious/noExplicitAny: tabela fora do Database gerado até aplicar a migration
+  const { data, error } = await (createClient() as any)
+    .from('harness_respostas_dono')
+    .select('tipo, alvo_id, valor, criado_em, aplicado_em');
+  if (error) throw falhaLeitura('respostas_dono', error);
+  return (data ?? []) as RespostaDono[];
+}

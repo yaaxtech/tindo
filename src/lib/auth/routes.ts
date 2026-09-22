@@ -9,6 +9,7 @@ export const ROTAS_PUBLICAS = [
   '/recuperar-senha',
   '/nova-senha',
   '/harness',
+  '/harness.json',
   '/manifest.webmanifest',
 ] as const;
 

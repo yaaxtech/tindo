@@ -1,0 +1,746 @@
+{
+  "versao": 2,
+  "gerado_em": "2026-09-22T21:00:42.398Z",
+  "periodo": {
+    "de": "2026-09-15T21:00:42.398Z",
+    "ate": "2026-09-22T21:00:42.398Z",
+    "dias": 7
+  },
+  "nota": {
+    "valor": 18.3,
+    "qualidade": 55,
+    "economia": 0,
+    "confianca": 0,
+    "meta": 80,
+    "historico": [
+      {
+        "semana": "2026-W39",
+        "valor": 18.3,
+        "qualidade": 55,
+        "economia": 0,
+        "confianca": 0
+      }
+    ]
+  },
+  "atencao": [
+    {
+      "id": "D-mecanico",
+      "tipo": "alerta_dado",
+      "titulo": "Medição fraca em Mecânico",
+      "detalhe": "confiança 0%",
+      "acao": "corrigir coleta"
+    },
+    {
+      "id": "D-analise",
+      "tipo": "alerta_dado",
+      "titulo": "Medição fraca em Pesquisa e análise",
+      "detalhe": "confiança 0%",
+      "acao": "corrigir coleta"
+    },
+    {
+      "id": "D-dificil",
+      "tipo": "alerta_dado",
+      "titulo": "Medição fraca em Código difícil",
+      "detalhe": "confiança 0%",
+      "acao": "corrigir coleta"
+    },
+    {
+      "id": "D-ui",
+      "tipo": "alerta_dado",
+      "titulo": "Medição fraca em Frontend / UI",
+      "detalhe": "confiança 0%",
+      "acao": "corrigir coleta"
+    },
+    {
+      "id": "D-cerebro",
+      "tipo": "alerta_dado",
+      "titulo": "Medição fraca em Planejamento / cérebro",
+      "detalhe": "confiança 0%",
+      "acao": "corrigir coleta"
+    },
+    {
+      "id": "D-revisao",
+      "tipo": "alerta_dado",
+      "titulo": "Medição fraca em Revisão",
+      "detalhe": "confiança 0%",
+      "acao": "corrigir coleta"
+    },
+    {
+      "id": "D-sql",
+      "tipo": "alerta_dado",
+      "titulo": "Medição fraca em SQL / dinheiro",
+      "detalhe": "confiança 0%",
+      "acao": "corrigir coleta"
+    },
+    {
+      "id": "Q-7d",
+      "tipo": "cota",
+      "titulo": "Cota atingida",
+      "detalhe": "houve tarefa com quota nos últimos 7 dias",
+      "acao": "ver assinaturas"
+    },
+    {
+      "id": "P-7d",
+      "tipo": "pendente",
+      "titulo": "Tarefas sem veredito",
+      "detalhe": "há tarefas ainda não julgadas",
+      "acao": "rodar juiz"
+    }
+  ],
+  "areas": [
+    {
+      "id": "mecanico",
+      "nome": "Mecânico",
+      "descricao": "Transformações previsíveis e repetitivas.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "high",
+        "rotulo": "gpt-6-luna high"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "claude-opus-5-5 low"
+      },
+      "teto": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "max",
+        "rotulo": "gpt-6-luna max"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "high",
+          "rotulo": "gpt-6-luna high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "xhigh",
+          "rotulo": "gpt-6-luna xhigh"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "max",
+          "rotulo": "gpt-6-luna max"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 2,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "rotina",
+      "nome": "Rotina",
+      "descricao": "Código e tarefas rotineiras.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "max",
+        "rotulo": "gpt-6-luna max"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "claude-opus-5-5 low"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "claude-opus-5-5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "high",
+          "rotulo": "gpt-6-luna high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "xhigh",
+          "rotulo": "gpt-6-luna xhigh"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "max",
+          "rotulo": "gpt-6-luna max"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "claude-opus-5-5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "claude-opus-5-5 medium"
+        }
+      ],
+      "estado": "juntando_dado",
+      "n": 0,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": null,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "analise",
+      "nome": "Pesquisa e análise",
+      "descricao": "Pesquisa, síntese e análise de dados.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-luna",
+        "effort": "max",
+        "rotulo": "gpt-6-luna max"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "claude-opus-5-5 low"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "claude-opus-5-5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "high",
+          "rotulo": "gpt-6-luna high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "xhigh",
+          "rotulo": "gpt-6-luna xhigh"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-luna",
+          "effort": "max",
+          "rotulo": "gpt-6-luna max"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "claude-opus-5-5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "claude-opus-5-5 medium"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 21,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "dificil",
+      "nome": "Código difícil",
+      "descricao": "Implementação complexa e depuração profunda.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "high",
+        "rotulo": "gpt-6-sol high"
+      },
+      "fallback": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "claude-opus-5-5 medium"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "claude-opus-5-5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "medium",
+          "rotulo": "gpt-6-sol medium"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "high",
+          "rotulo": "gpt-6-sol high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "xhigh",
+          "rotulo": "gpt-6-sol xhigh"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "max",
+          "rotulo": "gpt-6-sol max"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "claude-opus-5-5 medium"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 4,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "ui",
+      "nome": "Frontend / UI",
+      "descricao": "Interface, experiência e design visual.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "claude-opus-5-5 low"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "high",
+        "rotulo": "gpt-6-sol high"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "claude-opus-5-5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "claude-opus-5-5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "claude-opus-5-5 medium"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 43,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "cerebro",
+      "nome": "Planejamento / cérebro",
+      "descricao": "Planejamento, arquitetura, decisão e síntese.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "claude-opus-5-5 medium"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-astra",
+        "effort": "medium",
+        "rotulo": "gpt-6-astra medium"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "high",
+        "rotulo": "claude-opus-5-5 high"
+      },
+      "escada": [
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "claude-opus-5-5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "claude-opus-5-5 medium"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "high",
+          "rotulo": "claude-opus-5-5 high"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 1,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "revisao",
+      "nome": "Revisão",
+      "descricao": "Revisão por outra assinatura; fallback próprio é não independente.",
+      "risco": false,
+      "meta_ok1": 80,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "rotulo": "claude-opus-5-5 low"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "high",
+        "rotulo": "gpt-6-sol high"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "rotulo": "claude-opus-5-5 medium"
+      },
+      "escada": [
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "high",
+          "rotulo": "gpt-6-sol high"
+        },
+        {
+          "provedor": "codex",
+          "modelo": "gpt-6-sol",
+          "effort": "xhigh",
+          "rotulo": "gpt-6-sol xhigh"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "low",
+          "rotulo": "claude-opus-5-5 low"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "medium",
+          "rotulo": "claude-opus-5-5 medium"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 74,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    },
+    {
+      "id": "sql",
+      "nome": "SQL / dinheiro",
+      "descricao": "SQL, migrations, dinheiro e dados de produção.",
+      "risco": true,
+      "meta_ok1": 90,
+      "titular": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "high",
+        "rotulo": "claude-opus-5-5 high"
+      },
+      "fallback": {
+        "provedor": "codex",
+        "modelo": "gpt-6-sol",
+        "effort": "xhigh",
+        "rotulo": "gpt-6-sol xhigh"
+      },
+      "teto": {
+        "provedor": "claude",
+        "modelo": "claude-opus-5-5",
+        "effort": "max",
+        "rotulo": "claude-opus-5-5 max"
+      },
+      "escada": [
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "high",
+          "rotulo": "claude-opus-5-5 high"
+        },
+        {
+          "provedor": "claude",
+          "modelo": "claude-opus-5-5",
+          "effort": "max",
+          "rotulo": "claude-opus-5-5 max"
+        }
+      ],
+      "estado": "sem_confianca",
+      "n": 139,
+      "julgados": 0,
+      "ok1": null,
+      "tokens_saida_mediana": null,
+      "duracao_mediana_s": null,
+      "confianca": 0,
+      "teste": null,
+      "proposta": null,
+      "ultima_decisao": null
+    }
+  ],
+  "testes": [],
+  "assinaturas": [
+    {
+      "id": "claude_max_5x",
+      "conta": "emanuelsilveiramaia@gmail.com",
+      "tarefas": 204,
+      "tokens_saida": 6245817,
+      "quota_bateu": 1,
+      "fallback_acionado": 0
+    },
+    {
+      "id": "chatgpt_pro_20x",
+      "conta": "falecomseucamarao@gmail.com",
+      "tarefas": 759,
+      "tokens_saida": 10823240,
+      "quota_bateu": 8,
+      "fallback_acionado": 0
+    }
+  ],
+  "aderencia": [
+    {
+      "conta": "falecomseucamarao@gmail.com",
+      "provedor": "codex",
+      "sessoes": 759,
+      "na_rota": 0,
+      "pct": 0
+    },
+    {
+      "conta": "emanuelsilveiramaia@gmail.com",
+      "provedor": "claude",
+      "sessoes": 204,
+      "na_rota": 2,
+      "pct": 1
+    }
+  ],
+  "decisoes": [],
+  "saude": {
+    "ultima_coleta": "2026-09-22T20:53:01.051Z",
+    "cobertura": {
+      "modelo": 82.8,
+      "effort": 94.3,
+      "tokens": 97.6,
+      "duracao": 100,
+      "area_declarada": 0.5,
+      "veredito": 3.2
+    },
+    "por_fonte": {
+      "claude": {
+        "tarefas": 126,
+        "cobertura": {
+          "modelo": 89.7,
+          "effort": 61.9,
+          "tokens": 100,
+          "duracao": 100,
+          "area_declarada": 3.2,
+          "veredito": 7.9
+        }
+      },
+      "codex": {
+        "tarefas": 719,
+        "cobertura": {
+          "modelo": 81.6,
+          "effort": 100,
+          "tokens": 97.2,
+          "duracao": 100,
+          "area_declarada": 0,
+          "veredito": 2.4
+        }
+      }
+    },
+    "erros": [
+      {
+        "em": "2026-09-22T20:53:01.051Z",
+        "onde": "codex",
+        "msg": "112/641 tarefas sem turn_context.payload.model (cobertura 82.5%)"
+      }
+    ]
+  },
+  "benchmark": {
+    "fonte": "Artificial Analysis",
+    "data": "2026-09-22",
+    "modelos": [
+      {
+        "modelo": "claude-opus-5-5",
+        "effort": "low",
+        "indice": 42.3,
+        "custo_tarefa_usd": 0.551,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "claude-opus-5-5",
+        "effort": "medium",
+        "indice": 51.2,
+        "custo_tarefa_usd": 1.336,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "claude-opus-5-5",
+        "effort": "high",
+        "indice": 53.6,
+        "custo_tarefa_usd": 1.82,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-sol",
+        "effort": "medium",
+        "indice": 39.8,
+        "custo_tarefa_usd": 0.248,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-sol",
+        "effort": "high",
+        "indice": 42.8,
+        "custo_tarefa_usd": 0.375,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-sol",
+        "effort": "xhigh",
+        "indice": 44.1,
+        "custo_tarefa_usd": 0.532,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-sol",
+        "effort": "max",
+        "indice": 47.5,
+        "custo_tarefa_usd": 1.056,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-luna",
+        "effort": "medium",
+        "indice": null,
+        "custo_tarefa_usd": null,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-luna",
+        "effort": "high",
+        "indice": 32.1,
+        "custo_tarefa_usd": 0.029,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-luna",
+        "effort": "xhigh",
+        "indice": 33.9,
+        "custo_tarefa_usd": 0.042,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-luna",
+        "effort": "max",
+        "indice": 37.3,
+        "custo_tarefa_usd": 0.068,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-astra",
+        "effort": "low",
+        "indice": 45.8,
+        "custo_tarefa_usd": 0.818,
+        "tokens_saida_tarefa": null
+      },
+      {
+        "modelo": "gpt-6-astra",
+        "effort": "medium",
+        "indice": 49.6,
+        "custo_tarefa_usd": 1.541,
+        "tokens_saida_tarefa": null
+      }
+    ]
+  },
+  "regras": [
+    "Confiança abaixo de 80% não decide.",
+    "Folga de 10 pontos abre teste do degrau imediatamente mais barato.",
+    "Promoção recente abaixo da meta volta ao anterior comprovado.",
+    "Teste completo barateia se preservar a meta e ficar até 5 pontos do titular.",
+    "Falha do titular gera proposta de subida para o dono.",
+    "Modelo novo mais barato abre teste; mais caro gera proposta, exceto em revisão.",
+    "Área de risco só gera propostas."
+  ]
+}
