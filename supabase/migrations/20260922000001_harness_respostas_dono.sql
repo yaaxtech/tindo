@@ -1,4 +1,4 @@
--- PREPARADA, NÃO APLICADA (gate de migration).
+-- Gate de migration: aplicar só com OK do dono.
 -- Respostas do dono no Painel do Harness: aprovação de proposta e voto 👍/👎 por tarefa.
 -- O motor lê as linhas com aplicado_em nulo, aplica e preenche aplicado_em.
 create table if not exists public.harness_respostas_dono (
@@ -13,13 +13,13 @@ create table if not exists public.harness_respostas_dono (
 
 alter table public.harness_respostas_dono enable row level security;
 
--- Dono: o repo não guarda o uid dele; o app identifica o dono pelo e-mail
--- (src/lib/auth/routes.ts). TODO(gate): trocar pelo auth.uid() real antes de aplicar.
+-- Dono = o mesmo e-mail que o app usa como dono (src/lib/auth/routes.ts, EMAIL_USUARIO_MVP).
+-- O e-mail vem do JWT emitido pelo Supabase Auth (verificado), não de input do cliente.
 create or replace function public.harness_eh_dono() returns boolean
   language sql stable
+  set search_path = ''
 as $$
-  select auth.uid() = '00000000-0000-0000-0000-000000000000'::uuid
-      or lower(coalesce(auth.jwt() ->> 'email', '')) = 'falecomseucamarao@gmail.com'
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'falecomseucamarao@gmail.com'
 $$;
 
 drop policy if exists harness_respostas_dono_leitura on public.harness_respostas_dono;
