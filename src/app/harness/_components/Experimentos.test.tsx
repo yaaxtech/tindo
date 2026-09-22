@@ -12,6 +12,27 @@ describe('Experimentos', () => {
     expect(screen.getAllByText('histórico manual').length).toBeGreaterThan(0);
   });
 
+  it('não quebra com braço de experimento encerrado sem todos os contadores', () => {
+    const dados = {
+      gerado_em: '2026-09-22T18:03:16Z',
+      experimentos: [
+        {
+          id: 'rotina-sol-luna-20260915',
+          terreno: 'rotina',
+          status: 'Encerrado',
+          motivo: 'desligado',
+          bracos: [
+            { id: 'sol-low', modelo: 'sol', effort: 'low', execucoes: 0, julgados: 0, ok1: 0 },
+          ],
+        },
+      ],
+    } as unknown as ExperimentosPublicados;
+
+    render(<Experimentos dados={dados} />);
+
+    expect(screen.getByText(/sol-low/)).toBeInTheDocument();
+  });
+
   it('mostra métricas dos braços publicados sem transformar null em zero', () => {
     const dados: ExperimentosPublicados = {
       gerado_em: '2026-09-15T10:00:00Z',

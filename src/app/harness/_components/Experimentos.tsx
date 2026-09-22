@@ -3,7 +3,9 @@ import { cn } from '@/lib/utils';
 import type { BenchmarkModelosPublicado, ExperimentosPublicados } from '@/types/harness';
 import { Card, corPill } from './ui';
 
-const numero = (valor: number): string => valor.toLocaleString('pt-BR');
+// Experimento encerrado pode ser publicado sem todos os contadores.
+const numero = (valor: number | null | undefined): string =>
+  valor == null ? '—' : valor.toLocaleString('pt-BR');
 
 function mediana(valor: number | null, unidade: string): string {
   if (valor == null) return '—';
