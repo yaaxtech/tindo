@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { AreaV2, DegrauV2, EstadoAreaV2, HarnessV2 } from '@/types/harness';
+import type { AreaV2, AtencaoV2, DegrauV2, EstadoAreaV2, HarnessV2 } from '@/types/harness';
 import { useState } from 'react';
 import { fmtData, fmtDuracao, fmtInt, fmtNota, fmtPct, fmtTokens } from './formato';
 
@@ -116,6 +116,107 @@ function Barra({
   );
 }
 
+// ── Respostas do dono ───────────────────────────────────────────────────────
+
+/** Como a página conversa com o dono. Sem isto, as propostas mostram só o status. */
+export interface RespostasDonoProps {
+  /** Dono logado: vê os botões. */
+  dono: boolean;
+  /** Respostas já gravadas, por id da proposta. */
+  respostas: Record<string, -1 | 1>;
+  responder: (alvoId: string, valor: -1 | 1) => Promise<{ ok: true } | { ok: false; erro: string }>;
+}
+
+const TEXTO_RESPOSTA = {
+  1: 'Aprovado — aplica na próxima hora.',
+  [-1]: 'Recusado — nada muda.',
+} as const;
+
+function RespostaProposta({ a, r }: { a: AtencaoV2; r?: RespostasDonoProps }) {
+  const [pedindo, setPedindo] = useState<-1 | 1 | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [local, setLocal] = useState<-1 | 1 | null>(null);
+  const valor = local ?? r?.respostas[a.id] ?? null;
+
+  if (valor != null) {
+    return (
+      <p
+        data-testid={`resposta-${a.id}`}
+        className={cn(
+          'mt-2 text-sm font-medium',
+          valor === 1 ? 'text-success' : 'text-text-secondary',
+        )}
+      >
+        {TEXTO_RESPOSTA[valor]}
+      </p>
+    );
+  }
+  if (!r?.dono) {
+    return <p className="mt-2 text-sm text-text-muted">Aguardando o dono decidir.</p>;
+  }
+  const confirmar = async () => {
+    if (pedindo == null) return;
+    setSalvando(true);
+    setErro(null);
+    const res = await r.responder(a.id, pedindo);
+    setSalvando(false);
+    if (res.ok) setLocal(pedindo);
+    else setErro(res.erro);
+  };
+  const botao = 'rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50';
+  if (pedindo != null) {
+    return (
+      <div className="mt-2 space-y-2" data-testid={`confirmar-${a.id}`}>
+        <p className="text-sm text-text-primary">
+          {pedindo === 1 ? 'Confirmar aprovação?' : 'Confirmar recusa?'}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={salvando}
+            onClick={confirmar}
+            className={cn(botao, 'bg-jade text-text-inverse hover:bg-jade/90')}
+          >
+            {salvando ? 'Salvando…' : pedindo === 1 ? 'Sim, aprovar' : 'Sim, recusar'}
+          </button>
+          <button
+            type="button"
+            disabled={salvando}
+            onClick={() => setPedindo(null)}
+            className={cn(botao, 'border border-border text-text-secondary hover:bg-bg-hover')}
+          >
+            Voltar
+          </button>
+        </div>
+        {erro && (
+          <p role="alert" className="text-sm text-danger">
+            {erro}
+          </p>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => setPedindo(1)}
+        className={cn(botao, 'bg-jade text-text-inverse hover:bg-jade/90')}
+      >
+        Aprovar
+      </button>
+      <button
+        type="button"
+        onClick={() => setPedindo(-1)}
+        className={cn(botao, 'border border-border text-text-secondary hover:bg-bg-hover')}
+      >
+        Recusar
+      </button>
+    </div>
+  );
+}
+
 // ── Blocos ──────────────────────────────────────────────────────────────────
 
 const PILARES = [
@@ -182,7 +283,7 @@ function Nota({ s }: { s: HarnessV2 }) {
   );
 }
 
-function Atencao({ s }: { s: HarnessV2 }) {
+function Atencao({ s, r }: { s: HarnessV2; r?: RespostasDonoProps }) {
   const itens = s.atencao.slice(0, 3);
   return (
     <Secao id="atencao" titulo="Precisa de você">
@@ -202,7 +303,11 @@ function Atencao({ s }: { s: HarnessV2 }) {
                   {a.titulo}
                 </p>
                 <p className="text-sm text-text-secondary">{a.detalhe}</p>
-                <p className="mt-1 text-sm font-medium text-jade-accent">{a.acao}</p>
+                {a.tipo === 'proposta_subir' ? (
+                  <RespostaProposta a={a} r={r} />
+                ) : (
+                  <p className="mt-1 text-sm font-medium text-jade-accent">{a.acao}</p>
+                )}
               </Cartao>
             </li>
           ))}
@@ -549,11 +654,11 @@ function ParaIAs({ s }: { s: HarnessV2 }) {
 
 // ── Página ──────────────────────────────────────────────────────────────────
 
-export function PainelV2({ s }: { s: HarnessV2 }) {
+export function PainelV2({ s, respostas }: { s: HarnessV2; respostas?: RespostasDonoProps }) {
   return (
     <div className="space-y-8">
       <Nota s={s} />
-      <Atencao s={s} />
+      <Atencao s={s} r={respostas} />
       <Mapa areas={s.areas} />
       <Testes s={s} />
       <Assinaturas s={s} />

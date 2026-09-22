@@ -1,6 +1,6 @@
 'use client';
 
-import { PainelV2, ehSnapshotV2 } from './PainelV2';
+import { PainelV2, type RespostasDonoProps, ehSnapshotV2 } from './PainelV2';
 import { fmtData } from './formato';
 
 export type Estado =
@@ -9,7 +9,10 @@ export type Estado =
   | { tipo: 'vazio' }
   | { tipo: 'pronto'; dados: unknown };
 
-export function PaginaHarness({ estado }: { estado: Estado }) {
+export function PaginaHarness({
+  estado,
+  respostas,
+}: { estado: Estado; respostas?: RespostasDonoProps }) {
   const v2 = estado.tipo === 'pronto' && ehSnapshotV2(estado.dados) ? estado.dados : null;
   return (
     <main className="min-h-dvh pb-16 safe-top safe-bottom">
@@ -37,7 +40,7 @@ export function PaginaHarness({ estado }: { estado: Estado }) {
             Snapshot antigo — aguardando publicação v2.
           </output>
         )}
-        {v2 && <PainelV2 s={v2} />}
+        {v2 && <PainelV2 s={v2} respostas={respostas} />}
       </div>
     </main>
   );

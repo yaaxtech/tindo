@@ -1,7 +1,8 @@
 'use client';
 
 import { type Estado, PaginaHarness } from '@/app/harness/_components/PaginaHarness';
-import { getHarnessDadosCru } from '@/services/harness';
+import { responderProposta } from '@/app/harness/acoes';
+import { getHarnessDadosCru, getRespostasDono, souDonoHarness } from '@/services/harness';
 import { useEffect, useState } from 'react';
 
 /** Em desenvolvimento, `?fixture=v2` mostra a página com dados de exemplo. */
@@ -30,5 +31,27 @@ export default function HarnessPage() {
       vivo = false;
     };
   }, []);
-  return <PaginaHarness estado={estado} />;
+
+  // Quem é o dono e o que ele já respondeu. Falha aqui não derruba a página:
+  // sem sessão, as propostas só mostram o status.
+  const [dono, setDono] = useState(false);
+  const [respostas, setRespostas] = useState<Record<string, -1 | 1>>({});
+  useEffect(() => {
+    souDonoHarness()
+      .then(setDono)
+      .catch(() => setDono(false));
+    getRespostasDono()
+      .then((rs) =>
+        setRespostas(
+          Object.fromEntries(
+            rs.filter((r) => r.tipo === 'aprovacao').map((r) => [r.alvo_id, r.valor]),
+          ),
+        ),
+      )
+      .catch(() => setRespostas({}));
+  }, []);
+
+  return (
+    <PaginaHarness estado={estado} respostas={{ dono, respostas, responder: responderProposta }} />
+  );
 }
