@@ -5,6 +5,7 @@
  * do que seria mudado. A aplicação no Todoist (com etiqueta IA, log e desfazer)
  * entra numa fatia seguinte, depois do OK do dono.
  */
+import { criarClienteClaude } from '@/lib/ai/cliente-claude';
 import { ErroServicoExterno, ErroValidacao } from '@/lib/api/erros';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { TodoistClient, type TodoistTask } from '@/lib/todoist/client';
@@ -23,7 +24,6 @@ import {
   montarMensagemTriagem,
   montarSystemTriagem,
 } from '@/lib/triagem/prompt';
-import Anthropic from '@anthropic-ai/sdk';
 
 const MODELO_DEFAULT = 'claude-sonnet-4-6';
 const MAX_EXEMPLOS = 60;
@@ -106,7 +106,7 @@ export async function gerarPreviaTriagem(limite = 10): Promise<PreviaTriagem> {
     frentesValidas: new Set(ctx.frentes.map((f) => f.id)),
   };
 
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = criarClienteClaude(apiKey);
   const system = montarSystemTriagem(ctx);
   const planos: PlanoTriagem[] = [];
   const erros: PreviaTriagem['erros'] = [];

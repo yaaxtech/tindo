@@ -1,3 +1,4 @@
+import { criarClienteClaude } from '@/lib/ai/cliente-claude';
 import {
   type ClassificacaoMeta,
   type ContextoClassificacao,
@@ -10,7 +11,6 @@ import {
 } from '@/lib/ai/prompts';
 import { ErroServicoExterno, ErroValidacao } from '@/lib/api/erros';
 import type { Projeto, Tag } from '@/types/domain';
-import Anthropic from '@anthropic-ai/sdk';
 
 export type { Classificacao, ClassificacaoMeta, Sugestao } from '@/lib/ai/prompts';
 
@@ -79,7 +79,7 @@ export async function quebrarTarefa(input: QuebrarTarefaInput): Promise<QuebraTa
     );
   }
 
-  const anthropic = new Anthropic({ apiKey: resolvedKey });
+  const anthropic = criarClienteClaude(resolvedKey);
   const modelo = input.modelo ?? MODELO_DEFAULT;
 
   const ctx: ContextoQuebra = {
@@ -195,7 +195,7 @@ export async function sugerirTarefas(input: SugerirTarefasInput): Promise<Sugeri
     );
   }
 
-  const anthropic = new Anthropic({ apiKey: resolvedKey });
+  const anthropic = criarClienteClaude(resolvedKey);
   const modelo = input.modelo ?? MODELO_DEFAULT;
 
   const { system, userMessage, tool } = montarPromptSugestoes({
@@ -274,7 +274,7 @@ export async function classificarTarefa(input: ClassificarTarefaInput): Promise<
     );
   }
 
-  const anthropic = new Anthropic({ apiKey: resolvedKey });
+  const anthropic = criarClienteClaude(resolvedKey);
   const modelo = input.modelo ?? MODELO_DEFAULT;
 
   const ctx: ContextoClassificacao = {

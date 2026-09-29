@@ -1,3 +1,4 @@
+import { criarClienteClaude } from '@/lib/ai/cliente-claude';
 import { respostaOk } from '@/lib/api/resposta';
 import Anthropic from '@anthropic-ai/sdk';
 import type { NextRequest } from 'next/server';
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const anthropic = new Anthropic({ apiKey: chave });
+    const anthropic = criarClienteClaude(chave);
     await anthropic.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 1,
