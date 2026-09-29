@@ -1,5 +1,5 @@
-import assert from 'node:assert/strict';
 import test from 'node:test';
+import assert from 'node:assert/strict';
 import { calcKpis, familiaModelo, validarRevisaoCruzada } from './ledger.mjs';
 
 const base = {
@@ -29,7 +29,10 @@ test('família de modelo ignora provider e versão', () => {
 });
 
 test('revisor usa LLM diferente primeiro e própria somente como fallback', () => {
-  assert.equal(validarRevisaoCruzada({ papel: 'revisor', modelo: 'gpt-5.6-sol' }).ok, false);
+  assert.equal(
+    validarRevisaoCruzada({ papel: 'revisor', modelo: 'gpt-5.6-sol' }).ok,
+    false,
+  );
   assert.equal(
     validarRevisaoCruzada({
       papel: 'revisor',

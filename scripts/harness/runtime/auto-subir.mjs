@@ -25,21 +25,16 @@
  *
  * Spec: docs/superpowers/specs/2026-08-15-auto-subir-modelo-effort-por-dados.md
  */
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { autorregular } from './autorregular-experimentos.mjs';
+import { coletarTokensPorSessaoCodex } from './telemetria-codex.mjs';
 import { construirExperimentos, decidirExperimento } from './experimentos-harness.mjs';
 import {
-  LEDGER_FILE,
-  LIMIARES,
-  avisoMudo,
-  julgavel,
-  loadJanela,
-  terrenoAmbiguo,
+  LEDGER_FILE, LIMIARES, loadJanela, terrenoAmbiguo, avisoMudo, julgavel,
 } from './ledger.mjs';
-import { coletarTokensPorSessaoCodex } from './telemetria-codex.mjs';
 
 const DEFAULTS_FILE = join(homedir(), '.claude', 'orquestracao', 'defaults-terreno.json');
 
@@ -60,17 +55,16 @@ const idxEffort = (e) => EFFORT.indexOf(e);
 // A referência externa para manutenção humana das cadeias é Artificial
 // Analysis. O motor não usa score externo congelado para decidir sozinho.
 export const MODELO = {
-  astra: { provider: 'openai', custo_rel: 0.5 },
-  luna: { provider: 'openai', custo_rel: 0.4 },
-  sol: { provider: 'openai', custo_rel: 0.5 },
-  terra: { provider: 'openai', custo_rel: 0.4 },
-  haiku: { provider: 'anthropic', custo_rel: 1.5 },
+  astra:  { provider: 'openai',    custo_rel: 0.5 },
+  luna:   { provider: 'openai',    custo_rel: 0.4 },
+  sol:    { provider: 'openai',    custo_rel: 0.5 },
+  terra:  { provider: 'openai',    custo_rel: 0.4 },
+  haiku:  { provider: 'anthropic', custo_rel: 1.5 },
   sonnet: { provider: 'anthropic', custo_rel: 4.0 },
-  fable: { provider: 'anthropic', custo_rel: 6.0 },
-  opus5: { provider: 'anthropic', custo_rel: 10.0 },
+  fable:  { provider: 'anthropic', custo_rel: 6.0 },
+  opus5:  { provider: 'anthropic', custo_rel: 10.0 },
 };
-export const BENCHMARK_MODELOS_URL =
-  'https://arena.ai/leaderboard/agent/pareto?projection=output-tokens';
+export const BENCHMARK_MODELOS_URL = 'https://arena.ai/leaderboard/agent/pareto?projection=output-tokens';
 
 // Força-tarefa de economia Claude até 27/08: subir para modelo Anthropic paga
 // pedágio no custo (não é veto — é preço; o dono pediu automático).
@@ -139,7 +133,7 @@ function custoTrocaModelo(atual, alvo) {
 function custoDegrauEffort(modelo) {
   const m = MODELO[modelo];
   if (!m) return 0.2;
-  if (m.provider !== 'anthropic') return 0.1; // flat-rate: quase de graça
+  if (m.provider !== 'anthropic') return 0.1;   // flat-rate: quase de graça
   let c = 0.4 * (m.custo_rel / 10);
   if (pedagioAtivo()) c *= PEDAGIO;
   return Math.max(0.1, c);
@@ -164,9 +158,10 @@ function recorteTerreno(linhas, terreno) {
   // REVISÃO nunca mede degrau de CONSTRUÇÃO (26/08): num revisor, `retrabalho`
   // quer dizer "reprovei o artefato" — é o revisor acertando. Deixá-la na
   // amostra rebaixava o titular do terreno exatamente onde ele funcionava.
-  const doTerreno = linhas.filter(
-    (r) => r.terreno === terreno && r.papel === 'construtor' && r.papel_inferido !== true,
-  );
+  const doTerreno = linhas.filter((r) =>
+    r.terreno === terreno &&
+    r.papel === 'construtor' &&
+    r.papel_inferido !== true);
   const julgaveis = doTerreno.filter(julgavel);
   const carimbados = julgaveis.filter((r) => !terrenoAmbiguo(r));
   const ambiguos = julgaveis.length - carimbados.length;
@@ -218,21 +213,13 @@ function avaliarTerreno(nome, cfg, linhas) {
 
   // Gate de ambiguidade — balde sujo não mede tier
   if (r.julgaveis && r.ambiguo_ratio > AMBIGUO_MAX) {
-    return {
-      ...base,
-      estado: 'ambiguo',
-      proposta: null,
-      motivo: `balde ambíguo (${pct(r.ambiguo_ratio)} sem carimbo de terreno) — sinal suprimido`,
-    };
+    return { ...base, estado: 'ambiguo', proposta: null,
+      motivo: `balde ambíguo (${pct(r.ambiguo_ratio)} sem carimbo de terreno) — sinal suprimido` };
   }
   // Gate de amostra — abaixo de N_MIN é ruído
   if (r.n < N_MIN) {
-    return {
-      ...base,
-      estado: 'amostra',
-      proposta: null,
-      motivo: `amostra insuficiente (${r.n}/${N_MIN} carimbados) — nada a mexer`,
-    };
+    return { ...base, estado: 'amostra', proposta: null,
+      motivo: `amostra insuficiente (${r.n}/${N_MIN} carimbados) — nada a mexer` };
   }
 
   const ok1pts = r.ok1_pct * 100;
@@ -240,12 +227,8 @@ function avaliarTerreno(nome, cfg, linhas) {
   base.gap = +gap.toFixed(1);
 
   if (gap <= 0) {
-    return {
-      ...base,
-      estado: 'no_alvo',
-      proposta: null,
-      motivo: `no alvo (ok1 ${pct(r.ok1_pct)} ≥ ${alvo}%)`,
-    };
+    return { ...base, estado: 'no_alvo', proposta: null,
+      motivo: `no alvo (ok1 ${pct(r.ok1_pct)} ≥ ${alvo}%)` };
   }
 
   // Enumera degraus possíveis, pontua por VALOR = ganho_pts / custo_marginal
@@ -259,27 +242,13 @@ function avaliarTerreno(nome, cfg, linhas) {
     const delta = ledgerDeltaEffort(r.por_effort, cfg.effort, alvoEffort);
     const custo = custoDegrauEffort(cfg.modelo);
     if (delta != null && delta > 0) {
-      candidatos.push({
-        tipo: 'effort',
-        de: cfg.effort,
-        para: alvoEffort,
-        ganho_pts: Math.min(gap, delta),
-        custo,
-        fonte: 'ledger',
-        valor: Math.min(gap, delta) / custo,
-      });
+      candidatos.push({ tipo: 'effort', de: cfg.effort, para: alvoEffort,
+        ganho_pts: Math.min(gap, delta), custo, fonte: 'ledger',
+        valor: Math.min(gap, delta) / custo });
     } else {
       // sem prior de effort → não sobe no escuro, marca para A/B (F5)
-      candidatos.push({
-        tipo: 'effort',
-        de: cfg.effort,
-        para: alvoEffort,
-        ganho_pts: null,
-        custo,
-        fonte: 'sem prior',
-        valor: null,
-        ab: true,
-      });
+      candidatos.push({ tipo: 'effort', de: cfg.effort, para: alvoEffort,
+        ganho_pts: null, custo, fonte: 'sem prior', valor: null, ab: true });
     }
   }
 
@@ -289,32 +258,18 @@ function avaliarTerreno(nome, cfg, linhas) {
   const noTetoModelo = cfg.modelo === cfg.teto_modelo || posAtual === cadeia.length - 1;
   // Trava de dinheiro: candidato barrado pela regra de risco/benchmark nem vira
   // proposta (SQL/dinheiro — dono, 2026-08-16).
-  const proximoOk = posAtual >= 0 && !noTetoModelo && modeloPermitido(cfg, cadeia[posAtual + 1]);
+  const proximoOk = posAtual >= 0 && !noTetoModelo &&
+    modeloPermitido(cfg, cadeia[posAtual + 1]);
   if (proximoOk) {
     const alvoModelo = cadeia[posAtual + 1];
     const ganho = ganhoModelo(cfg.modelo, alvoModelo, gap, null);
     const custo = custoTrocaModelo(cfg.modelo, alvoModelo);
     if (ganho.pts != null && ganho.pts > 0) {
-      candidatos.push({
-        tipo: 'modelo',
-        de: cfg.modelo,
-        para: alvoModelo,
-        ganho_pts: ganho.pts,
-        custo,
-        fonte: ganho.fonte,
-        valor: ganho.pts / custo,
-      });
+      candidatos.push({ tipo: 'modelo', de: cfg.modelo, para: alvoModelo,
+        ganho_pts: ganho.pts, custo, fonte: ganho.fonte, valor: ganho.pts / custo });
     } else {
-      candidatos.push({
-        tipo: 'modelo',
-        de: cfg.modelo,
-        para: alvoModelo,
-        ganho_pts: null,
-        custo,
-        fonte: ganho.fonte,
-        valor: null,
-        ab: true,
-      });
+      candidatos.push({ tipo: 'modelo', de: cfg.modelo, para: alvoModelo,
+        ganho_pts: null, custo, fonte: ganho.fonte, valor: null, ab: true });
     }
   }
 
@@ -324,45 +279,30 @@ function avaliarTerreno(nome, cfg, linhas) {
   }
 
   // Escolhe o degrau de maior valor POSITIVO conhecido
-  const comValor = candidatos
-    .filter((c) => c.valor != null && c.valor > 0)
+  const comValor = candidatos.filter((c) => c.valor != null && c.valor > 0)
     .sort((a, b) => b.valor - a.valor);
   const paraAb = candidatos.filter((c) => c.ab);
 
   if (comValor.length) {
     const melhor = comValor[0];
     return {
-      ...base,
-      estado: 'sobe',
-      proposta: melhor,
-      candidatos,
-      para_ab: paraAb,
-      motivo:
-        `${melhor.tipo} ${melhor.de}→${melhor.para} · ganho ~${num(melhor.ganho_pts)}pt ` +
+      ...base, estado: 'sobe', proposta: melhor, candidatos, para_ab: paraAb,
+      motivo: `${melhor.tipo} ${melhor.de}→${melhor.para} · ganho ~${num(melhor.ganho_pts)}pt ` +
         `÷ custo ${num(melhor.custo)} = valor ${num(melhor.valor)} (${melhor.fonte})`,
     };
   }
   if (paraAb.length) {
     const primeiro = paraAb[0];
     return {
-      ...base,
-      estado: 'medir',
-      proposta: null,
-      candidatos,
-      para_ab: paraAb,
-      motivo:
-        `gap ${base.gap}pt mas sem prior de ganho — medir ${primeiro.tipo} ` +
+      ...base, estado: 'medir', proposta: null, candidatos, para_ab: paraAb,
+      motivo: `gap ${base.gap}pt mas sem prior de ganho — medir ${primeiro.tipo} ` +
         `${primeiro.de}→${primeiro.para} via A/B antes de fixar`,
     };
   }
   // gap positivo mas sem degrau nenhum (já no teto de tudo)
   return {
-    ...base,
-    estado: 'teto',
-    proposta: null,
-    candidatos,
-    motivo:
-      `atrás do alvo (gap ${base.gap}pt) mas já no teto de modelo e effort` +
+    ...base, estado: 'teto', proposta: null, candidatos,
+    motivo: `atrás do alvo (gap ${base.gap}pt) mas já no teto de modelo e effort` +
       (cfg.reforco ? ` — resta reforço: ${cfg.reforco}` : ''),
   };
 }
@@ -380,71 +320,43 @@ function escreverDefaults(obj, path = DEFAULTS_FILE) {
 export async function avaliar({ dias = 7, file = LEDGER_FILE, defaultsFile = DEFAULTS_FILE } = {}) {
   const defaults = lerDefaults(defaultsFile);
   if (defaults._meta?.governanca === 'experimentos-v1') {
-    const report = construirExperimentos(
-      defaults,
-      loadJanela(file, 90),
-      await coletarTokensPorSessaoCodex({ dias: 90 }),
-    );
-    const sinais = report.experimentos.map((exp) => {
-      const cfg = defaults.terrenos[exp.terreno].experimento;
-      return `${exp.terreno}: ${exp.bracos.map((b) => `${b.modelo}/${b.effort} ${b.ok1}/${b.julgados}`).join(' · ')} — ${decidirExperimento(exp, cfg).motivo}`;
+    const report = construirExperimentos(defaults,loadJanela(file,90),await coletarTokensPorSessaoCodex({dias:90}));
+    const sinais=report.experimentos.map(exp=>{
+      const cfg=defaults.terrenos[exp.terreno].experimento;
+      return `${exp.terreno}: ${exp.bracos.map(b=>`${b.modelo}/${b.effort} ${b.ok1}/${b.julgados}`).join(' · ')} — ${decidirExperimento(exp,cfg).motivo}`;
     });
-    return {
-      dias: 90,
-      auto_aplicar: defaults._meta.auto_aplicar,
-      terrenos: [],
-      propostas: [],
-      experimentos: report,
-      sinais,
-    };
+    return {dias:90,auto_aplicar:defaults._meta.auto_aplicar,terrenos:[],propostas:[],experimentos:report,sinais};
   }
   const linhas = loadJanela(file, dias);
   const mudo = avisoMudo(file);
 
-  const terrenos = Object.entries(defaults.terrenos).map(([nome, cfg]) =>
-    avaliarTerreno(nome, cfg, linhas),
-  );
+  const terrenos = Object.entries(defaults.terrenos)
+    .map(([nome, cfg]) => avaliarTerreno(nome, cfg, linhas));
 
   const sinais = [];
   if (mudo) sinais.push(mudo);
   if (defaults._meta?.auto_aplicar === false) {
-    sinais.push(
-      'ℹ Motor em modo PROPÕE (auto_aplicar=false) — nada é aplicado; ' +
-        'só sinal para painel e e-mail.',
-    );
+    sinais.push('ℹ Motor em modo PROPÕE (auto_aplicar=false) — nada é aplicado; ' +
+      'só sinal para painel e e-mail.');
   }
 
   const emoji = {
-    sobe: '🔺',
-    medir: '🧪',
-    teto: '⛔',
-    no_alvo: '🟢',
-    ambiguo: '⚠',
-    amostra: '·',
+    sobe: '🔺', medir: '🧪', teto: '⛔', no_alvo: '🟢', ambiguo: '⚠', amostra: '·',
   };
   for (const t of terrenos) {
-    sinais.push(
-      `${emoji[t.estado] || '·'} ${t.rotulo} [${t.modelo}/${t.effort}] ` +
-        `ok1 ${pct(t.ok1_pct)} (n=${t.n}, alvo ${t.alvo}%): ${t.motivo}`,
-    );
+    sinais.push(`${emoji[t.estado] || '·'} ${t.rotulo} [${t.modelo}/${t.effort}] ` +
+      `ok1 ${pct(t.ok1_pct)} (n=${t.n}, alvo ${t.alvo}%): ${t.motivo}`);
   }
 
   const propostas = terrenos.filter((t) => t.estado === 'sobe');
 
-  return {
-    dias,
-    atualizado_ledger_mudo: !!mudo,
-    auto_aplicar: defaults._meta?.auto_aplicar,
-    terrenos,
-    propostas,
-    sinais,
-  };
+  return { dias, atualizado_ledger_mudo: !!mudo, auto_aplicar: defaults._meta?.auto_aplicar,
+    terrenos, propostas, sinais };
 }
 
 /** Linhas prontas para o corpo do e-mail semanal da auditoria. */
 export function linhasParaEmail(resultado) {
-  const cab =
-    `Tier por terreno (${resultado.dias}d): ` +
+  const cab = `Tier por terreno (${resultado.dias}d): ` +
     `${resultado.propostas.length} subida(s) proposta(s)` +
     (resultado.auto_aplicar === false ? ' · modo PROPÕE (nada aplicado)' : '');
   return [cab, ...resultado.sinais];
@@ -467,17 +379,8 @@ export function linhasParaEmail(resultado) {
 
 function lerAudit(auditFile) {
   if (!existsSync(auditFile)) return [];
-  return readFileSync(auditFile, 'utf8')
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .map((l) => {
-      try {
-        return JSON.parse(l);
-      } catch {
-        return null;
-      }
-    })
+  return readFileSync(auditFile, 'utf8').trim().split('\n').filter(Boolean)
+    .map((l) => { try { return JSON.parse(l); } catch { return null; } })
     .filter(Boolean);
 }
 
@@ -486,15 +389,14 @@ function registrarAudit(auditFile, registro) {
 }
 
 function registrarAvaliacao(auditFile, aval, ligado) {
-  const compacto = (terrenos) =>
-    terrenos.map((t) => ({
-      terreno: t.terreno,
-      estado: t.estado,
-      n: t.n,
-      ok1_pct: t.ok1_pct,
-      proposta: t.proposta,
-      motivo: t.motivo,
-    }));
+  const compacto = (terrenos) => terrenos.map((t) => ({
+    terreno: t.terreno,
+    estado: t.estado,
+    n: t.n,
+    ok1_pct: t.ok1_pct,
+    proposta: t.proposta,
+    motivo: t.motivo,
+  }));
   registrarAudit(auditFile, {
     ts: agoraIso(),
     acao: 'avaliou',
@@ -508,15 +410,13 @@ function registrarAvaliacao(auditFile, aval, ligado) {
 // Lê fundo (DIAS_REVISAO) e corta por ts >= desde; só carimbados julgáveis.
 function amostraDesde(file, terreno, desdeIso) {
   const desde = Date.parse(desdeIso);
-  const linhas = loadJanela(file, DIAS_REVISAO).filter(
-    (r) =>
-      r.terreno === terreno &&
-      r.papel === 'construtor' &&
-      r.papel_inferido !== true &&
-      Date.parse(r.ts) >= desde &&
-      julgavel(r) &&
-      !terrenoAmbiguo(r),
-  );
+  const linhas = loadJanela(file, DIAS_REVISAO).filter((r) =>
+    r.terreno === terreno &&
+    r.papel === 'construtor' &&
+    r.papel_inferido !== true &&
+    Date.parse(r.ts) >= desde &&
+    julgavel(r) &&
+    !terrenoAmbiguo(r));
   const n = linhas.length;
   const ok1 = linhas.filter((r) => r.resultado === 'ok1').length;
   return { n, ok1_pct: n ? ok1 / n : null };
@@ -529,67 +429,43 @@ function revisarReversao(defaults, file, auditFile) {
   const audit = lerAudit(auditFile);
   const revertidos = [];
   for (const [terreno, cfg] of Object.entries(defaults.terrenos)) {
-    const subidas = audit.filter(
-      (a) =>
-        a.terreno === terreno &&
-        a.acao === 'subiu' &&
-        ['canonica', 'claude'].includes(a.rota || 'claude'),
-    );
+    const subidas = audit.filter((a) => a.terreno === terreno && a.acao === 'subiu' &&
+      ['canonica', 'claude'].includes(a.rota || 'claude'));
     if (!subidas.length) continue;
     const ultima = subidas[subidas.length - 1];
-    const jaEncerrada = audit.some(
-      (a) =>
-        a.terreno === terreno &&
-        (a.acao === 'reverteu' || a.acao === 'reversao_ignorada') &&
-        ['canonica', 'claude'].includes(a.rota || 'claude') &&
-        Date.parse(a.ts) > Date.parse(ultima.ts),
-    );
+    const jaEncerrada = audit.some((a) => a.terreno === terreno &&
+      (a.acao === 'reverteu' || a.acao === 'reversao_ignorada') &&
+      ['canonica', 'claude'].includes(a.rota || 'claude') &&
+      Date.parse(a.ts) > Date.parse(ultima.ts));
     if (jaEncerrada) continue;
 
     const amostra = amostraDesde(file, terreno, ultima.ts);
-    if (amostra.n < N_MIN) continue; // sem amostra pós-subida: aguarda
+    if (amostra.n < N_MIN) continue;           // sem amostra pós-subida: aguarda
     const ganho = amostra.ok1_pct * 100 - ultima.ok1_antes_pts;
-    if (ganho > GANHO_MIN_CONFIRMA) continue; // segurou: mantém
+    if (ganho > GANHO_MIN_CONFIRMA) continue;  // segurou: mantém
 
     const campo = ultima.tipo === 'modelo' ? 'modelo' : 'effort';
     if (cfg[campo] !== ultima.para) {
       registrarAudit(auditFile, {
-        ts: agoraIso(),
-        rota: 'canonica',
-        terreno,
-        acao: 'reversao_ignorada',
-        tipo: ultima.tipo,
-        esperado: ultima.para,
-        atual: cfg[campo],
-        ref_subida_ts: ultima.ts,
-        motivo:
-          'configuração mudou depois da subida; preservada para não sobrescrever ajuste manual',
+        ts: agoraIso(), rota: 'canonica', terreno, acao: 'reversao_ignorada', tipo: ultima.tipo,
+        esperado: ultima.para, atual: cfg[campo], ref_subida_ts: ultima.ts,
+        motivo: 'configuração mudou depois da subida; preservada para não sobrescrever ajuste manual',
       });
       continue;
     }
-    cfg[campo] = ultima.de; // volta pro degrau de origem
+    cfg[campo] = ultima.de;                      // volta pro degrau de origem
     if (ultima.tipo === 'modelo' && cfg.effort_por_modelo?.[ultima.de]) {
       cfg.effort = cfg.effort_por_modelo[ultima.de];
     } else if (ultima.tipo === 'effort' && cfg.effort_por_modelo) {
       cfg.effort_por_modelo[cfg.modelo] = ultima.de;
     }
     cfg.atualizado_em = hojeData();
-    cfg.motivo =
-      `revertido: ${ultima.tipo} ${ultima.para}→${ultima.de} — subida não ` +
+    cfg.motivo = `revertido: ${ultima.tipo} ${ultima.para}→${ultima.de} — subida não ` +
       `confirmou (ok1 pós ${pct(amostra.ok1_pct)} vs ${ultima.ok1_antes_pts}% antes, n=${amostra.n})`;
-    const reg = {
-      ts: agoraIso(),
-      rota: 'canonica',
-      terreno,
-      acao: 'reverteu',
-      tipo: ultima.tipo,
-      de: ultima.para,
-      para: ultima.de,
-      ok1_pos_pts: +(amostra.ok1_pct * 100).toFixed(1),
-      n_pos: amostra.n,
-      motivo: cfg.motivo,
-      ref_subida_ts: ultima.ts,
-    };
+    const reg = { ts: agoraIso(), rota: 'canonica', terreno, acao: 'reverteu', tipo: ultima.tipo,
+      de: ultima.para, para: ultima.de,
+      ok1_pos_pts: +(amostra.ok1_pct * 100).toFixed(1), n_pos: amostra.n,
+      motivo: cfg.motivo, ref_subida_ts: ultima.ts };
     registrarAudit(auditFile, reg);
     revertidos.push(reg);
   }
@@ -599,16 +475,10 @@ function revisarReversao(defaults, file, auditFile) {
 // Trava anti-vaivém: um degrau recém-revertido não re-sobe por ANTITHRASH_DIAS.
 function travadoAntiVaivem(audit, terreno, prop) {
   const limite = Date.now() - ANTITHRASH_DIAS * 864e5;
-  return audit.some(
-    (a) =>
-      a.terreno === terreno &&
-      a.acao === 'reverteu' &&
-      ['canonica', 'claude'].includes(a.rota || 'claude') &&
-      a.tipo === prop.tipo &&
-      a.de === prop.para &&
-      a.para === prop.de &&
-      Date.parse(a.ts) >= limite,
-  );
+  return audit.some((a) => a.terreno === terreno && a.acao === 'reverteu' &&
+    ['canonica', 'claude'].includes(a.rota || 'claude') &&
+    a.tipo === prop.tipo && a.de === prop.para && a.para === prop.de &&
+    Date.parse(a.ts) >= limite);
 }
 
 // Muta cfg para o degrau proposto; devolve o registro (SEM gravar — o chamador
@@ -630,59 +500,32 @@ function aplicarSubida(cfg, terreno, prop) {
   }
   cfg.atualizado_em = hojeData();
   cfg.motivo = `auto-subiu: ${prop.tipo} ${de}→${prop.para} · ${prop.fonte} · valor ${num(prop.valor)}`;
-  return {
-    ts: agoraIso(),
-    rota: 'canonica',
-    terreno,
-    acao: 'subiu',
-    tipo: prop.tipo,
-    de,
-    para: prop.para,
+  return { ts: agoraIso(), rota: 'canonica', terreno, acao: 'subiu', tipo: prop.tipo, de, para: prop.para,
     effort_associado: effortAssociado,
-    valor: prop.valor,
-    ganho_pts: prop.ganho_pts,
-    custo: prop.custo,
-    fonte: prop.fonte,
-    motivo: cfg.motivo,
-  };
+    valor: prop.valor, ganho_pts: prop.ganho_pts, custo: prop.custo, fonte: prop.fonte,
+    motivo: cfg.motivo };
 }
 
-export async function aplicar({
-  dias = 7,
-  file = LEDGER_FILE,
-  defaultsFile = DEFAULTS_FILE,
-  auditFile = AUDIT_FILE,
-} = {}) {
+export async function aplicar({ dias = 7, file = LEDGER_FILE,
+  defaultsFile = DEFAULTS_FILE, auditFile = AUDIT_FILE } = {}) {
   const defaults = lerDefaults(defaultsFile);
   if (defaults._meta?.governanca === 'experimentos-v1') {
-    const result = autorregular({
-      defaultsFile,
-      auditFile,
-      linhas: loadJanela(file, 90),
-      sessoes: await coletarTokensPorSessaoCodex({ dias: 90 }),
-      aplicar: true,
-    });
-    return {
-      ligado: result.habilitada,
-      aplicado: result.mudancas || [],
-      revertido: [],
-      sinais: [result.motivo],
-      motivo: result.motivo,
-    };
+    const result = autorregular({defaultsFile,auditFile,linhas:loadJanela(file,90),
+      sessoes:await coletarTokensPorSessaoCodex({dias:90}),aplicar:true});
+    return {ligado:result.habilitada,aplicado:result.mudancas || [],revertido:[],
+      sinais:[result.motivo],motivo:result.motivo};
   }
   const ligado = autoSubirOn() && defaults._meta?.auto_aplicar === true;
   const aval = await avaliar({ dias, file, defaultsFile });
   registrarAvaliacao(auditFile, aval, ligado);
 
   if (!ligado) {
-    return {
-      ligado: false,
-      aplicado: [],
-      revertido: [],
+    return { ligado: false, aplicado: [], revertido: [],
       motivo: `toggle OFF (AUTO_SUBIR_ON=${autoSubirOn()}, auto_aplicar=${defaults._meta?.auto_aplicar}) — nada escrito`,
-      propostas_seriam: [...aval.propostas.map((p) => ({ terreno: p.terreno, ...p.proposta }))],
-      sinais: aval.sinais,
-    };
+      propostas_seriam: [
+        ...aval.propostas.map((p) => ({ terreno: p.terreno, ...p.proposta })),
+      ],
+      sinais: aval.sinais };
   }
 
   // 1) reversões primeiro (desfaz o que não segurou antes de subir de novo)
@@ -692,11 +535,11 @@ export async function aplicar({
   // 2) subidas
   const aplicado = [];
   for (const p of aval.propostas) {
-    if (revertido.some((r) => r.terreno === p.terreno)) continue; // acabou de reverter
-    if (travadoAntiVaivem(auditPos, p.terreno, p.proposta)) continue; // anti-vaivém
+    if (revertido.some((r) => r.terreno === p.terreno)) continue;      // acabou de reverter
+    if (travadoAntiVaivem(auditPos, p.terreno, p.proposta)) continue;  // anti-vaivém
     const cfg = defaults.terrenos[p.terreno];
     const reg = aplicarSubida(cfg, p.terreno, p.proposta);
-    if (!reg) continue; // barrado (dinheiro)
+    if (!reg) continue;                                                // barrado (dinheiro)
     reg.ok1_antes_pts = +((p.ok1_pct ?? 0) * 100).toFixed(1);
     reg.n_antes = p.n;
     reg.gap_antes = p.gap;
@@ -711,21 +554,13 @@ export async function aplicar({
   return { ligado: true, aplicado, revertido, sinais: aval.sinais };
 }
 
-const executadoDiretamente =
-  process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const executadoDiretamente = process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
 if (executadoDiretamente) {
   const i = process.argv.indexOf('--dias');
   const dias = i === -1 ? 7 : Number(process.argv[i + 1]) || 7;
-  const jf = (k) => {
-    const p = process.argv.indexOf(k);
-    return p === -1 ? undefined : process.argv[p + 1];
-  };
-  const opts = {
-    dias,
-    file: jf('--ledger'),
-    defaultsFile: jf('--defaults'),
-    auditFile: jf('--audit'),
-  };
+  const jf = (k) => { const p = process.argv.indexOf(k); return p === -1 ? undefined : process.argv[p + 1]; };
+  const opts = { dias, file: jf('--ledger'), defaultsFile: jf('--defaults'), auditFile: jf('--audit') };
   for (const k of Object.keys(opts)) if (opts[k] === undefined) delete opts[k];
 
   if (process.argv.includes('aplicar')) {
@@ -736,53 +571,43 @@ if (executadoDiretamente) {
           if (r.propostas_seriam?.length) {
             process.stdout.write('   FARIA:\n');
             for (const p of r.propostas_seriam) {
-              process.stdout.write(
-                `     ${p.terreno}: ${p.tipo} ${p.de}→${p.para} (valor ${num(p.valor)})\n`,
-              );
+                process.stdout.write(`     ${p.terreno}: ${p.tipo} ${p.de}→${p.para} (valor ${num(p.valor)})\n`);
             }
           } else {
             process.stdout.write('   (nenhuma subida proposta na janela)\n');
           }
           return;
         }
-        process.stdout.write(
-          `✅ motor LIGADO — ${r.aplicado.length} subida(s)/` +
-            `${r.revertido.length} reversão(ões)\n`,
-        );
+        process.stdout.write(`✅ motor LIGADO — ${r.aplicado.length} subida(s)/` +
+          `${r.revertido.length} reversão(ões)\n`);
         for (const a of r.revertido) {
           process.stdout.write(`   🔻 ${a.terreno}: ${a.tipo} ${a.de}→${a.para} — ${a.motivo}\n`);
         }
         for (const a of r.aplicado) {
+          process.stdout.write(`   🔺 ${a.terreno}: ${a.tipo} ${a.de}→${a.para} (valor ${num(a.valor)}, ${a.fonte})\n`);
+        }
+      })
+      .catch((erro) => { process.stderr.write(`${erro.message}\n`); process.exitCode = 1; });
+  } else avaliar(opts)
+    .then((r) => {
+      if (process.argv.includes('--json')) {
+        process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+        return;
+      }
+      process.stdout.write(`${linhasParaEmail(r).join('\n')}\n`);
+      if (r.propostas.length) {
+        process.stdout.write('\nPROPOSTAS:\n');
+        for (const p of r.propostas) {
+          const d = p.proposta;
           process.stdout.write(
-            `   🔺 ${a.terreno}: ${a.tipo} ${a.de}→${a.para} (valor ${num(a.valor)}, ${a.fonte})\n`,
+            `  ${p.terreno}: ${d.tipo} ${d.de}→${d.para} ` +
+            `(ganho ~${num(d.ganho_pts)}pt, custo ${num(d.custo)}, valor ${num(d.valor)})\n`,
           );
         }
-      })
-      .catch((erro) => {
-        process.stderr.write(`${erro.message}\n`);
-        process.exitCode = 1;
-      });
-  } else
-    avaliar(opts)
-      .then((r) => {
-        if (process.argv.includes('--json')) {
-          process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
-          return;
-        }
-        process.stdout.write(`${linhasParaEmail(r).join('\n')}\n`);
-        if (r.propostas.length) {
-          process.stdout.write('\nPROPOSTAS:\n');
-          for (const p of r.propostas) {
-            const d = p.proposta;
-            process.stdout.write(
-              `  ${p.terreno}: ${d.tipo} ${d.de}→${d.para} ` +
-                `(ganho ~${num(d.ganho_pts)}pt, custo ${num(d.custo)}, valor ${num(d.valor)})\n`,
-            );
-          }
-        }
-      })
-      .catch((erro) => {
-        process.stderr.write(`${erro.message}\n`);
-        process.exitCode = 1;
-      });
+      }
+    })
+    .catch((erro) => {
+      process.stderr.write(`${erro.message}\n`);
+      process.exitCode = 1;
+    });
 }

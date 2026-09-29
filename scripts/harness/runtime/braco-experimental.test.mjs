@@ -1,5 +1,5 @@
-import assert from 'node:assert/strict';
 import test from 'node:test';
+import assert from 'node:assert/strict';
 import { sortear } from './braco-experimental.mjs';
 
 const defaultsFixture = {
@@ -20,34 +20,22 @@ defaultsFixture.terrenos = defaultsFixture.canary_ignored.terrenos;
 defaultsFixture.codex = { terrenos: { rotina: { modelo: 'luna', effort: 'max' } } };
 
 test('rnd abaixo do limiar de amostragem sorteia o braço xhigh experimental', () => {
-  assert.deepEqual(
-    sortear('rotina', () => 0.05, defaultsFixture),
-    {
-      arm: 'xhigh_exp',
-      effort: 'xhigh',
-    },
-  );
+  assert.deepEqual(sortear('rotina', () => 0.05, defaultsFixture), {
+    arm: 'xhigh_exp',
+    effort: 'xhigh',
+  });
 });
 
 test('rnd acima do limiar de amostragem sorteia o braço base (effort do terreno)', () => {
-  assert.deepEqual(
-    sortear('rotina', () => 0.5, defaultsFixture),
-    {
-      arm: 'base',
-      effort: 'low',
-    },
-  );
+  assert.deepEqual(sortear('rotina', () => 0.5, defaultsFixture), {
+    arm: 'base',
+    effort: 'low',
+  });
 });
 
 test('terreno sql (sem braço) sempre volta base, qualquer rnd', () => {
-  assert.deepEqual(
-    sortear('sql', () => 0, defaultsFixture),
-    { arm: 'base', effort: 'xhigh' },
-  );
-  assert.deepEqual(
-    sortear('sql', () => 0.999, defaultsFixture),
-    { arm: 'base', effort: 'xhigh' },
-  );
+  assert.deepEqual(sortear('sql', () => 0, defaultsFixture), { arm: 'base', effort: 'xhigh' });
+  assert.deepEqual(sortear('sql', () => 0.999, defaultsFixture), { arm: 'base', effort: 'xhigh' });
 });
 
 test('amostragem em N=1000 sorteios fica dentro de ±0.05 do valor configurado (0.2)', () => {

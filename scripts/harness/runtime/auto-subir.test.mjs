@@ -1,8 +1,8 @@
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import test from 'node:test';
 import { aplicar, avaliar } from './auto-subir.mjs';
 
 const agora = Date.now();
@@ -29,23 +29,15 @@ function defaults() {
     _meta: { auto_aplicar: true },
     terrenos: {
       dificil: {
-        rotulo: 'Código difícil',
-        modelo: 'sol',
-        effort: 'high',
-        cadeia_modelo: ['sol'],
-        piso_modelo: 'sol',
-        teto_modelo: 'sol',
-        effort_teto: 'xhigh',
-        alvo_ok1: 80,
-        reforco: null,
+        rotulo: 'Código difícil', modelo: 'sol', effort: 'high',
+        cadeia_modelo: ['sol'], piso_modelo: 'sol', teto_modelo: 'sol',
+        effort_teto: 'xhigh', alvo_ok1: 80, reforco: null,
       },
     },
     codex: {
       terrenos: {
         dificil: {
-          modelo: 'sol',
-          effort: 'high',
-          escalada_effort: ['xhigh'],
+          modelo: 'sol', effort: 'high', escalada_effort: ['xhigh'],
           orquestrador: 'thread_principal',
         },
       },
@@ -77,26 +69,15 @@ test('origins share one quality sample and inferred work stays outside it', asyn
 
 test('canonical effort promotion changes only terrenos and combines both origins', async () => {
   const lines = [
-    ...Array.from({ length: 10 }, (_, i) =>
-      linha({ frente: i % 2 ? 'claude' : 'codex', effort: 'high', resultado: 'ok1' }),
-    ),
-    ...Array.from({ length: 10 }, (_, i) =>
-      linha({ frente: i % 2 ? 'codex' : 'claude', effort: 'high', resultado: 'retrabalho' }),
-    ),
-    ...Array.from({ length: 20 }, (_, i) =>
-      linha({ frente: i % 2 ? 'claude' : 'codex', effort: 'xhigh', resultado: 'ok1' }),
-    ),
+    ...Array.from({ length: 10 }, (_, i) => linha({ frente: i % 2 ? 'claude' : 'codex', effort: 'high', resultado: 'ok1' })),
+    ...Array.from({ length: 10 }, (_, i) => linha({ frente: i % 2 ? 'codex' : 'claude', effort: 'high', resultado: 'retrabalho' })),
+    ...Array.from({ length: 20 }, (_, i) => linha({ frente: i % 2 ? 'claude' : 'codex', effort: 'xhigh', resultado: 'ok1' })),
   ];
   const files = preparar(lines);
   const previous = process.env.AUTO_SUBIR_ON;
   process.env.AUTO_SUBIR_ON = '1';
   try {
-    const result = await aplicar({
-      dias: 7,
-      file: files.ledger,
-      defaultsFile: files.defaultsFile,
-      auditFile: files.auditFile,
-    });
+    const result = await aplicar({ dias: 7, file: files.ledger, defaultsFile: files.defaultsFile, auditFile: files.auditFile });
     assert.equal(result.aplicado.length, 1);
     const after = JSON.parse(readFileSync(files.defaultsFile, 'utf8'));
     assert.equal(after.terrenos.dificil.effort, 'xhigh');
@@ -149,19 +130,13 @@ test('canonical rollback preserves a manual change', async () => {
       auditFile: files.auditFile,
     });
     assert.equal(segunda.revertido.length, 0);
-    assert.equal(
-      JSON.parse(readFileSync(files.defaultsFile, 'utf8')).terrenos.dificil.effort,
-      'xhigh',
-    );
+    assert.equal(JSON.parse(readFileSync(files.defaultsFile, 'utf8')).terrenos.dificil.effort, 'xhigh');
     const audit = readFileSync(files.auditFile, 'utf8')
       .trim()
       .split('\n')
       .map((registro) => JSON.parse(registro));
     assert.equal(audit.filter((registro) => registro.acao === 'reversao_ignorada').length, 1);
-    assert.equal(
-      audit.some((registro) => registro.acao === 'reverteu'),
-      false,
-    );
+    assert.equal(audit.some((registro) => registro.acao === 'reverteu'), false);
   } finally {
     if (antes === undefined) delete process.env.AUTO_SUBIR_ON;
     else process.env.AUTO_SUBIR_ON = antes;
