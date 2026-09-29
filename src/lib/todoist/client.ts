@@ -97,6 +97,15 @@ export interface TodoistTask {
   note_count?: number;
 }
 
+export interface TodoistComment {
+  id: string;
+  item_id?: string | null;
+  task_id?: string | null;
+  content: string;
+  posted_at?: string;
+  is_deleted?: boolean;
+}
+
 interface PagedResponse<T> {
   results: T[];
   next_cursor: string | null;
@@ -161,6 +170,31 @@ export class TodoistClient {
     if (params?.label) qs.set('label', params.label);
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     return this.paginate<TodoistTask>(`/tasks${suffix}`);
+  }
+
+  listTaskComments(taskId: string): Promise<TodoistComment[]> {
+    return this.paginate<TodoistComment>(`/comments?task_id=${encodeURIComponent(taskId)}`);
+  }
+
+  /**
+   * Todos os comentários de tarefas numa chamada só (Sync API). Evita uma
+   * requisição por tarefa, que estoura o limite de subrequisições do Worker.
+   */
+  async listAllTaskComments(): Promise<TodoistComment[]> {
+    const body = new URLSearchParams({ sync_token: '*', resource_types: '["notes"]' });
+    const res = await this.req<{ notes?: TodoistComment[] }>('/sync', {
+      method: 'POST',
+      body: body.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    return (res.notes ?? []).filter((n) => !n.is_deleted);
+  }
+
+  addTaskComment(taskId: string, content: string): Promise<TodoistComment> {
+    return this.req<TodoistComment>('/comments', {
+      method: 'POST',
+      body: JSON.stringify({ task_id: taskId, content }),
+    });
   }
 }
 
