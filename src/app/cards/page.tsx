@@ -22,6 +22,7 @@ const AdiamentoNivel2 = dynamic(
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { type SugestaoAdiamento, rotuloMotivoManual } from '@/lib/adiamento/heuristica';
 import { playCompletion, playLevelUp, playSwipe } from '@/lib/audio/tones';
+import { MODOS_FILA, type ModoFila, ehModoFila, filtrarPorModo } from '@/lib/fila-modo';
 import { mockTarefas } from '@/lib/mock/tarefas';
 import { useCardStackStore } from '@/stores/cardStack';
 import { useGamificacaoStore } from '@/stores/gamificacao';
@@ -90,7 +91,18 @@ export default function CardsPage() {
   const [popoverAberto, setPopoverAberto] = useState<CampoData | null>(null);
   // Animação de saída disparada pelo teclado
   const [animacaoEmCurso, setAnimacaoEmCurso] = useState<SwipeDir | null>(null);
+  const [modo, setModo] = useState<ModoFila>('todos');
   const tarefaAtual = atual();
+
+  // Lembra o último modo escolhido (conveniência; falha silenciosa se storage bloqueado).
+  useEffect(() => {
+    try {
+      const salvo = localStorage.getItem('tindo:modo-fila');
+      if (ehModoFila(salvo)) setModo(salvo);
+    } catch {
+      /* storage indisponível */
+    }
+  }, []);
 
   useEffect(() => {
     void hidratarGami();
@@ -131,7 +143,7 @@ export default function CardsPage() {
           setFila([...mockTarefas].sort((a, b) => b.nota - a.nota));
           setErroCarga('Sem tarefas reais — usando mock.');
         } else {
-          setFila(filaReal);
+          setFila(filtrarPorModo(filaReal, modo));
         }
       } catch (e) {
         if (cancelado) return;
@@ -146,7 +158,16 @@ export default function CardsPage() {
       cancelado = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [modo]);
+
+  function trocarModo(novo: ModoFila): void {
+    setModo(novo);
+    try {
+      localStorage.setItem('tindo:modo-fila', novo);
+    } catch {
+      /* storage indisponível */
+    }
+  }
 
   async function sincronizarAcao(
     tarefaId: string,
@@ -363,6 +384,27 @@ export default function CardsPage() {
         </span>
       </header>
 
+      <nav
+        aria-label="Modo da fila"
+        className="mx-auto mb-2 flex gap-1 rounded-full border border-border-strong bg-bg-elevated p-1 text-xs"
+      >
+        {MODOS_FILA.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => trocarModo(m.id)}
+            aria-pressed={modo === m.id}
+            className={`rounded-full px-3 py-1 font-medium transition-colors ${
+              modo === m.id
+                ? 'bg-jade text-text-primary'
+                : 'text-text-muted hover:text-text-primary'
+            }`}
+          >
+            {m.rotulo}
+          </button>
+        ))}
+      </nav>
+
       <section className="relative flex flex-1 items-center justify-center px-4 pb-6">
         <div className="relative h-[640px] w-full max-w-md md:h-[680px]">
           <AnimatePresence mode="wait">
@@ -496,7 +538,7 @@ export default function CardsPage() {
           try {
             const res = await fetch('/api/fila', { cache: 'no-store' });
             const body = await res.json();
-            setFila(body.fila);
+            setFila(filtrarPorModo(body.fila, modo));
           } catch {
             /* ignore */
           }

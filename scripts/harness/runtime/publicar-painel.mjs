@@ -14,7 +14,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { consultarArena } from './arena-benchmark.mjs';
 import { coletarAutonomia } from './autonomia.mjs';
+import { autorregular } from './autorregular-experimentos.mjs';
+import { construirExperimentos } from './experimentos-harness.mjs';
 import { coletar } from './janela.mjs';
 import {
   HARNESS_METRIC_VERSION,
@@ -27,14 +30,11 @@ import {
   saudeDosDados,
 } from './metricas-snapshot.mjs';
 import { normModelo } from './modelos.mjs';
-import { ASSINATURAS, CADEIAS, janela, lerJsonl, prVelocidade, volumeCodigo } from './painel.mjs';
+import { construirCadeias } from './painel-config.mjs';
+import { ASSINATURAS, janela, lerJsonl, prVelocidade, volumeCodigo } from './painel.mjs';
 import { verificarParidade } from './paridade-terrenos.mjs';
 import { coletarTelemetriaCodex } from './telemetria-codex.mjs';
 import { coletarTokensPorSessaoCodex } from './telemetria-codex.mjs';
-import { construirCadeias } from './painel-config.mjs';
-import { construirExperimentos } from './experimentos-harness.mjs';
-import { autorregular } from './autorregular-experimentos.mjs';
-import { consultarArena } from './arena-benchmark.mjs';
 
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -82,8 +82,11 @@ async function main() {
   // inteiro (ledger/janela/autonomia perderiam a atualização horária). O
   // bloqueio duro fica no `node paridade-terrenos.mjs` (exit 1) e no e-mail
   // semanal da auditoria.
-  const configInicial = JSON.parse(readFileSync(join(DIR,'defaults-terreno.json'),'utf8'));
-  const par = verificarParidade({defaults:configInicial,cadeias:construirCadeias(configInicial)});
+  const configInicial = JSON.parse(readFileSync(join(DIR, 'defaults-terreno.json'), 'utf8'));
+  const par = verificarParidade({
+    defaults: configInicial,
+    cadeias: construirCadeias(configInicial),
+  });
   if (!par.ok) {
     console.error(
       `⚠ paridade de terrenos QUEBRADA (${par.problemas.length}) — publicando mesmo assim:`,
@@ -135,25 +138,49 @@ async function main() {
     }));
   const codex90 = await lerCodex(90);
   const codex14 = await lerCodex(14);
-  const tokensSessoes = await coletarTokensPorSessaoCodex({dias:90,agora:Date.parse(geradoEm)});
+  const tokensSessoes = await coletarTokensPorSessaoCodex({
+    dias: 90,
+    agora: Date.parse(geradoEm),
+  });
   const defaultsFile = join(DIR, 'defaults-terreno.json');
-  const autorregulacao = autorregular({defaultsFile, auditFile:join(DIR,'tier-mudancas.jsonl'),
-    linhas:ledgerLocal, sessoes:tokensSessoes, agora:geradoEm, aplicar:!process.argv.includes('--dry-run')});
-  const defaults = JSON.parse(readFileSync(defaultsFile,'utf8'));
-  const experimentos = construirExperimentos(defaults,ledgerLocal,tokensSessoes,geradoEm);
+  const autorregulacao = autorregular({
+    defaultsFile,
+    auditFile: join(DIR, 'tier-mudancas.jsonl'),
+    linhas: ledgerLocal,
+    sessoes: tokensSessoes,
+    agora: geradoEm,
+    aplicar: !process.argv.includes('--dry-run'),
+  });
+  const defaults = JSON.parse(readFileSync(defaultsFile, 'utf8'));
+  const experimentos = construirExperimentos(defaults, ledgerLocal, tokensSessoes, geradoEm);
   // Closed technical pilots remain explicitly separate from promotion input.
   try {
-    const pilotos=JSON.parse(readFileSync(join(DIR,'pilotos-harness.json'),'utf8'));
-    if(Array.isArray(pilotos)) experimentos.experimentos.push(...pilotos);
-  } catch(e) { if(e.code!=='ENOENT') console.error('Pilotos não carregados:',e.message); }
+    const pilotos = JSON.parse(readFileSync(join(DIR, 'pilotos-harness.json'), 'utf8'));
+    if (Array.isArray(pilotos)) experimentos.experimentos.push(...pilotos);
+  } catch (e) {
+    if (e.code !== 'ENOENT') console.error('Pilotos não carregados:', e.message);
+  }
   let benchmarkModelos = null;
-  try { benchmarkModelos = JSON.parse(readFileSync(join(DIR,'arena-benchmark.json'),'utf8')); } catch { /* Visible absence, never invented scores. */ }
-  if (!process.argv.includes('--dry-run') && (!benchmarkModelos ||
-      Date.parse(geradoEm)-Date.parse(benchmarkModelos.consultado_em)>7*864e5)) {
+  try {
+    benchmarkModelos = JSON.parse(readFileSync(join(DIR, 'arena-benchmark.json'), 'utf8'));
+  } catch {
+    /* Visible absence, never invented scores. */
+  }
+  if (
+    !process.argv.includes('--dry-run') &&
+    (!benchmarkModelos ||
+      Date.parse(geradoEm) - Date.parse(benchmarkModelos.consultado_em) > 7 * 864e5)
+  ) {
     try {
       benchmarkModelos = await consultarArena();
-      writeFileSync(join(DIR,'arena-benchmark.json'),JSON.stringify(benchmarkModelos,null,2)+'\n',{mode:0o600});
-    } catch(e) { console.error('Benchmark não atualizado:',e.message); }
+      writeFileSync(
+        join(DIR, 'arena-benchmark.json'),
+        JSON.stringify(benchmarkModelos, null, 2) + '\n',
+        { mode: 0o600 },
+      );
+    } catch (e) {
+      console.error('Benchmark não atualizado:', e.message);
+    }
   }
   const blob = {
     schema_version: HARNESS_SCHEMA_VERSION,

@@ -320,6 +320,13 @@ export async function classificarTarefa(input: ClassificarTarefaInput): Promise<
     urgencia: Math.round(Math.min(100, Math.max(0, urgencia))),
     facilidade: Math.round(Math.min(100, Math.max(0, facilidade))),
     tags_sugeridas: Array.isArray(raw.tags_sugeridas) ? (raw.tags_sugeridas as string[]) : [],
+    tipo_sugerido:
+      raw.tipo_sugerido === 'lembrete' || raw.tipo_sugerido === 'tarefa'
+        ? raw.tipo_sugerido
+        : undefined,
+    labels_todoist_sugeridas: Array.isArray(raw.labels_todoist_sugeridas)
+      ? (raw.labels_todoist_sugeridas as unknown[]).map(String).slice(0, 3)
+      : [],
     explicacao: String(raw.explicacao ?? '').slice(0, 140),
     usage: {
       input_tokens: response.usage.input_tokens,

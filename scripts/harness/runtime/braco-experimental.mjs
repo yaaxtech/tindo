@@ -7,8 +7,8 @@ import { existsSync, realpathSync } from 'node:fs';
  * `sortearDetalhado` para levar modelo, experimento e braço ao ledger.
  */
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DEFAULT_FILE = join(homedir(), '.claude', 'orquestracao', 'defaults-terreno.json');
@@ -34,10 +34,17 @@ function familia(modelo) {
 }
 
 function validarExperimento(exp, terreno) {
-  if (!exp || typeof exp !== 'object' || !exp.id || !Array.isArray(exp.bracos) || !exp.bracos.length) {
+  if (
+    !exp ||
+    typeof exp !== 'object' ||
+    !exp.id ||
+    !Array.isArray(exp.bracos) ||
+    !exp.bracos.length
+  ) {
     throw new Error(`experimento ativo inválido em ${terreno}: exige id e bracos`);
   }
-  if (new Set(exp.bracos.map(b=>b.id)).size!==exp.bracos.length) throw new Error('braços duplicados');
+  if (new Set(exp.bracos.map((b) => b.id)).size !== exp.bracos.length)
+    throw new Error('braços duplicados');
   let pesoTotal = 0;
   for (const b of exp.bracos) {
     if (!b || !b.id || !b.modelo || !EFFORTS.has(b.effort)) {
@@ -54,20 +61,24 @@ function validarExperimento(exp, terreno) {
 
 function parBase(terrenoCfg, defaults, base) {
   if (base?.modelo && base?.effort) return { modelo: familia(base.modelo), effort: base.effort };
-  const modelo = terrenoCfg.modelo ||
+  const modelo =
+    terrenoCfg.modelo ||
     terrenoCfg.braco_experimental_xhigh?.modelo ||
     (terrenoCfg.effort_por_modelo?.astra ? 'astra' : null);
   const f = familia(modelo);
-  const effort = terrenoCfg.effort_por_modelo?.[f] ||
-    terrenoCfg.effort_por_modelo?.[modelo] || terrenoCfg.effort;
+  const effort =
+    terrenoCfg.effort_por_modelo?.[f] ||
+    terrenoCfg.effort_por_modelo?.[modelo] ||
+    terrenoCfg.effort;
   return modelo && effort ? { modelo: f, effort } : null;
 }
 
 function baseExperimentArm(exp, current) {
   const byId = exp.base && exp.bracos.find((b) => b.id === exp.base);
   if (byId) return byId;
-  return exp.bracos.find((b) => !current ||
-    (familia(b.modelo) === current.modelo && b.effort === current.effort));
+  return exp.bracos.find(
+    (b) => !current || (familia(b.modelo) === current.modelo && b.effort === current.effort),
+  );
 }
 
 function escolherArm(exp, rnd) {
@@ -97,7 +108,11 @@ export function sortearDetalhado(terreno, rnd = Math.random, defaults, base) {
   if (exp?.ativo === true) {
     validarExperimento(exp, terreno);
     const reference = baseExperimentArm(exp, current);
-    if (!reference || (current && (familia(reference.modelo) !== current.modelo || reference.effort !== current.effort))) {
+    if (
+      !reference ||
+      (current &&
+        (familia(reference.modelo) !== current.modelo || reference.effort !== current.effort))
+    ) {
       return { arm: 'base', modelo: current.modelo, effort: current.effort };
     }
     const selected = escolherArm(exp, rnd);
@@ -112,11 +127,18 @@ export function sortearDetalhado(terreno, rnd = Math.random, defaults, base) {
   // Compatibilidade com o formato antigo. Ele só pode aparecer se o modelo
   // corrente for Astra; não transforma um braço planejado em execução em
   // rotina Sol/Luna.
-  if (cfg._meta?.governanca === 'experimentos-v1') return {arm:'base',modelo:current.modelo,effort:current.effort};
+  if (cfg._meta?.governanca === 'experimentos-v1')
+    return { arm: 'base', modelo: current.modelo, effort: current.effort };
   const legacy = terrenoCfg.braco_experimental_xhigh;
-  if (legacy && familia(legacy.modelo) === 'astra' && current.modelo === 'astra' &&
-      EFFORTS.has(legacy.effort) && Number.isFinite(Number(legacy.amostragem)) &&
-      Number(legacy.amostragem) > 0 && Number(rnd()) < Number(legacy.amostragem)) {
+  if (
+    legacy &&
+    familia(legacy.modelo) === 'astra' &&
+    current.modelo === 'astra' &&
+    EFFORTS.has(legacy.effort) &&
+    Number.isFinite(Number(legacy.amostragem)) &&
+    Number(legacy.amostragem) > 0 &&
+    Number(rnd()) < Number(legacy.amostragem)
+  ) {
     return {
       arm: 'xhigh_exp',
       modelo: 'astra',
@@ -133,7 +155,11 @@ export function sortear(terreno, rnd = Math.random, defaults) {
   return { arm: resultado.arm, effort: resultado.effort };
 }
 
-if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  existsSync(process.argv[1]) &&
+  import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+) {
   const [cmd, terreno] = process.argv.slice(2);
   if (cmd !== 'sortear' || !terreno) {
     console.error('uso: node braco-experimental.mjs sortear <terreno>');

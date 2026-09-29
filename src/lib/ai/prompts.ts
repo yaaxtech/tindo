@@ -5,6 +5,10 @@ export interface Classificacao {
   urgencia: number;
   facilidade: number;
   tags_sugeridas: string[];
+  /** Lembrete = operacional, < 2 min. Tarefa = estratégica ou mais demorada. */
+  tipo_sugerido?: 'lembrete' | 'tarefa';
+  /** Labels do Todoist (nomes) que a IA recomenda; só sugestão, nunca escrita automática. */
+  labels_todoist_sugeridas?: string[];
   explicacao: string;
 }
 
@@ -57,6 +61,19 @@ export const TOOL_CLASSIFICAR_TAREFA = {
         type: 'array',
         items: { type: 'string' },
         description: 'IDs das tags disponíveis que se aplicam à tarefa. Pode ser vazio.',
+      },
+      tipo_sugerido: {
+        type: 'string',
+        enum: ['lembrete', 'tarefa'],
+        description:
+          'lembrete = algo operacional que se resolve em menos de 2 minutos (facilidade alta). tarefa = estratégica ou que exige mais tempo.',
+      },
+      labels_todoist_sugeridas: {
+        type: 'array',
+        items: { type: 'string' },
+        maxItems: 3,
+        description:
+          'Nomes de labels do Todoist úteis para achar a tarefa depois (ex.: EM.Coop se for dividida com o companheiro, EM.Acomp se for só acompanhamento). Pode ser vazio.',
       },
       explicacao: {
         type: 'string',
@@ -120,7 +137,7 @@ ${buildCriterios(input.criteriosSucesso)}`;
   return [
     {
       type: 'text' as const,
-      text: 'Você é o classificador de tarefas do TinDo. Seu papel é analisar uma tarefa e retornar, via tool_use, os valores de importância, urgência e facilidade (0-100), as tags que se aplicam e uma explicação curta.\n\nRegras:\n- importancia: impacto nos critérios de sucesso do usuário (100 = resolve objetivo principal)\n- urgencia: proximidade do prazo e consequências de atraso (100 = hoje/bloqueante)\n- facilidade: inverso da complexidade (100 = trivial <2min; 0 = enorme)\n- tags_sugeridas: somente IDs das tags listadas abaixo\n- explicacao: ≤140 chars, objetivo, em português',
+      text: 'Você é o classificador de tarefas do TinDo. Seu papel é analisar uma tarefa e retornar, via tool_use, os valores de importância, urgência e facilidade (0-100), as tags que se aplicam e uma explicação curta.\n\nRegras:\n- importancia: impacto nos critérios de sucesso do usuário (100 = resolve objetivo principal)\n- urgencia: proximidade do prazo e consequências de atraso (100 = hoje/bloqueante)\n- facilidade: inverso da complexidade (100 = trivial <2min; 0 = enorme)\n- tags_sugeridas: somente IDs das tags listadas abaixo\n- tipo_sugerido: lembrete se for operacional e de menos de 2 minutos; tarefa se for estratégica ou demorada\n- labels_todoist_sugeridas: até 3 nomes de labels do Todoist; use EM.Coop quando a responsabilidade for dividida com o companheiro e EM.Acomp quando o usuário só acompanha algo de outra pessoa\n- explicacao: ≤140 chars, objetivo, em português',
     },
     {
       type: 'text' as const,

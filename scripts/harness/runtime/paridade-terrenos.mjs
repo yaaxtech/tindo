@@ -27,10 +27,10 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CADEIAS as CADEIAS_PADRAO } from './painel.mjs';
 // MODELO carrega provider/custo de cada modelo. auto-subir.mjs é puro (guarda
 // de CLI), então importar não dispara efeito.
 import { MODELO } from './auto-subir.mjs';
+import { CADEIAS as CADEIAS_PADRAO } from './painel.mjs';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -51,14 +51,12 @@ const NOME_MODELO = {
 /**
  * @returns {{ ok: boolean, problemas: string[] }}
  */
-export function verificarParidade({defaults, cadeias} = {}) {
+export function verificarParidade({ defaults, cadeias } = {}) {
   const CADEIAS = cadeias || CADEIAS_PADRAO;
   const problemas = [];
   const push = (t, msg) => problemas.push(`[${t}] ${msg}`);
 
-  const raw = defaults || JSON.parse(
-    readFileSync(join(DIR, 'defaults-terreno.json'), 'utf8'),
-  );
+  const raw = defaults || JSON.parse(readFileSync(join(DIR, 'defaults-terreno.json'), 'utf8'));
   const escala = raw._meta?.escala_effort;
   const terrenos = raw.terrenos || {};
 
@@ -72,9 +70,7 @@ export function verificarParidade({defaults, cadeias} = {}) {
   const kJson = Object.keys(terrenos).sort();
   const kPainel = Object.keys(CADEIAS).sort();
   if (kJson.join(',') !== kPainel.join(',')) {
-    problemas.push(
-      `conjunto de terrenos difere — JSON=[${kJson}] painel=[${kPainel}]`,
-    );
+    problemas.push(`conjunto de terrenos difere — JSON=[${kJson}] painel=[${kPainel}]`);
     // segue mesmo assim, checando a interseção
   }
 
@@ -112,9 +108,7 @@ export function verificarParidade({defaults, cadeias} = {}) {
     }
 
     // 4) modelo_no_teto = (piso_modelo === teto_modelo), derivado igual dos 2 lados
-    const noTetoJson = !!(
-      d.piso_modelo && d.teto_modelo && d.piso_modelo === d.teto_modelo
-    );
+    const noTetoJson = !!(d.piso_modelo && d.teto_modelo && d.piso_modelo === d.teto_modelo);
     if (!!c.modelo_no_teto !== noTetoJson) {
       push(t, `modelo_no_teto painel=${!!c.modelo_no_teto} ≠ derivado do json=${noTetoJson}`);
     }
@@ -129,7 +123,10 @@ export function verificarParidade({defaults, cadeias} = {}) {
     if (!nomeTitular) {
       push(t, `modelo '${d.modelo}' sem tradução em NOME_MODELO — mapa desatualizado`);
     } else if (!String(c.default).includes(nomeTitular)) {
-      push(t, `default do painel '${c.default}' não cita o titular do json '${d.modelo}' (${nomeTitular})`);
+      push(
+        t,
+        `default do painel '${c.default}' não cita o titular do json '${d.modelo}' (${nomeTitular})`,
+      );
     }
 
     // 7) fallbacks: cada modelo da cadeia (fora o titular) deve aparecer em
@@ -142,7 +139,10 @@ export function verificarParidade({defaults, cadeias} = {}) {
       if (!nome) {
         push(t, `cadeia_modelo tem '${cod}' sem tradução em NOME_MODELO`);
       } else if (!fbPainel.includes(nome)) {
-        push(t, `cadeia_modelo do json tem '${cod}' (${nome}) mas o fallback do painel [${fbPainel}] não cita`);
+        push(
+          t,
+          `cadeia_modelo do json tem '${cod}' (${nome}) mas o fallback do painel [${fbPainel}] não cita`,
+        );
       }
     }
 
@@ -158,7 +158,10 @@ export function verificarParidade({defaults, cadeias} = {}) {
       }
     }
     if (d.modelo && effortPorModelo[d.modelo] !== d.effort) {
-      push(t, `par titular '${d.modelo}/${d.effort}' diverge de effort_por_modelo.${d.modelo}='${effortPorModelo[d.modelo] ?? 'ausente'}'`);
+      push(
+        t,
+        `par titular '${d.modelo}/${d.effort}' diverge de effort_por_modelo.${d.modelo}='${effortPorModelo[d.modelo] ?? 'ausente'}'`,
+      );
     }
     if (!d.evidencia_modelo || !d.evidencia_effort) {
       push(t, 'evidencia_modelo e evidencia_effort são obrigatórias e separadas');
@@ -172,12 +175,17 @@ export function verificarParidade({defaults, cadeias} = {}) {
       push(t, 'fallback_por_motivo ausente ou inválido');
     } else {
       for (const [motivo, provider] of [
-        ['quota_openai', 'anthropic'], ['indisponivel_openai', 'anthropic'],
-        ['quota_anthropic', 'openai'], ['indisponivel_anthropic', 'openai'],
+        ['quota_openai', 'anthropic'],
+        ['indisponivel_openai', 'anthropic'],
+        ['quota_anthropic', 'openai'],
+        ['indisponivel_anthropic', 'openai'],
       ]) {
         const passos = porMotivo[motivo];
-        if (!Array.isArray(passos) || !passos.length ||
-            passos.some(passo => MODELO[passo?.modelo]?.provider !== provider)) {
+        if (
+          !Array.isArray(passos) ||
+          !passos.length ||
+          passos.some((passo) => MODELO[passo?.modelo]?.provider !== provider)
+        ) {
           push(t, `${motivo} exige fallback no outro provedor (${provider})`);
         }
       }
@@ -188,10 +196,16 @@ export function verificarParidade({defaults, cadeias} = {}) {
         }
         for (const [i, passo] of passos.entries()) {
           if (!passo?.modelo || !MODELO[passo.modelo]) {
-            push(t, `fallback_por_motivo.${motivo}[${i}] tem modelo desconhecido '${passo?.modelo ?? 'ausente'}'`);
+            push(
+              t,
+              `fallback_por_motivo.${motivo}[${i}] tem modelo desconhecido '${passo?.modelo ?? 'ausente'}'`,
+            );
           }
           if (!passo?.effort || idxEffort(passo.effort) === -1) {
-            push(t, `fallback_por_motivo.${motivo}[${i}] tem effort inválido '${passo?.effort ?? 'ausente'}'`);
+            push(
+              t,
+              `fallback_por_motivo.${motivo}[${i}] tem effort inválido '${passo?.effort ?? 'ausente'}'`,
+            );
           }
         }
       }
@@ -209,23 +223,31 @@ export function verificarParidade({defaults, cadeias} = {}) {
       }
       for (const [i, revisor] of revisores.entries()) {
         const mesmaFamilia = !!(
-          MODELO[autor]?.provider &&
-          MODELO[revisor?.modelo]?.provider === MODELO[autor].provider
+          MODELO[autor]?.provider && MODELO[revisor?.modelo]?.provider === MODELO[autor].provider
         );
         if (!revisor?.modelo || !MODELO[revisor.modelo]) {
-          push(t, `revisao_por_modelo.${autor}[${i}] tem modelo desconhecido '${revisor?.modelo ?? 'ausente'}'`);
+          push(
+            t,
+            `revisao_por_modelo.${autor}[${i}] tem modelo desconhecido '${revisor?.modelo ?? 'ausente'}'`,
+          );
         } else if (i === 0 && mesmaFamilia) {
           push(t, `revisao_por_modelo.${autor}[0] precisa usar outro harness primeiro`);
         } else if (i === 0 && revisor.outro_harness_primeiro !== true) {
           push(t, `revisao_por_modelo.${autor}[0] precisa declarar outro_harness_primeiro=true`);
         } else if (i > 0 && mesmaFamilia && revisor.fallback_proprio !== true) {
-          push(t, `revisao_por_modelo.${autor}[${i}] usa a própria família sem fallback_proprio=true`);
+          push(
+            t,
+            `revisao_por_modelo.${autor}[${i}] usa a própria família sem fallback_proprio=true`,
+          );
         }
         if (revisor?.fallback_proprio === true && i === 0) {
           push(t, `revisao_por_modelo.${autor}[0] não pode começar pelo fallback próprio`);
         }
         if (!revisor?.effort || idxEffort(revisor.effort) === -1) {
-          push(t, `revisao_por_modelo.${autor}[${i}] tem effort inválido '${revisor?.effort ?? 'ausente'}'`);
+          push(
+            t,
+            `revisao_por_modelo.${autor}[${i}] tem effort inválido '${revisor?.effort ?? 'ausente'}'`,
+          );
         }
       }
     }
@@ -235,7 +257,7 @@ export function verificarParidade({defaults, cadeias} = {}) {
   //    externo ajuda a revisar a allowlist, mas não afrouxa controle sozinho.
   for (const [t, d] of Object.entries(terrenos)) {
     if (!d.modelos_permitidos?.length) continue;
-    const paresFortes = {opus5:'high',sol:'xhigh',astra:'xhigh'};
+    const paresFortes = { opus5: 'high', sol: 'xhigh', astra: 'xhigh' };
     for (const modelo of d.modelos_permitidos) {
       if (!paresFortes[modelo] || d.effort_por_modelo?.[modelo] !== paresFortes[modelo]) {
         push(t, `modelo permitido ${modelo} sem par forte para SQL`);

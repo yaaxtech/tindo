@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { execFileSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 /**
  * Ledger de despachos do harness multi-LLM (Codex/Claude) + KPIs.
  *
@@ -56,30 +58,39 @@
  *              de ~/.claude/hooks/marco-preparo.sh — não há comando a lembrar.
  *              null = não deu para medir (nunca estimado).
  */
-import { realpathSync, appendFileSync, existsSync, readFileSync, mkdirSync, writeFileSync, renameSync, rmdirSync, statSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
-import { dirname, join } from 'node:path';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
-import { normModelo, inferirFrente } from './modelos.mjs';
+import { dirname, join } from 'node:path';
 import {
   HARNESS_METRIC_VERSION,
   MIN_AMOSTRA_DECISAO,
   filtrarHistoricoCompativel,
 } from './metricas-snapshot.mjs';
+import { inferirFrente, normModelo } from './modelos.mjs';
 
-const DEFAULT_FILE = process.env.HARNESS_LEDGER_FILE || join(homedir(), '.claude', 'orquestracao', 'ledger.jsonl');
+const DEFAULT_FILE =
+  process.env.HARNESS_LEDGER_FILE || join(homedir(), '.claude', 'orquestracao', 'ledger.jsonl');
 const HISTORY_FILE = join(homedir(), '.claude', 'orquestracao', 'kpi-history.jsonl');
 const DEFAULT_SUBAGENT_FILE = join(homedir(), '.claude', 'orquestracao', 'subagentes.jsonl');
 const ESPERA_LOCK = new Int32Array(new SharedArrayBuffer(4));
 
 // Limiares (espelho da governança no CLAUDE.md global)
 const MIN_N = MIN_AMOSTRA_DECISAO; // uma única amostra mínima p/ qualquer decisão de qualidade
-const OK1_PISO = 0.70;      // abaixo → degrau subdimensionado
-const OK1_TETO = 0.90;      // acima (n>=20, degrau não-mínimo) → candidato a descer
-const QUOTA_ALERTA = 3;     // eventos de quota na janela → frente saturada
-const MUDO_DIAS = 3;        // sem registro há N dias → instrumento mudo
-const AMBIGUO_MAX = 0.30;   // acima disso o balde não mede terreno — sem sinal
+const OK1_PISO = 0.7; // abaixo → degrau subdimensionado
+const OK1_TETO = 0.9; // acima (n>=20, degrau não-mínimo) → candidato a descer
+const QUOTA_ALERTA = 3; // eventos de quota na janela → frente saturada
+const MUDO_DIAS = 3; // sem registro há N dias → instrumento mudo
+const AMBIGUO_MAX = 0.3; // acima disso o balde não mede terreno — sem sinal
 
 // Os run.sh gravam um terreno DEFAULT quando LEDGER_TERRENO não vem (`rotina`
 // no codex). Um balde assim mistura o terreno real com tudo que
@@ -135,7 +146,10 @@ export const FORA_DO_DENOMINADOR = new Set(['quota', 'infra', 'descartado', 'pen
 export const julgavel = (r) => !FORA_DO_DENOMINADOR.has(r.resultado);
 
 export function validarMetadadosExperimento({
-  experimentId, arm, experimentVersion, configVersion,
+  experimentId,
+  arm,
+  experimentVersion,
+  configVersion,
 } = {}) {
   const valores = { experimentId, arm, experimentVersion, configVersion };
   for (const [nome, valor] of Object.entries(valores)) {
@@ -158,7 +172,9 @@ export function validarEffort(bruto, ondeErro) {
   const v = String(bruto).trim();
   if (EFFORTS.includes(v)) return v;
   const amostra = v.replace(/\s+/g, ' ').slice(0, 40);
-  console.error(`effort inválido em ${ondeErro}: "${amostra}${v.length > 40 ? '…' : ''}" (${v.length} chars). Use ${EFFORTS.join('|')} — ou omita.`);
+  console.error(
+    `effort inválido em ${ondeErro}: "${amostra}${v.length > 40 ? '…' : ''}" (${v.length} chars). Use ${EFFORTS.join('|')} — ou omita.`,
+  );
   process.exit(2);
 }
 
@@ -173,20 +189,27 @@ export function familiaModelo(modelo) {
   return m;
 }
 
-export function validarRevisaoCruzada({
-  papel, modelo, modeloAutor, fallbackProprio = false,
-}) {
+export function validarRevisaoCruzada({ papel, modelo, modeloAutor, fallbackProprio = false }) {
   if (papel !== 'revisor') return { ok: true, cruzada: null };
   if (!modeloAutor) {
-    return { ok: false, motivo: 'revisão sem --modelo-autor; não há prova de que outro LLM revisou' };
+    return {
+      ok: false,
+      motivo: 'revisão sem --modelo-autor; não há prova de que outro LLM revisou',
+    };
   }
   const autor = familiaModelo(modeloAutor);
   const revisor = familiaModelo(modelo);
   if (!autor || !revisor) {
-    return { ok: false, motivo: `revisor '${revisor || 'ausente'}' não pode aprovar autor '${autor || 'ausente'}'` };
+    return {
+      ok: false,
+      motivo: `revisor '${revisor || 'ausente'}' não pode aprovar autor '${autor || 'ausente'}'`,
+    };
   }
   if (autor === revisor && !fallbackProprio) {
-    return { ok: false, motivo: `revisor '${revisor}' não pode aprovar autor '${autor}' sem fallback próprio comprovado` };
+    return {
+      ok: false,
+      motivo: `revisor '${revisor}' não pode aprovar autor '${autor}' sem fallback próprio comprovado`,
+    };
   }
   if (autor === revisor) {
     return { ok: true, cruzada: false, fallback_proprio: true, autor, revisor };
@@ -195,9 +218,9 @@ export function validarRevisaoCruzada({
 }
 
 export function terrenoAmbiguo(r) {
-  if (r.terreno_inferido) return true;   // o próprio run.sh admitiu o default
+  if (r.terreno_inferido) return true; // o próprio run.sh admitiu o default
   if (r.classificacao === 'declarada' && r.terreno && r.papel && !r.papel_inferido) return false;
-  if (!r.auto) return true;              // rótulo digitado à mão ≠ classificação
+  if (!r.auto) return true; // rótulo digitado à mão ≠ classificação
   // Sem PAPEL não dá para saber se `retrabalho` foi construtor errando ou
   // revisor reprovando (26/08): o balde continua VISÍVEL, mas não decide tier.
   if (!r.papel) return true;
@@ -213,8 +236,17 @@ export function terrenoAmbiguo(r) {
 // nunca é reescrito — apelidos antigos viram canônicos só na leitura)
 function lerTudo(file) {
   if (!existsSync(file)) return [];
-  return readFileSync(file, 'utf8').trim().split('\n').filter(Boolean)
-    .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+  return readFileSync(file, 'utf8')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    })
     .filter(Boolean)
     .map((r) => ({ ...r, modelo: normModelo(r.modelo) }));
 }
@@ -247,7 +279,7 @@ function parseArgs(argv) {
 // qualquer outra coisa (flag sem valor, lixo, relógio torto) vira null.
 function preparoMin(bruto) {
   if (bruto == null) return null;
-  const n = parseFloat(bruto);
+  const n = Number.parseFloat(bruto);
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
@@ -265,8 +297,17 @@ function inteiroNaoNegativo(bruto) {
 
 function lerSubagentes(file = DEFAULT_SUBAGENT_FILE) {
   if (!existsSync(file)) return [];
-  const linhas = readFileSync(file, 'utf8').trim().split('\n').filter(Boolean)
-    .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+  const linhas = readFileSync(file, 'utf8')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    })
     .filter(Boolean);
   const vistos = new Set();
   return linhas.filter((e) => {
@@ -317,8 +358,10 @@ function comLock(file, fn) {
   const lock = `${file}.lock`;
   const limite = Date.now() + 5000;
   while (true) {
-    try { mkdirSync(lock, { mode: 0o700 }); break; }
-    catch (e) {
+    try {
+      mkdirSync(lock, { mode: 0o700 });
+      break;
+    } catch (e) {
       if (e?.code !== 'EEXIST') throw e;
       try {
         if (Date.now() - statSync(lock).mtimeMs > 120000) {
@@ -333,8 +376,15 @@ function comLock(file, fn) {
       Atomics.wait(ESPERA_LOCK, 0, 0, 25);
     }
   }
-  try { return fn(); }
-  finally { try { rmdirSync(lock); } catch { /* lock já removido */ } }
+  try {
+    return fn();
+  } finally {
+    try {
+      rmdirSync(lock);
+    } catch {
+      /* lock já removido */
+    }
+  }
 }
 
 function cmdLog(args) {
@@ -346,36 +396,63 @@ function cmdLog(args) {
   }
   const FRENTES = ['codex', 'claude', 'cerebro'];
   const TERRENOS = ['ui', 'rotina', 'dificil', 'analise', 'mecanico', 'sql'];
-  const RESULTADOS = ['ok1', 'retrabalho', 'escalado', 'falhou', 'infra', 'quota', 'descartado', 'pendente'];
+  const RESULTADOS = [
+    'ok1',
+    'retrabalho',
+    'escalado',
+    'falhou',
+    'infra',
+    'quota',
+    'descartado',
+    'pendente',
+  ];
   const PAPEIS = ['construtor', 'revisor'];
-  if (args.papel && !PAPEIS.includes(args.papel)) { console.error(`papel inválido: ${args.papel} (use construtor|revisor)`); process.exit(2); }
+  if (args.papel && !PAPEIS.includes(args.papel)) {
+    console.error(`papel inválido: ${args.papel} (use construtor|revisor)`);
+    process.exit(2);
+  }
   const revisao = validarRevisaoCruzada({
     papel: args.papel,
     modelo: args.modelo,
     modeloAutor: args['modelo-autor'],
     fallbackProprio: args['fallback-proprio'] === 'true',
   });
-  if (!revisao.ok) { console.error(`revisão cruzada inválida: ${revisao.motivo}`); process.exit(2); }
-  if (!FRENTES.includes(args.frente)) { console.error(`frente inválida: ${args.frente}`); process.exit(2); }
-  if (!TERRENOS.includes(args.terreno)) { console.error(`terreno inválido: ${args.terreno}`); process.exit(2); }
-  if (!RESULTADOS.includes(args.resultado)) { console.error(`resultado inválido: ${args.resultado}`); process.exit(2); }
+  if (!revisao.ok) {
+    console.error(`revisão cruzada inválida: ${revisao.motivo}`);
+    process.exit(2);
+  }
+  if (!FRENTES.includes(args.frente)) {
+    console.error(`frente inválida: ${args.frente}`);
+    process.exit(2);
+  }
+  if (!TERRENOS.includes(args.terreno)) {
+    console.error(`terreno inválido: ${args.terreno}`);
+    process.exit(2);
+  }
+  if (!RESULTADOS.includes(args.resultado)) {
+    console.error(`resultado inválido: ${args.resultado}`);
+    process.exit(2);
+  }
   const experimento = validarMetadadosExperimento({
     experimentId: args['experiment-id'],
     arm: args.arm,
     experimentVersion: args['experiment-version'],
     configVersion: args['config-version'],
   });
-  if (!experimento.ok) { console.error(`metadados de experimento inválidos: ${experimento.motivo}`); process.exit(2); }
+  if (!experimento.ok) {
+    console.error(`metadados de experimento inválidos: ${experimento.motivo}`);
+    process.exit(2);
+  }
   const rotaOrigem = args['rota-origem'] || null;
   if (rotaOrigem && !['codex', 'claude'].includes(rotaOrigem)) {
-    console.error(`rota-origem inválida: ${rotaOrigem} (use codex|claude)`); process.exit(2);
+    console.error(`rota-origem inválida: ${rotaOrigem} (use codex|claude)`);
+    process.exit(2);
   }
 
   const file = args.file || DEFAULT_FILE;
   mkdirSync(dirname(file), { recursive: true });
   const modeloRegistro = args['modelo-log'] || args.modelo;
-  const classificacao = args['terreno-inferido'] !== 'true' && args.papel
-    ? 'declarada' : null;
+  const classificacao = args['terreno-inferido'] !== 'true' && args.papel ? 'declarada' : null;
   const rec = {
     ts: new Date().toISOString(),
     frente: args.frente,
@@ -392,8 +469,7 @@ function cmdLog(args) {
     papel: args.papel || null,
     modelo_autor: args.papel === 'revisor' ? normModelo(args['modelo-autor']) : null,
     revisao_cruzada: args.papel === 'revisor' ? revisao.cruzada : null,
-    revisao_fallback_proprio: args.papel === 'revisor'
-      ? revisao.fallback_proprio === true : null,
+    revisao_fallback_proprio: args.papel === 'revisor' ? revisao.fallback_proprio === true : null,
     resultado: args.resultado,
     tarefa: args.tarefa,
     nota: args.nota || null,
@@ -420,16 +496,21 @@ function cmdLog(args) {
   if (args.orquestracao) {
     const modos = ['solo', 'fanout'];
     if (!modos.includes(args.orquestracao)) {
-      console.error(`orquestracao inválida: ${args.orquestracao} (use solo|fanout)`); process.exit(2);
+      console.error(`orquestracao inválida: ${args.orquestracao} (use solo|fanout)`);
+      process.exit(2);
     }
     rec.orquestracao_planejada = args.orquestracao;
   }
   const planejados = inteiroNaoNegativo(args['subagentes-planejados']);
   if (args['subagentes-planejados'] != null && planejados == null) {
-    console.error('subagentes-planejados deve ser inteiro não-negativo'); process.exit(2);
+    console.error('subagentes-planejados deve ser inteiro não-negativo');
+    process.exit(2);
   }
   if (planejados != null) rec.subagentes_planejados = planejados;
-  const filhos = resumoSubagentes(rec.run_id, args['subagent-file'] || process.env.HARNESS_SUBAGENT_LOG || DEFAULT_SUBAGENT_FILE);
+  const filhos = resumoSubagentes(
+    rec.run_id,
+    args['subagent-file'] || process.env.HARNESS_SUBAGENT_LOG || DEFAULT_SUBAGENT_FILE,
+  );
   if (filhos?.iniciados) {
     rec.orquestracao_real = 'fanout';
     rec.subagentes = filhos;
@@ -452,8 +533,8 @@ function cmdLog(args) {
   // loga uma linha por turno — foram 961 em 6 dias, e elas escondiam os 3
   // pendentes de verdade atrás de um alarme falso. Vão para arquivo próprio:
   // continuam auditáveis, ficam fora do `pendentes` e dos KPIs de despacho.
-  const ruidoCerebro = rec.auto === true && rec.resultado === 'pendente'
-    && /^cerebro-[a-z]+\b/.test(rec.tarefa || '');
+  const ruidoCerebro =
+    rec.auto === true && rec.resultado === 'pendente' && /^cerebro-[a-z]+\b/.test(rec.tarefa || '');
   const alvo = ruidoCerebro
     ? file.replace(/ledger\.jsonl$/, 'ledger-cerebro-fallback.jsonl')
     : file;
@@ -463,9 +544,13 @@ function cmdLog(args) {
     return;
   }
   if (!rec.papel) {
-    console.error('⚠ --papel não setado — linha FORA das tabelas de qualidade e do motor de tier. Use --papel construtor (quem escreve) ou --papel revisor (quem julga).');
+    console.error(
+      '⚠ --papel não setado — linha FORA das tabelas de qualidade e do motor de tier. Use --papel construtor (quem escreve) ou --papel revisor (quem julga).',
+    );
   }
-  console.log(`registrado: [${rec.frente}/${rec.modelo}${rec.effort ? '/' + rec.effort : ''}] ${rec.terreno} → ${rec.resultado}${rec.id ? ` (id ${rec.id} — feche após a revisão: ledger.mjs fechar --resultado ok1 --id ${rec.id})` : ''}`);
+  console.log(
+    `registrado: [${rec.frente}/${rec.modelo}${rec.effort ? '/' + rec.effort : ''}] ${rec.terreno} → ${rec.resultado}${rec.id ? ` (id ${rec.id} — feche após a revisão: ledger.mjs fechar --resultado ok1 --id ${rec.id})` : ''}`,
+  );
 }
 
 function cmdValidarRevisao(args) {
@@ -483,9 +568,11 @@ function cmdValidarRevisao(args) {
     console.error(`revisão cruzada inválida: ${revisao.motivo}`);
     process.exit(2);
   }
-  console.log(revisao.fallback_proprio
-    ? `fallback próprio válido: ${revisao.autor} → ${revisao.revisor}`
-    : `revisão cruzada válida: ${revisao.autor} → ${revisao.revisor}`);
+  console.log(
+    revisao.fallback_proprio
+      ? `fallback próprio válido: ${revisao.autor} → ${revisao.revisor}`
+      : `revisão cruzada válida: ${revisao.autor} → ${revisao.revisor}`,
+  );
 }
 
 // Fecha um registro provisório: reescreve SÓ a linha do pendente alvo com o
@@ -494,33 +581,52 @@ function cmdValidarRevisao(args) {
 function cmdFechar(args) {
   const RESULTADOS = ['ok1', 'retrabalho', 'escalado', 'falhou', 'infra', 'quota', 'descartado'];
   if (!args.resultado || !RESULTADOS.includes(args.resultado)) {
-    console.error(`--resultado obrigatório (${RESULTADOS.join('|')})`); process.exit(2);
+    console.error(`--resultado obrigatório (${RESULTADOS.join('|')})`);
+    process.exit(2);
   }
   const file = args.file || DEFAULT_FILE;
-  if (!existsSync(file)) { console.error(`sem ledger em ${file}`); process.exit(2); }
+  if (!existsSync(file)) {
+    console.error(`sem ledger em ${file}`);
+    process.exit(2);
+  }
   const TERRENOS = ['ui', 'rotina', 'dificil', 'analise', 'mecanico', 'sql'];
   if (args.terreno && !TERRENOS.includes(args.terreno)) {
-    console.error(`terreno inválido: ${args.terreno}`); process.exit(2);
+    console.error(`terreno inválido: ${args.terreno}`);
+    process.exit(2);
   }
   const PAPEIS = ['construtor', 'revisor'];
   if (args.papel && !PAPEIS.includes(args.papel)) {
-    console.error(`papel inválido: ${args.papel} (use construtor|revisor)`); process.exit(2);
+    console.error(`papel inválido: ${args.papel} (use construtor|revisor)`);
+    process.exit(2);
   }
   let rec;
   try {
     rec = comLock(file, () => {
       const brutas = readFileSync(file, 'utf8').split('\n');
-      let idx = -1; let alvo = null;
+      let idx = -1;
+      let alvo = null;
       for (let i = 0; i < brutas.length; i++) {
-        let r; try { r = JSON.parse(brutas[i]); } catch { continue; }
+        let r;
+        try {
+          r = JSON.parse(brutas[i]);
+        } catch {
+          continue;
+        }
         if (!r || r.resultado !== 'pendente') continue;
-        if (args.id ? r.id === args.id : idx === -1) { idx = i; alvo = r; if (args.id) break; }
+        if (args.id ? r.id === args.id : idx === -1) {
+          idx = i;
+          alvo = r;
+          if (args.id) break;
+        }
       }
-      if (idx === -1) throw new Error(args.id ? `pendente com id ${args.id} não encontrado` : 'nenhum pendente em aberto');
+      if (idx === -1)
+        throw new Error(
+          args.id ? `pendente com id ${args.id} não encontrado` : 'nenhum pendente em aberto',
+        );
       alvo.resultado = args.resultado;
       alvo.ts_fechado = new Date().toISOString();
       if (args.nota) alvo.nota = alvo.nota ? `${alvo.nota} · ${args.nota}` : args.nota;
-      if (args.dur) alvo.dur = parseFloat(args.dur);
+      if (args.dur) alvo.dur = Number.parseFloat(args.dur);
       // O run.sh grava o pendente ANTES de saber o papel em alguns fluxos;
       // quem fecha (o cérebro, após a revisão) é quem sabe. Fechar sem papel
       // deixa a linha fora das tabelas — de propósito.
@@ -531,7 +637,8 @@ function cmdFechar(args) {
         delete alvo.papel_inferido;
         delete alvo.papel_metodo;
       }
-      if (args.terreno) { // corrige o terreno chutado pelo run.sh, se preciso
+      if (args.terreno) {
+        // corrige o terreno chutado pelo run.sh, se preciso
         alvo.terreno = args.terreno;
         // classificar no fechamento é uma escolha do cérebro: deixa de ser default
         delete alvo.terreno_inferido;
@@ -543,18 +650,26 @@ function cmdFechar(args) {
       return alvo;
     });
   } catch (e) {
-    console.error(e.message); process.exit(2);
+    console.error(e.message);
+    process.exit(2);
   }
   if (!rec.papel) {
-    console.error('⚠ linha fechada SEM papel — fica fora das tabelas de qualidade e do motor de tier. Refaça com --papel construtor|revisor.');
+    console.error(
+      '⚠ linha fechada SEM papel — fica fora das tabelas de qualidade e do motor de tier. Refaça com --papel construtor|revisor.',
+    );
   }
-  console.log(`fechado ${rec.id || '(sem id)'}: [${rec.frente}/${rec.modelo}] ${rec.terreno}${rec.papel ? '/' + rec.papel : ''} → ${rec.resultado} — "${rec.tarefa}"`);
+  console.log(
+    `fechado ${rec.id || '(sem id)'}: [${rec.frente}/${rec.modelo}] ${rec.terreno}${rec.papel ? '/' + rec.papel : ''} → ${rec.resultado} — "${rec.tarefa}"`,
+  );
 }
 
 function cmdPendentes(args) {
   const file = args.file || DEFAULT_FILE;
   const abertos = lerTudo(file).filter((r) => r.resultado === 'pendente');
-  if (!abertos.length) { console.log('nenhum pendente em aberto.'); return; }
+  if (!abertos.length) {
+    console.log('nenhum pendente em aberto.');
+    return;
+  }
   console.log(`${abertos.length} pendente(s) de revisão:`);
   const agora = Date.now();
   let velhos = 0;
@@ -565,17 +680,25 @@ function cmdPendentes(args) {
     // revisão; acima disso o despacho ou morreu ou foi esquecido.
     const marca = horas > 48 ? ` ⏰ ${Math.floor(horas / 24)}d SEM FECHAR` : '';
     if (horas > 48) velhos++;
-    console.log(`  ${r.id || '(sem id)'}  ${r.ts.slice(0, 16)}  [${r.frente}/${r.modelo}] ${r.terreno} — ${r.tarefa}${marca}`);
+    console.log(
+      `  ${r.id || '(sem id)'}  ${r.ts.slice(0, 16)}  [${r.frente}/${r.modelo}] ${r.terreno} — ${r.tarefa}${marca}`,
+    );
   }
-  if (velhos) console.log(`\n⏰ ${velhos} pendente(s) há MAIS DE 48h — decida (ok1/retrabalho/falhou) ou marque \`infra\` se o worker nunca rodou. Enquanto abertos, não entram em nenhum KPI.`);
-  console.log('\nfeche com: ledger.mjs fechar --resultado ok1|retrabalho|escalado|falhou --papel construtor|revisor --id <id>');
+  if (velhos)
+    console.log(
+      `\n⏰ ${velhos} pendente(s) há MAIS DE 48h — decida (ok1/retrabalho/falhou) ou marque \`infra\` se o worker nunca rodou. Enquanto abertos, não entram em nenhum KPI.`,
+    );
+  console.log(
+    '\nfeche com: ledger.mjs fechar --resultado ok1|retrabalho|escalado|falhou --papel construtor|revisor --id <id>',
+  );
 }
 
 function cmdSubagentes(args) {
-  const dias = parseInt(args.dias || '7', 10);
+  const dias = Number.parseInt(args.dias || '7', 10);
   const corte = Date.now() - dias * 864e5;
-  const eventos = lerSubagentes(args.file || process.env.HARNESS_SUBAGENT_LOG || DEFAULT_SUBAGENT_FILE)
-    .filter((e) => Date.parse(e.ts) >= corte);
+  const eventos = lerSubagentes(
+    args.file || process.env.HARNESS_SUBAGENT_LOG || DEFAULT_SUBAGENT_FILE,
+  ).filter((e) => Date.parse(e.ts) >= corte);
   const inicios = eventos.filter((e) => e.evento === 'SubagentStart');
   const fins = eventos.filter((e) => e.evento === 'SubagentStop');
   const sessoes = new Set(inicios.map((e) => e.session_id).filter(Boolean));
@@ -589,19 +712,38 @@ function cmdSubagentes(args) {
     modelos[modelo] = (modelos[modelo] || 0) + 1;
   }
   console.log(`# Subagentes Codex — últimos ${dias}d`);
-  console.log(`iniciados ${inicios.length} · concluídos ${fins.length} · sessões-pai ${sessoes.size} · runs do wrapper ${runs.size}`);
-  console.log(`perfis: ${Object.entries(perfis).map(([k, v]) => `${k}:${v}`).join(' ') || '—'}`);
-  console.log(`modelos: ${Object.entries(modelos).map(([k, v]) => `${k}:${v}`).join(' ') || '—'}`);
+  console.log(
+    `iniciados ${inicios.length} · concluídos ${fins.length} · sessões-pai ${sessoes.size} · runs do wrapper ${runs.size}`,
+  );
+  console.log(
+    `perfis: ${
+      Object.entries(perfis)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' ') || '—'
+    }`,
+  );
+  console.log(
+    `modelos: ${
+      Object.entries(modelos)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' ') || '—'
+    }`,
+  );
   const semRun = inicios.filter((e) => !e.run_id).length;
   if (semRun) console.log(`nativos da app/fora do wrapper: ${semRun}`);
 }
 
-function pct(x) { return x == null ? '—' : (100 * x).toFixed(0) + '%'; }
+function pct(x) {
+  return x == null ? '—' : (100 * x).toFixed(0) + '%';
+}
 
 function cmdReport(args) {
   const file = args.file || DEFAULT_FILE;
-  const dias = parseInt(args.dias || '7', 10);
-  if (!existsSync(file)) { console.log(`sem ledger em ${file} — nada a reportar.`); return; }
+  const dias = Number.parseInt(args.dias || '7', 10);
+  if (!existsSync(file)) {
+    console.log(`sem ledger em ${file} — nada a reportar.`);
+    return;
+  }
   const mudo = avisoMudo(file);
   if (mudo) console.log(`${mudo}\n`);
   const corte = Date.now() - dias * 864e5;
@@ -611,9 +753,14 @@ function cmdReport(args) {
   const fechadas = janela.filter((r) => r.resultado !== 'pendente');
   if (pendentes.length) {
     const velhos = pendentes.filter((r) => (Date.now() - Date.parse(r.ts)) / 36e5 > 48).length;
-    console.log(`⏳ ${pendentes.length} despacho(s) pendente(s) de revisão (fora dos números abaixo)${velhos ? ` — ⏰ ${velhos} há MAIS DE 48h` : ''} — veja \`ledger.mjs pendentes\` e feche com \`ledger.mjs fechar\`.\n`);
+    console.log(
+      `⏳ ${pendentes.length} despacho(s) pendente(s) de revisão (fora dos números abaixo)${velhos ? ` — ⏰ ${velhos} há MAIS DE 48h` : ''} — veja \`ledger.mjs pendentes\` e feche com \`ledger.mjs fechar\`.\n`,
+    );
   }
-  if (!fechadas.length) { console.log(`0 despachos revisados nos últimos ${dias}d.`); return; }
+  if (!fechadas.length) {
+    console.log(`0 despachos revisados nos últimos ${dias}d.`);
+    return;
+  }
 
   // Separação por PAPEL (2026-08-26). `retrabalho` num REVISOR significa "o
   // revisor reprovou o artefato" — o revisor fez o trabalho dele. Misturado
@@ -621,26 +768,31 @@ function cmdReport(args) {
   // aparecia com ok1 15% sendo que as 13 linhas eram revisão somente-leitura.
   // Linha sem papel não vai para NENHUMA tabela de qualidade: rótulo sem prova
   // não mede degrau (mesma doutrina do terreno inferido).
-  const revisoes = fechadas.filter((r) =>
-    r.papel === 'revisor' && r.papel_inferido !== true);
-  const semPapel = fechadas.filter((r) =>
-    !r.papel || r.papel_inferido === true);
+  const revisoes = fechadas.filter((r) => r.papel === 'revisor' && r.papel_inferido !== true);
+  const semPapel = fechadas.filter((r) => !r.papel || r.papel_inferido === true);
   // Qualidade só usa papel explicitamente carimbado. Papel ausente/inferido
   // continua contado na saúde do instrumento, mas não entra em denominador.
-  const construcao = fechadas.filter((r) =>
-    r.papel === 'construtor' && r.papel_inferido !== true);
+  const construcao = fechadas.filter((r) => r.papel === 'construtor' && r.papel_inferido !== true);
   const linhas = construcao;
 
-  console.log(`# KPIs de orquestração — últimos ${dias}d (${fechadas.length} despachos: ${construcao.length} construção · ${revisoes.length} revisão · ${semPapel.length} sem papel)\n`);
+  console.log(
+    `# KPIs de orquestração — últimos ${dias}d (${fechadas.length} despachos: ${construcao.length} construção · ${revisoes.length} revisão · ${semPapel.length} sem papel)\n`,
+  );
 
   if (revisoes.length) {
-    const reprovou = revisoes.filter((r) => r.resultado === 'retrabalho' || r.resultado === 'escalado').length;
+    const reprovou = revisoes.filter(
+      (r) => r.resultado === 'retrabalho' || r.resultado === 'escalado',
+    ).length;
     const julgRev = revisoes.filter(julgavel).length;
     console.log(`## Revisão (${revisoes.length}) — NÃO entra no ok1 de construção`);
-    console.log(`reprovou/mandou refazer: ${reprovou}/${julgRev} (${pct(julgRev ? reprovou / julgRev : null)}) — taxa ALTA aqui é revisor funcionando, não degrau ruim.\n`);
+    console.log(
+      `reprovou/mandou refazer: ${reprovou}/${julgRev} (${pct(julgRev ? reprovou / julgRev : null)}) — taxa ALTA aqui é revisor funcionando, não degrau ruim.\n`,
+    );
   }
   if (semPapel.length) {
-    console.log(`⚠️ ${semPapel.length} linha(s) com papel AUSENTE ou INFERIDO — fora das tabelas e do motor de tier. Carimbe \`--papel construtor|revisor\` em todo log/fechamento.\n`);
+    console.log(
+      `⚠️ ${semPapel.length} linha(s) com papel AUSENTE ou INFERIDO — fora das tabelas e do motor de tier. Carimbe \`--papel construtor|revisor\` em todo log/fechamento.\n`,
+    );
   }
   if (!linhas.length) {
     console.log(`Só houve REVISÃO nos últimos ${dias}d — nada a medir sobre degrau de construção.`);
@@ -653,28 +805,53 @@ function cmdReport(args) {
   for (const r of linhas) {
     const degrau = `${r.frente}/${r.modelo}${r.effort ? '/' + r.effort : ''}`;
     const k = `${degrau} × ${r.terreno}`;
-    if (!porDegrau.has(k)) porDegrau.set(k, { degrau, terreno: r.terreno, n: 0, ok1: 0, retrabalho: 0, escalado: 0, falhou: 0, infra: 0, quota: 0, descartado: 0, ambiguos: 0 });
+    if (!porDegrau.has(k))
+      porDegrau.set(k, {
+        degrau,
+        terreno: r.terreno,
+        n: 0,
+        ok1: 0,
+        retrabalho: 0,
+        escalado: 0,
+        falhou: 0,
+        infra: 0,
+        quota: 0,
+        descartado: 0,
+        ambiguos: 0,
+      });
     const a = porDegrau.get(k);
-    a.n++; a[r.resultado]++;
+    a.n++;
+    a[r.resultado]++;
     // só conta ambiguidade no que ENTRA no denominador de qualidade: quota e
     // infra já saem de lá, e contá-los aqui fazia o "classificados" ficar
     // negativo (uma rota externa de UI acumulou mais ambíguos que julgáveis).
     if (julgavel(r) && terrenoAmbiguo(r)) a.ambiguos++;
   }
 
-  console.log('degrau × terreno                                    n   ok1  retrab esc  falh infra quota desc');
+  console.log(
+    'degrau × terreno                                    n   ok1  retrab esc  falh infra quota desc',
+  );
   for (const a of [...porDegrau.values()].sort((x, y) => y.n - x.n)) {
     const nome = `${a.degrau} × ${a.terreno}`.padEnd(50);
     // ok1 sobre os JULGÁVEIS (fora quota e infra) — o mesmo denominador que os
     // SINAIS abaixo usam. Antes a coluna dividia por `n` cru e discordava do
     // sinal na mesma linha.
     const julg = a.n - a.quota - a.infra - a.descartado;
-    console.log(`${nome} ${String(a.n).padStart(3)}  ${pct(julg ? a.ok1 / julg : null).padStart(4)} ${String(a.retrabalho).padStart(5)} ${String(a.escalado).padStart(4)} ${String(a.falhou).padStart(4)} ${String(a.infra).padStart(5)} ${String(a.quota).padStart(4)} ${String(a.descartado).padStart(4)}`);
+    console.log(
+      `${nome} ${String(a.n).padStart(3)}  ${pct(julg ? a.ok1 / julg : null).padStart(4)} ${String(a.retrabalho).padStart(5)} ${String(a.escalado).padStart(4)} ${String(a.falhou).padStart(4)} ${String(a.infra).padStart(5)} ${String(a.quota).padStart(4)} ${String(a.descartado).padStart(4)}`,
+    );
   }
-  console.log('(ok1 = aceito na 1ª revisão ÷ julgáveis; `infra` = worker nunca rodou, `quota` = barrado, `desc` = rodou mas o resultado foi jogado fora por orquestração — os três ficam fora do denominador, como `pendente`.)');
+  console.log(
+    '(ok1 = aceito na 1ª revisão ÷ julgáveis; `infra` = worker nunca rodou, `quota` = barrado, `desc` = rodou mas o resultado foi jogado fora por orquestração — os três ficam fora do denominador, como `pendente`.)',
+  );
   const ork = calcKpis(linhas).orquestracao;
-  console.log(`orquestração dos pais: fan-out ${ork.fanout} · solo ${ork.solo} · sem telemetria antiga ${ork.desconhecido} · filhos observados ${ork.subagentes_total}`);
-  if (ork.fanout_nao_observado) console.log(`⚠️ ${ork.fanout_nao_observado} pai(s) declararam fan-out, mas nenhum SubagentStart foi observado.`);
+  console.log(
+    `orquestração dos pais: fan-out ${ork.fanout} · solo ${ork.solo} · sem telemetria antiga ${ork.desconhecido} · filhos observados ${ork.subagentes_total}`,
+  );
+  if (ork.fanout_nao_observado)
+    console.log(
+      `⚠️ ${ork.fanout_nao_observado} pai(s) declararam fan-out, mas nenhum SubagentStart foi observado.`,
+    );
 
   // Sinais contra os limiares
   console.log('\n## SINAIS (limiares pré-definidos)');
@@ -690,24 +867,38 @@ function cmdReport(args) {
       // Vale para QUALQUER balde (ver comentário de terrenoAmbiguo).
       if (a.ambiguos / julgaveis > AMBIGUO_MAX) {
         sinais++;
-        console.log(`⚠️ BALDE AMBÍGUO: ${a.degrau} em ${a.terreno} — ok1 ${pct(taxaOk1)} (n=${julgaveis}), mas só ${julgaveis - a.ambiguos} têm terreno CLASSIFICADO (carimbo de LEDGER_TERRENO no despacho); ${a.ambiguos} são rótulo sem prova. Sinal 🔺/🔻 SUPRIMIDO até ${Math.ceil(julgaveis * (1 - AMBIGUO_MAX))}+ classificados — passe LEDGER_TERRENO em TODO despacho.`);
+        console.log(
+          `⚠️ BALDE AMBÍGUO: ${a.degrau} em ${a.terreno} — ok1 ${pct(taxaOk1)} (n=${julgaveis}), mas só ${julgaveis - a.ambiguos} têm terreno CLASSIFICADO (carimbo de LEDGER_TERRENO no despacho); ${a.ambiguos} são rótulo sem prova. Sinal 🔺/🔻 SUPRIMIDO até ${Math.ceil(julgaveis * (1 - AMBIGUO_MAX))}+ classificados — passe LEDGER_TERRENO em TODO despacho.`,
+        );
         continue;
       }
       if (taxaOk1 < OK1_PISO) {
         sinais++;
-        console.log(`🔺 SUBIR: ${a.degrau} em ${a.terreno} com ok1 ${pct(taxaOk1)} (<${pct(OK1_PISO)}, n=${julgaveis}) — propor subir o DEFAULT do terreno.`);
-      } else if (taxaOk1 >= OK1_TETO && julgaveis >= MIN_N && !/luna|haiku|mecanico/.test(a.degrau + a.terreno)) {
+        console.log(
+          `🔺 SUBIR: ${a.degrau} em ${a.terreno} com ok1 ${pct(taxaOk1)} (<${pct(OK1_PISO)}, n=${julgaveis}) — propor subir o DEFAULT do terreno.`,
+        );
+      } else if (
+        taxaOk1 >= OK1_TETO &&
+        julgaveis >= MIN_N &&
+        !/luna|haiku|mecanico/.test(a.degrau + a.terreno)
+      ) {
         sinais++;
-        console.log(`🔻 DESCER?: ${a.degrau} em ${a.terreno} com ok1 ${pct(taxaOk1)} (n=${julgaveis}) — candidato a A/B no degrau abaixo (5 tarefas).`);
+        console.log(
+          `🔻 DESCER?: ${a.degrau} em ${a.terreno} com ok1 ${pct(taxaOk1)} (n=${julgaveis}) — candidato a A/B no degrau abaixo (5 tarefas).`,
+        );
       }
     }
   }
   // Desperdício: Sol em mecânico puro (desde 30/07 Sol é o default de rotina;
   // só mecânico — grep/rename/inventário — é terreno de Luna/explorador)
-  const desperdicio = linhas.filter((r) => /sol/i.test(r.modelo) && r.terreno === 'mecanico' && r.orquestracao_real !== 'fanout');
+  const desperdicio = linhas.filter(
+    (r) => /sol/i.test(r.modelo) && r.terreno === 'mecanico' && r.orquestracao_real !== 'fanout',
+  );
   if (desperdicio.length) {
     sinais++;
-    console.log(`⚠️ DESPERDÍCIO: ${desperdicio.length} despacho(s) de Sol em mecânico — terreno de Luna/explorador:`);
+    console.log(
+      `⚠️ DESPERDÍCIO: ${desperdicio.length} despacho(s) de Sol em mecânico — terreno de Luna/explorador:`,
+    );
     for (const r of desperdicio.slice(0, 5)) console.log(`   - ${r.ts.slice(0, 10)} ${r.tarefa}`);
   }
   // Crashes de invocação: NÃO entram em ok1/reciclo (o worker nunca rodou),
@@ -741,36 +932,49 @@ function cmdReport(args) {
     if (porCausa.lancador.length) {
       sinais++;
       const grave = porCausa.lancador.length >= 3;
-      console.log(`${grave ? '🛠️ LANÇADOR QUEBRANDO' : '🛠️ INFRA (lançador)'}: ${porCausa.lancador.length} despacho(s) nunca rodaram — o CLI recusou a invocação${grave ? '. Conserte o run.sh/despacho ANTES de olhar qualquer ok1 desta janela' : ''}:`);
+      console.log(
+        `${grave ? '🛠️ LANÇADOR QUEBRANDO' : '🛠️ INFRA (lançador)'}: ${porCausa.lancador.length} despacho(s) nunca rodaram — o CLI recusou a invocação${grave ? '. Conserte o run.sh/despacho ANTES de olhar qualquer ok1 desta janela' : ''}:`,
+      );
       listar(porCausa.lancador);
     }
     if (porCausa.maquina.length) {
       sinais++;
-      console.log(`🖥️ MÁQUINA DERRUBANDO DESPACHO: ${porCausa.maquina.length} despacho(s) morreram por SINAL externo, ou foram barrados com o Mac em vermelho — NÃO é bug do lançador. Reduza a concorrência (menos frentes ao mesmo tempo, fan-out menor) ou espere aliviar; o gate de recursos já recusa despacho automático nesse estado:`);
+      console.log(
+        `🖥️ MÁQUINA DERRUBANDO DESPACHO: ${porCausa.maquina.length} despacho(s) morreram por SINAL externo, ou foram barrados com o Mac em vermelho — NÃO é bug do lançador. Reduza a concorrência (menos frentes ao mesmo tempo, fan-out menor) ou espere aliviar; o gate de recursos já recusa despacho automático nesse estado:`,
+      );
       listar(porCausa.maquina);
     }
     if (porCausa['sem-causa'].length) {
       sinais++;
-      console.log(`🛠️ INFRA (causa não registrada): ${porCausa['sem-causa'].length} despacho(s) — linhas anteriores ao carimbo de CAUSA (26/08/2026) ou log manual sem nota:`);
+      console.log(
+        `🛠️ INFRA (causa não registrada): ${porCausa['sem-causa'].length} despacho(s) — linhas anteriores ao carimbo de CAUSA (26/08/2026) ou log manual sem nota:`,
+      );
       listar(porCausa['sem-causa']);
     }
   }
   // Saturação de quota por frente
   const quotaPorFrente = {};
-  for (const r of linhas) if (r.resultado === 'quota') quotaPorFrente[r.frente] = (quotaPorFrente[r.frente] || 0) + 1;
+  for (const r of linhas)
+    if (r.resultado === 'quota') quotaPorFrente[r.frente] = (quotaPorFrente[r.frente] || 0) + 1;
   for (const [f, n] of Object.entries(quotaPorFrente)) {
     if (n >= QUOTA_ALERTA) {
       sinais++;
-      console.log(`🚱 SATURADA: frente ${f} bateu quota ${n}× na janela — antecipar desvio pra vizinha (não esperar o erro).`);
+      console.log(
+        `🚱 SATURADA: frente ${f} bateu quota ${n}× na janela — antecipar desvio pra vizinha (não esperar o erro).`,
+      );
     }
   }
   if (!sinais) {
     const julgaveisGerais = linhas.filter(julgavel).length;
     if (julgaveisGerais < 20)
-      console.log(`⏳ nenhum alerta decisório — só ${julgaveisGerais}/20 construções julgáveis na janela.`);
+      console.log(
+        `⏳ nenhum alerta decisório — só ${julgaveisGerais}/20 construções julgáveis na janela.`,
+      );
     else console.log('✅ nenhum limiar violado — estrutura atual sustentada pelos dados.');
   }
-  console.log('\n(Este report só sinaliza; aplicar mudança segue `auto_aplicar`/`AUTO_SUBIR_ON` do motor por terreno.)');
+  console.log(
+    '\n(Este report só sinaliza; aplicar mudança segue `auto_aplicar`/`AUTO_SUBIR_ON` do motor por terreno.)',
+  );
 }
 
 // ── KPIs do harness (snapshot grava, history mostra a evolução) ──
@@ -795,7 +999,12 @@ export function loadJanela(file, dias) {
 // tenham FONTE ÚNICA — duplicar num segundo arquivo viraria drift silencioso.
 export const LEDGER_FILE = DEFAULT_FILE;
 export const LIMIARES = {
-  MIN_N, OK1_PISO, OK1_TETO, QUOTA_ALERTA, MUDO_DIAS, AMBIGUO_MAX,
+  MIN_N,
+  OK1_PISO,
+  OK1_TETO,
+  QUOTA_ALERTA,
+  MUDO_DIAS,
+  AMBIGUO_MAX,
   INSTRUMENTACAO_TERRENO,
 };
 
@@ -818,11 +1027,21 @@ export function calcKpis(linhas) {
   const porFrente = {};
   for (const r of linhas) porFrente[r.frente] = (porFrente[r.frente] || 0) + 1;
   const quotaPorFrente = {};
-  for (const r of linhas) if (r.resultado === 'quota') quotaPorFrente[r.frente] = (quotaPorFrente[r.frente] || 0) + 1;
+  for (const r of linhas)
+    if (r.resultado === 'quota') quotaPorFrente[r.frente] = (quotaPorFrente[r.frente] || 0) + 1;
   const reciclos = julgaveis.filter((r) => r.resultado !== 'ok1').length;
-  const durs = julgaveis.map((r) => r.dur).filter((d) => typeof d === 'number' && d > 0).sort((a, b) => a - b);
+  const durs = julgaveis
+    .map((r) => r.dur)
+    .filter((d) => typeof d === 'number' && d > 0)
+    .sort((a, b) => a - b);
   const durMed = durs.length ? durs[Math.floor(durs.length / 2)] : null;
-  const orquestracao = { solo: 0, fanout: 0, fanout_nao_observado: 0, desconhecido: 0, subagentes_total: 0 };
+  const orquestracao = {
+    solo: 0,
+    fanout: 0,
+    fanout_nao_observado: 0,
+    desconhecido: 0,
+    subagentes_total: 0,
+  };
   const modosOrquestracao = new Set(['solo', 'fanout', 'fanout_nao_observado']);
   for (const r of linhas) {
     const modo = modosOrquestracao.has(r.orquestracao_real) ? r.orquestracao_real : 'desconhecido';
@@ -833,7 +1052,14 @@ export function calcKpis(linhas) {
   // subir/baratear o modelo DEFAULT de cada terreno no histórico
   const porTerreno = {};
   for (const r of linhas) {
-    const t = (porTerreno[r.terreno] ||= { n: 0, julgaveis: 0, ok1: 0, reciclo: 0, quota: 0, infra: 0 });
+    const t = (porTerreno[r.terreno] ||= {
+      n: 0,
+      julgaveis: 0,
+      ok1: 0,
+      reciclo: 0,
+      quota: 0,
+      infra: 0,
+    });
     t.n++;
     if (r.resultado === 'quota') t.quota++;
     else if (r.resultado === 'infra') t.infra++;
@@ -866,12 +1092,17 @@ export function calcKpis(linhas) {
 }
 
 function cmdSnapshot(args) {
-  const dias = parseInt(args.dias || '7', 10);
+  const dias = Number.parseInt(args.dias || '7', 10);
   const linhas = loadJanela(args.file || DEFAULT_FILE, dias);
-  if (!linhas.length) { console.log(`0 despachos nos últimos ${dias}d — snapshot não gravado.`); return; }
+  if (!linhas.length) {
+    console.log(`0 despachos nos últimos ${dias}d — snapshot não gravado.`);
+    return;
+  }
   const k = calcKpis(linhas);
   if (!k.n) {
-    console.log(`0 construções explicitamente carimbadas nos últimos ${dias}d — snapshot não gravado.`);
+    console.log(
+      `0 construções explicitamente carimbadas nos últimos ${dias}d — snapshot não gravado.`,
+    );
     return;
   }
   const rec = {
@@ -884,26 +1115,48 @@ function cmdSnapshot(args) {
   };
   mkdirSync(dirname(HISTORY_FILE), { recursive: true });
   appendFileSync(HISTORY_FILE, JSON.stringify(rec) + '\n');
-  console.log(`snapshot gravado (${dias}d, n=${k.n}): ok1 ${pct(k.ok1_pct)} · offload ${pct(k.offload_pct)} · quotaHit ${pct(k.quota_hit_pct)} · reciclo ${pct(k.reciclo_pct)} · infra ${k.infra_n} · fan-out ${k.orquestracao.fanout}/${k.n} (${k.orquestracao.subagentes_total} filhos) · durMed ${k.dur_mediana_min != null ? k.dur_mediana_min + 'min (n=' + k.dur_n + ')' : 's/dados'}`);
+  console.log(
+    `snapshot gravado (${dias}d, n=${k.n}): ok1 ${pct(k.ok1_pct)} · offload ${pct(k.offload_pct)} · quotaHit ${pct(k.quota_hit_pct)} · reciclo ${pct(k.reciclo_pct)} · infra ${k.infra_n} · fan-out ${k.orquestracao.fanout}/${k.n} (${k.orquestracao.subagentes_total} filhos) · durMed ${k.dur_mediana_min != null ? k.dur_mediana_min + 'min (n=' + k.dur_n + ')' : 's/dados'}`,
+  );
 }
 
 function cmdHistory(args) {
-  const nMax = parseInt(args.n || '12', 10);
-  if (!existsSync(HISTORY_FILE)) { console.log('sem histórico ainda — rode `ledger.mjs snapshot` ao fechar a semana.'); return; }
-  const todos = readFileSync(HISTORY_FILE, 'utf8').trim().split('\n').filter(Boolean)
-    .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+  const nMax = Number.parseInt(args.n || '12', 10);
+  if (!existsSync(HISTORY_FILE)) {
+    console.log('sem histórico ainda — rode `ledger.mjs snapshot` ao fechar a semana.');
+    return;
+  }
+  const todos = readFileSync(HISTORY_FILE, 'utf8')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((l) => {
+      try {
+        return JSON.parse(l);
+      } catch {
+        return null;
+      }
+    })
     .filter(Boolean);
   const compativeis = filtrarHistoricoCompativel(todos);
   const recs = compativeis.slice(-nMax);
   console.log('# Evolução dos KPIs do harness');
   if (todos.length !== compativeis.length)
-    console.log(`# ${todos.length - compativeis.length} snapshot(s) legado(s) em quarentena (fórmula anterior)`);
-  console.log('# qualidade: ok1≥80% · economia: offload subindo, quotaHit>0 sem saturar · velocidade: reciclo≤20%, durMed caindo\n');
+    console.log(
+      `# ${todos.length - compativeis.length} snapshot(s) legado(s) em quarentena (fórmula anterior)`,
+    );
+  console.log(
+    '# qualidade: ok1≥80% · economia: offload subindo, quotaHit>0 sem saturar · velocidade: reciclo≤20%, durMed caindo\n',
+  );
   console.log('data        janela   n   ok1  offload quotaHit reciclo durMed  frentes');
   for (const r of recs) {
-    const frentes = Object.entries(r.por_frente || {}).map(([f, x]) => `${f}:${x}`).join(' ');
+    const frentes = Object.entries(r.por_frente || {})
+      .map(([f, x]) => `${f}:${x}`)
+      .join(' ');
     const dur = r.dur_mediana_min != null ? `${r.dur_mediana_min}m` : '—';
-    console.log(`${r.ts.slice(0, 10)}  ${String(r.janela_dias + 'd').padStart(4)} ${String(r.n).padStart(4)}  ${pct(r.ok1_pct).padStart(4)}  ${pct(r.offload_pct).padStart(6)} ${pct(r.quota_hit_pct).padStart(7)} ${pct(r.reciclo_pct).padStart(7)} ${String(dur).padStart(6)}  ${frentes}${r.nota ? '  — ' + r.nota : ''}`);
+    console.log(
+      `${r.ts.slice(0, 10)}  ${String(r.janela_dias + 'd').padStart(4)} ${String(r.n).padStart(4)}  ${pct(r.ok1_pct).padStart(4)}  ${pct(r.offload_pct).padStart(6)} ${pct(r.quota_hit_pct).padStart(7)} ${pct(r.reciclo_pct).padStart(7)} ${String(dur).padStart(6)}  ${frentes}${r.nota ? '  — ' + r.nota : ''}`,
+    );
   }
 }
 
@@ -912,9 +1165,15 @@ function cmdHistory(args) {
 function cmdLogRapido(args) {
   const obrig = ['modelo', 'effort', 'terreno', 'resultado'];
   const faltam = obrig.filter((k) => !args[k]);
-  if (faltam.length) { console.error(`faltam campos: ${faltam.join(', ')}`); process.exit(2); }
+  if (faltam.length) {
+    console.error(`faltam campos: ${faltam.join(', ')}`);
+    process.exit(2);
+  }
   const frente = args.frente || inferirFrente(args.modelo);
-  if (!frente) { console.error(`não sei inferir a frente de "${args.modelo}" — passe --frente`); process.exit(2); }
+  if (!frente) {
+    console.error(`não sei inferir a frente de "${args.modelo}" — passe --frente`);
+    process.exit(2);
+  }
   cmdLog({ ...args, frente, tarefa: args.tarefa || '(log-rapido, sem descrição)' });
 }
 
@@ -936,26 +1195,43 @@ function cmdLogRapido(args) {
 // lado, para que a decisão de assinatura use o número certo. Corrigir o
 // offload de verdade exige logar TODO despacho, inclusive o inline.
 function cmdCobertura(args) {
-  const dias = parseInt(args.dias || '15', 10);
+  const dias = Number.parseInt(args.dias || '15', 10);
   const repo = args.repo || join(homedir(), 'Apps YaaX', 'SeuCamarao App');
   const linhas = loadJanela(args.file || DEFAULT_FILE, dias);
 
   const sh = (cmd, argv) => {
     try {
-      return execFileSync(cmd, argv, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-    } catch { return null; }
+      return execFileSync(cmd, argv, {
+        cwd: repo,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+    } catch {
+      return null;
+    }
   };
 
   console.log(`\n# Cobertura do ledger — últimos ${dias}d\n`);
 
   // 1) Denominador: despachos registrados vs PRs realmente mergeados
-  const prJson = sh('gh', ['pr', 'list', '--state', 'merged', '--limit', '800', '--json', 'headRefName,mergedAt']);
+  const prJson = sh('gh', [
+    'pr',
+    'list',
+    '--state',
+    'merged',
+    '--limit',
+    '800',
+    '--json',
+    'headRefName,mergedAt',
+  ]);
   let prs = [];
   if (prJson) {
     const corte = Date.now() - dias * 864e5;
     try {
       prs = JSON.parse(prJson).filter((p) => Date.parse(p.mergedAt) >= corte);
-    } catch { prs = []; }
+    } catch {
+      prs = [];
+    }
   }
 
   console.log('DENOMINADOR');
@@ -963,10 +1239,17 @@ function cmdCobertura(args) {
   if (prs.length) {
     console.log(`  PRs mergeados no repositório:     ${String(prs.length).padStart(5)}`);
     const cob = linhas.length / prs.length;
-    console.log(`  cobertura:                        ${pct(cob).padStart(5)}   ← o ledger só enxerga isso`);
-    if (cob < 0.5) console.log('  ⚠️  menos da metade do trabalho é registrada: todo KPI abaixo é de uma amostra de conveniência, não de uma amostra representativa.');
+    console.log(
+      `  cobertura:                        ${pct(cob).padStart(5)}   ← o ledger só enxerga isso`,
+    );
+    if (cob < 0.5)
+      console.log(
+        '  ⚠️  menos da metade do trabalho é registrada: todo KPI abaixo é de uma amostra de conveniência, não de uma amostra representativa.',
+      );
   } else {
-    console.log('  PRs mergeados no repositório:      (não medido — `gh` indisponível ou fora de um repo)');
+    console.log(
+      '  PRs mergeados no repositório:      (não medido — `gh` indisponível ou fora de um repo)',
+    );
   }
 
   // 2) Offload pelas duas réguas
@@ -977,9 +1260,16 @@ function cmdCobertura(args) {
   if (prs.length) {
     const EXTERNOS = ['codex', 'gpt'];
     const ext = prs.filter((p) => EXTERNOS.includes(String(p.headRefName).split('/')[0])).length;
-    console.log(`  repo    (branches de worker externo ÷ PRs):   ${pct(ext / prs.length).padStart(5)}`);
+    console.log(
+      `  repo    (branches de worker externo ÷ PRs):   ${pct(ext / prs.length).padStart(5)}`,
+    );
 
-    const bodies = sh('git', ['log', 'origin/main', `--since=${dias} days ago`, '--pretty=format:%b']);
+    const bodies = sh('git', [
+      'log',
+      'origin/main',
+      `--since=${dias} days ago`,
+      '--pretty=format:%b',
+    ]);
     if (bodies) {
       const coas = [...bodies.matchAll(/Co-authored-by:\s*([^\n<]+)/gi)].map((m) => m[1].trim());
       const anth = coas.filter((c) => /claude|opus|sonnet|haiku|fable/i.test(c)).length;
@@ -987,7 +1277,9 @@ function cmdCobertura(args) {
       console.log(`  commits co-assinados por modelo Anthropic:    ${String(anth).padStart(5)}`);
       console.log(`  commits co-assinados por modelo externo:      ${String(outros).padStart(5)}`);
       if (anth > 0 && outros === 0) {
-        console.log('  ⚠️  nenhum commit co-assinado por worker externo. Ressalva honesta: nem todo worker assina commit — ausência de assinatura NÃO prova ausência de trabalho. Mas junto com a régua de branch, o offload do ledger fica sem sustentação.');
+        console.log(
+          '  ⚠️  nenhum commit co-assinado por worker externo. Ressalva honesta: nem todo worker assina commit — ausência de assinatura NÃO prova ausência de trabalho. Mas junto com a régua de branch, o offload do ledger fica sem sustentação.',
+        );
       }
     }
 
@@ -1002,15 +1294,24 @@ function cmdCobertura(args) {
   // 3) Velocidade: quantos registros têm duração
   const comDur = linhas.filter((r) => typeof r.dur === 'number' && r.dur > 0).length;
   console.log('\nVELOCIDADE');
-  console.log(`  registros com duração preenchida:  ${comDur} de ${linhas.length}  (${pct(linhas.length ? comDur / linhas.length : null)})`);
-  if (linhas.length && comDur / linhas.length < 0.5) console.log('  ⚠️  durMed vem de menos da metade dos registros — trate como indício, não como medida.');
+  console.log(
+    `  registros com duração preenchida:  ${comDur} de ${linhas.length}  (${pct(linhas.length ? comDur / linhas.length : null)})`,
+  );
+  if (linhas.length && comDur / linhas.length < 0.5)
+    console.log(
+      '  ⚠️  durMed vem de menos da metade dos registros — trate como indício, não como medida.',
+    );
   console.log('');
 }
 
 // Guarda de CLI: este arquivo também é importado como módulo (avisoMudo é
 // usado pela auditoria) — só roda comandos quando executado diretamente.
 import { pathToFileURL } from 'node:url';
-if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  existsSync(process.argv[1]) &&
+  import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+) {
   const [cmd, ...rest] = process.argv.slice(2);
   const args = parseArgs(rest);
   if (cmd === 'log') cmdLog(args);
@@ -1023,5 +1324,10 @@ if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathTo
   else if (cmd === 'snapshot') cmdSnapshot(args);
   else if (cmd === 'history') cmdHistory(args);
   else if (cmd === 'cobertura') cmdCobertura(args);
-  else { console.error('uso: ledger.mjs log|log-rapido|validar-revisao|fechar|pendentes|subagentes|report|snapshot|history|cobertura [--flags]'); process.exit(2); }
+  else {
+    console.error(
+      'uso: ledger.mjs log|log-rapido|validar-revisao|fechar|pendentes|subagentes|report|snapshot|history|cobertura [--flags]',
+    );
+    process.exit(2);
+  }
 }

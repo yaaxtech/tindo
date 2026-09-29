@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { existsSync, realpathSync } from 'node:fs';
 /**
  * Resolve uma rota por terreno a partir dos defaults versionados.
  *
@@ -7,6 +6,7 @@ import { existsSync, realpathSync } from 'node:fs';
  * modelo e não sorteia uma rota de revisor. O CLI só serializa o resultado.
  */
 import { createHash } from 'node:crypto';
+import { existsSync, realpathSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -37,7 +37,11 @@ function objeto(v) {
 function ordenar(v) {
   if (Array.isArray(v)) return v.map(ordenar);
   if (!objeto(v)) return v;
-  return Object.fromEntries(Object.keys(v).sort().map((k) => [k, ordenar(v[k])]));
+  return Object.fromEntries(
+    Object.keys(v)
+      .sort()
+      .map((k) => [k, ordenar(v[k])]),
+  );
 }
 
 export function versaoDefaults(defaults) {
@@ -48,9 +52,23 @@ export function versaoDefaults(defaults) {
 
 export function versaoExperimento(experimento) {
   if (!objeto(experimento)) erro('EXPERIMENTO_INVALIDO', 'experimento deve ser um objeto');
-  const protocolo = Object.fromEntries(Object.entries(experimento)
-    .filter(([k]) => !['ativo', 'status', 'motivo', 'desde', 'atualizado_em', 'promovido_em', 'historico'].includes(k)));
-  return `sha256:${createHash('sha256').update(JSON.stringify(ordenar(protocolo))).digest('hex')}`;
+  const protocolo = Object.fromEntries(
+    Object.entries(experimento).filter(
+      ([k]) =>
+        ![
+          'ativo',
+          'status',
+          'motivo',
+          'desde',
+          'atualizado_em',
+          'promovido_em',
+          'historico',
+        ].includes(k),
+    ),
+  );
+  return `sha256:${createHash('sha256')
+    .update(JSON.stringify(ordenar(protocolo)))
+    .digest('hex')}`;
 }
 
 function lerDefaults(file = DEFAULT_FILE) {
@@ -62,7 +80,9 @@ function lerDefaults(file = DEFAULT_FILE) {
 }
 
 function familia(modelo) {
-  const m = String(modelo || '').trim().toLowerCase();
+  const m = String(modelo || '')
+    .trim()
+    .toLowerCase();
   if (!m) return '';
   if (/^(?:gpt-6-)?astra$/.test(m)) return 'astra';
   if (/^(?:gpt-5\.6-)?sol$/.test(m)) return 'sol';
@@ -125,7 +145,8 @@ function texto(v, nome) {
 
 function validarEffort(v, nome = 'effort') {
   const e = texto(v, nome);
-  if (!EFFORTS.has(e)) erro('EFFORT_INVALIDO', `${nome} inválido: ${e}; use ${[...EFFORTS].join('|')}`);
+  if (!EFFORTS.has(e))
+    erro('EFFORT_INVALIDO', `${nome} inválido: ${e}; use ${[...EFFORTS].join('|')}`);
   return e;
 }
 
@@ -134,7 +155,8 @@ function paresConfigurados(cfg) {
   for (const [m, e] of Object.entries(cfg.effort_por_modelo || {})) {
     if (typeof e === 'string' && familia(m)) out.push({ modelo: familia(m), effort: e });
   }
-  if (cfg.modelo && cfg.effort && familia(cfg.modelo)) out.push({ modelo: familia(cfg.modelo), effort: cfg.effort });
+  if (cfg.modelo && cfg.effort && familia(cfg.modelo))
+    out.push({ modelo: familia(cfg.modelo), effort: cfg.effort });
   return out;
 }
 
@@ -163,8 +185,7 @@ function effortConfigurado(cfg, modelo) {
   if (!f) return null;
   const direto = cfg.effort_por_modelo?.[f] || cfg.effort_por_modelo?.[modelo];
   if (direto) return direto;
-  const chave = Object.keys(cfg.effort_por_modelo || {})
-    .find((k) => familia(k) === f);
+  const chave = Object.keys(cfg.effort_por_modelo || {}).find((k) => familia(k) === f);
   return chave ? cfg.effort_por_modelo[chave] : null;
 }
 
@@ -172,7 +193,10 @@ function escolherDefault(cfg, frente, terreno, papel, motivo) {
   if (motivo) {
     const candidatos = fallbackEntries(cfg, motivo).filter((p) => p && p.modelo && p.effort);
     if (!candidatos.length) {
-      erro('FALLBACK_NAO_CONFIGURADO', `fallback '${motivo}' não configurado para ${frente}/${terreno}`);
+      erro(
+        'FALLBACK_NAO_CONFIGURADO',
+        `fallback '${motivo}' não configurado para ${frente}/${terreno}`,
+      );
     }
     return { ...candidatos[0], origem: 'fallback' };
   }
@@ -180,27 +204,36 @@ function escolherDefault(cfg, frente, terreno, papel, motivo) {
     erro('DEFAULT_INCOMPLETO', `default de ${frente}/${terreno} não tem modelo e effort`);
   }
   const effort = cfg.effort;
-  if (!effort) erro('DEFAULT_INCOMPLETO', `default de ${frente}/${terreno} não tem effort configurado`);
+  if (!effort)
+    erro('DEFAULT_INCOMPLETO', `default de ${frente}/${terreno} não tem effort configurado`);
   return { modelo: cfg.modelo, effort, origem: 'default' };
 }
 
-function validarRotaForte({terreno,papel,par,modeloAutor}) {
+function validarRotaForte({ terreno, papel, par, modeloAutor }) {
   if (terreno !== 'sql') return;
-  const fortes={opus5:'high',sol:'xhigh',astra:'xhigh'};
-  if (fortes[familia(par.modelo)] !== par.effort) erro('SQL_ROTA_FRACA','SQL exige Opus 5/high, Sol/xhigh ou Astra/xhigh');
-  if (papel==='revisor' && !fortes[familia(modeloAutor)]) erro('SQL_AUTOR_INVALIDO','Autor SQL sem modelo forte reconhecido');
+  const fortes = { opus5: 'high', sol: 'xhigh', astra: 'xhigh' };
+  if (fortes[familia(par.modelo)] !== par.effort)
+    erro('SQL_ROTA_FRACA', 'SQL exige Opus 5/high, Sol/xhigh ou Astra/xhigh');
+  if (papel === 'revisor' && !fortes[familia(modeloAutor)])
+    erro('SQL_AUTOR_INVALIDO', 'Autor SQL sem modelo forte reconhecido');
 }
 
 function validarParConfigurado(cfg, par, motivo, roteamentoOk, experimento) {
   if (experimento || roteamentoOk) return;
   if (motivo) {
     if (!fallbackEntries(cfg, motivo).some((p) => p && parIgual(p, par))) {
-      erro('FALLBACK_FORA_DA_ROTA', `modelo/effort ${par.modelo}/${par.effort} não é fallback configurado para '${motivo}'`);
+      erro(
+        'FALLBACK_FORA_DA_ROTA',
+        `modelo/effort ${par.modelo}/${par.effort} não é fallback configurado para '${motivo}'`,
+      );
     }
     return;
   }
   if (!paresConfigurados(cfg).some((p) => parIgual(p, par))) {
-    erro('ROTA_FORA_DO_DEFAULT', `modelo/effort ${par.modelo}/${par.effort} não está configurado para este terreno`);
+    erro(
+      'ROTA_FORA_DO_DEFAULT',
+      `modelo/effort ${par.modelo}/${par.effort} não está configurado para este terreno`,
+    );
   }
 }
 
@@ -209,14 +242,24 @@ function validarRevisor({ cfg, par, modeloAutor, fallbackProprio, roteamentoOk }
   const autor = familia(modeloAutor);
   const revisor = familia(par.modelo);
   if (provedor(modeloAutor) === provedor(par.modelo) && !fallbackProprio) {
-    erro('REVISAO_NAO_CRUZADA', `revisor ${revisor} não pode aprovar autor ${autor} sem fallback próprio comprovado`);
+    erro(
+      'REVISAO_NAO_CRUZADA',
+      `revisor ${revisor} não pode aprovar autor ${autor} sem fallback próprio comprovado`,
+    );
   }
-  const candidatos = cfg.revisao_por_modelo?.[autor] || (cfg.revisao?.modelo
-    ? [{ modelo: cfg.revisao.modelo, effort: cfg.revisao.effort },
-      ...(cfg.revisao.fallback_proprio ? [cfg.revisao.fallback_proprio] : [])]
-    : []);
+  const candidatos =
+    cfg.revisao_por_modelo?.[autor] ||
+    (cfg.revisao?.modelo
+      ? [
+          { modelo: cfg.revisao.modelo, effort: cfg.revisao.effort },
+          ...(cfg.revisao.fallback_proprio ? [cfg.revisao.fallback_proprio] : []),
+        ]
+      : []);
   if (candidatos.length && !roteamentoOk && !candidatos.some((p) => parIgual(p, par))) {
-    erro('REVISOR_FORA_DA_ROTA', `revisão ${revisor}/${par.effort} não está configurada para autor ${autor}`);
+    erro(
+      'REVISOR_FORA_DA_ROTA',
+      `revisão ${revisor}/${par.effort} não está configurada para autor ${autor}`,
+    );
   }
 }
 
@@ -236,8 +279,14 @@ export function resolverRota({
   if (!FRENTES.has(frente)) erro('FRENTE_DESCONHECIDA', `frente desconhecida: ${frente}`);
   if (!terreno) erro('TERRENO_OBRIGATORIO', 'terreno é obrigatório');
   if (!PAPEIS.has(papel)) erro('PAPEL_INVALIDO', `papel inválido: ${papel}`);
-  if (fallbackProprio && !['outro_harness_indisponivel','outro_harness_saida_invalida'].includes(fallbackMotivo)) {
-    erro('FALLBACK_SEM_CAUSA','Revisão própria exige indisponibilidade ou saída inválida registrada');
+  if (
+    fallbackProprio &&
+    !['outro_harness_indisponivel', 'outro_harness_saida_invalida'].includes(fallbackMotivo)
+  ) {
+    erro(
+      'FALLBACK_SEM_CAUSA',
+      'Revisão própria exige indisponibilidade ou saída inválida registrada',
+    );
   }
   const cfgRaiz = defaults || lerDefaults();
   // A frente describes where the request came from; it never chooses a route.
@@ -261,7 +310,11 @@ export function resolverRota({
   } else {
     const motivo = fallbackMotivo ? texto(fallbackMotivo, 'fallback_motivo') : null;
     if ((motivo || roteamentoOk) && explicitModel && explicitEffort) {
-      escolhido = { modelo, effort: validarEffort(effort), origem: motivo ? 'fallback' : 'explicito' };
+      escolhido = {
+        modelo,
+        effort: validarEffort(effort),
+        origem: motivo ? 'fallback' : 'explicito',
+      };
     } else {
       escolhido = escolherDefault(cfg, frente, terreno, papel, motivo);
       if (motivo || roteamentoOk) {
@@ -286,7 +339,17 @@ export function resolverRota({
   }
 
   const par = { modelo: familia(escolhido.modelo), effort: escolhido.effort };
-  validarRotaForte({ frente, terreno, papel, cfg, par, modeloAutor, fallbackProprio, fallbackMotivo, roteamentoOk });
+  validarRotaForte({
+    frente,
+    terreno,
+    papel,
+    cfg,
+    par,
+    modeloAutor,
+    fallbackProprio,
+    fallbackMotivo,
+    roteamentoOk,
+  });
   const cli = modeloCli(escolhido.modelo);
   const provider = provedor(escolhido.modelo);
   if (!provider) erro('MODELO_DESCONHECIDO', `modelo sem provedor conhecido: ${escolhido.modelo}`);
@@ -332,11 +395,17 @@ function parseArgs(argv) {
   return args;
 }
 
-if (process.argv[1] && existsSync(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  existsSync(process.argv[1]) &&
+  import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+) {
   const [cmd, ...rest] = process.argv.slice(2);
   const args = parseArgs(rest);
   if (cmd !== 'resolver') {
-    console.error('uso: node rota-harness.mjs resolver --frente codex --terreno rotina [--papel construtor]');
+    console.error(
+      'uso: node rota-harness.mjs resolver --frente codex --terreno rotina [--papel construtor]',
+    );
     process.exit(2);
   }
   try {
