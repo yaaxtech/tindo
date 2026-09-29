@@ -29,7 +29,7 @@ entram em PRs posteriores.
 ## Contas que abrem os módulos antigos
 
 Cards, Tarefas, Projetos, Tags e Todoist ainda usam o usuário fixo `TINDO_MVP_USER_ID`. Só entram
-nesses módulos a conta com esse id, `falecomseucamarao@gmail.com` e os e-mails listados em
+nesses módulos a conta com esse id, `falecomseucamarao@gmail.com`, `emanuelsilveiramaia@gmail.com` e os e-mails listados em
 `TINDO_DONO_EMAILS` (separados por vírgula). Qualquer outra conta logada é levada para
 `/acesso-restrito`, que explica o motivo, em vez de cair calada no `/docs`.
 

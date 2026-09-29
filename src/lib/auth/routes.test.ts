@@ -107,6 +107,17 @@ describe('podeAcessarRotaAutenticada', () => {
     ).toBe(true);
   });
 
+  it('libera os módulos legados para a conta pessoal do dono sem configurar nada', () => {
+    expect(
+      podeAcessarRotaAutenticada(
+        '/triagem',
+        { usuarioId: 'outro-id', email: 'EmanuelSilveiraMaia@gmail.com' },
+        'dono',
+      ),
+    ).toBe(true);
+    expect(emailsDoDono()).toContain('emanuelsilveiramaia@gmail.com');
+  });
+
   it('libera o aviso de acesso restrito para qualquer conta logada', () => {
     const nova = { usuarioId: 'novo', email: 'novo@example.com' };
     expect(podeAcessarRotaAutenticada('/acesso-restrito', nova, 'dono')).toBe(true);
@@ -116,6 +127,7 @@ describe('podeAcessarRotaAutenticada', () => {
     const emails = emailsDoDono(' Outro@Example.com ,, segundo@example.com');
     expect(emails).toEqual([
       'falecomseucamarao@gmail.com',
+      'emanuelsilveiramaia@gmail.com',
       'outro@example.com',
       'segundo@example.com',
     ]);

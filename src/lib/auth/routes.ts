@@ -49,20 +49,23 @@ export function ehRotaMultiusuario(pathname: string): boolean {
 
 export const EMAIL_DONO_PADRAO = 'falecomseucamarao@gmail.com';
 
-/** Lê `TINDO_DONO_EMAILS` (separados por vírgula) somando ao e-mail padrão do dono. */
+/** Contas do dono que sempre abrem os módulos legados (a principal é a pessoal). */
+export const EMAILS_DONO_PADRAO = [EMAIL_DONO_PADRAO, 'emanuelsilveiramaia@gmail.com'];
+
+/** Lê `TINDO_DONO_EMAILS` (separados por vírgula) somando aos e-mails padrão do dono. */
 export function emailsDoDono(valor?: string | null): string[] {
   const extras = (valor ?? '')
     .split(',')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
-  return [EMAIL_DONO_PADRAO, ...extras];
+  return [...new Set([...EMAILS_DONO_PADRAO, ...extras])];
 }
 
 export function podeAcessarRotaAutenticada(
   pathname: string,
   identidade: { usuarioId: string; email?: string | null },
   donoId?: string,
-  emailsDono: string[] = [EMAIL_DONO_PADRAO],
+  emailsDono: string[] = EMAILS_DONO_PADRAO,
 ): boolean {
   if (ehRotaMultiusuario(pathname)) return true;
   const email = identidade.email?.trim().toLowerCase();
