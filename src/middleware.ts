@@ -1,5 +1,5 @@
 import { urlNoEnderecoOficial } from '@/lib/app-url';
-import { classificarAcessoRota, podeAcessarRotaAutenticada } from '@/lib/auth/routes';
+import { classificarAcessoRota, emailsDoDono, podeAcessarRotaAutenticada } from '@/lib/auth/routes';
 import { type CookieOptions, createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -68,6 +68,7 @@ export async function middleware(request: NextRequest) {
       email: typeof claims.email === 'string' ? claims.email : null,
     },
     process.env.TINDO_MVP_USER_ID,
+    emailsDoDono(process.env.TINDO_DONO_EMAILS),
   );
 
   if (!autorizado) {
@@ -77,7 +78,10 @@ export async function middleware(request: NextRequest) {
         { status: 403 },
       );
     }
-    return NextResponse.redirect(new URL('/docs', request.url));
+    // Antes mandava calado para /docs, e parecia que o menu estava quebrado.
+    const aviso = new URL('/acesso-restrito', request.url);
+    aviso.searchParams.set('de', pathname);
+    return NextResponse.redirect(aviso);
   }
 
   return response;

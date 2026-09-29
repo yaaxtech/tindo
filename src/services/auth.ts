@@ -127,6 +127,12 @@ export async function atualizarSenha(senha: string, authClient?: AuthClient): Pr
   falhar(error);
 }
 
+/** E-mail da conta logada neste navegador (null se ninguém entrou). */
+export async function emailDaSessao(authClient?: AuthClient): Promise<string | null> {
+  const { data } = await cliente(authClient).auth.getUser();
+  return data.user?.email ?? null;
+}
+
 export async function sair(authClient?: AuthClient): Promise<void> {
   const { error } = await cliente(authClient).auth.signOut();
   falhar(error);

@@ -40,19 +40,35 @@ export function ehRotaRoadMapMind(pathname: string): boolean {
 /** Áreas que já isolam dados pela sessão/RLS e podem receber qualquer conta. */
 export function ehRotaMultiusuario(pathname: string): boolean {
   return (
-    ehRotaRoadMapMind(pathname) || pathname === '/api/perfil' || pathname.startsWith('/api/perfil/')
+    ehRotaRoadMapMind(pathname) ||
+    pathname === '/acesso-restrito' ||
+    pathname === '/api/perfil' ||
+    pathname.startsWith('/api/perfil/')
   );
+}
+
+export const EMAIL_DONO_PADRAO = 'falecomseucamarao@gmail.com';
+
+/** Lê `TINDO_DONO_EMAILS` (separados por vírgula) somando ao e-mail padrão do dono. */
+export function emailsDoDono(valor?: string | null): string[] {
+  const extras = (valor ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  return [EMAIL_DONO_PADRAO, ...extras];
 }
 
 export function podeAcessarRotaAutenticada(
   pathname: string,
   identidade: { usuarioId: string; email?: string | null },
   donoId?: string,
+  emailsDono: string[] = [EMAIL_DONO_PADRAO],
 ): boolean {
   if (ehRotaMultiusuario(pathname)) return true;
+  const email = identidade.email?.trim().toLowerCase();
   return (
     (Boolean(donoId) && identidade.usuarioId === donoId) ||
-    identidade.email?.toLowerCase() === 'falecomseucamarao@gmail.com'
+    (Boolean(email) && emailsDono.includes(email as string))
   );
 }
 
