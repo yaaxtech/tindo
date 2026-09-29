@@ -29,7 +29,10 @@ function mensagemDoErro(codigo?: string): string {
   if (codigo === 'invalid_credentials') return 'E-mail ou senha inválidos.';
   if (codigo === 'email_not_confirmed') return 'Confirme seu e-mail antes de entrar.';
   if (codigo?.includes('captcha')) return 'Não foi possível validar o desafio anti-robô.';
-  if (codigo?.includes('rate_limit') || codigo === 'over_email_send_rate_limit') {
+  if (codigo === 'over_email_send_rate_limit') {
+    return 'Você acabou de pedir um e-mail. Aguarde cerca de 1 minuto e tente de novo (veja também o spam).';
+  }
+  if (codigo?.includes('rate_limit')) {
     return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
   }
   return 'Não foi possível concluir agora. Tente novamente.';
