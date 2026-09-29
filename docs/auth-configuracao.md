@@ -17,6 +17,22 @@ entram em PRs posteriores.
    cadastre a chave secreta do Turnstile no painel. Essa ordem evita bloquear o login no intervalo.
 6. Mantenha confirmação de e-mail habilitada e teste os modelos de link mágico e recuperação.
 
+7. Para o link funcionar mesmo quando aberto em outro navegador ou aparelho (ex.: o app de e-mail
+   do iPhone, que não compartilha cookies com o PWA), troque o link dos modelos de e-mail em
+   **Authentication → Emails**:
+   - *Magic Link*: `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=magiclink`
+   - *Reset Password*: `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery`
+
+   O `/auth/callback` aceita tanto esse formato quanto o `code` padrão (PKCE), que só funciona no
+   mesmo navegador que pediu o e-mail.
+
+## Contas que abrem os módulos antigos
+
+Cards, Tarefas, Projetos, Tags e Todoist ainda usam o usuário fixo `TINDO_MVP_USER_ID`. Só entram
+nesses módulos a conta com esse id, `falecomseucamarao@gmail.com` e os e-mails listados em
+`TINDO_DONO_EMAILS` (separados por vírgula). Qualquer outra conta logada é levada para
+`/acesso-restrito`, que explica o motivo, em vez de cair calada no `/docs`.
+
 ## Diagnóstico de produção
 
 - Um cadastro com e-mail já existente pode receber uma resposta neutra do Supabase. A interface

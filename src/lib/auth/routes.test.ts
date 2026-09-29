@@ -6,6 +6,7 @@ import {
   ehRotaCompartilhamentoPublico,
   ehRotaMultiusuario,
   ehRotaRoadMapMind,
+  emailsDoDono,
   podeAcessarRotaAutenticada,
 } from './routes';
 
@@ -104,5 +105,30 @@ describe('podeAcessarRotaAutenticada', () => {
         'dono',
       ),
     ).toBe(true);
+  });
+
+  it('libera o aviso de acesso restrito para qualquer conta logada', () => {
+    const nova = { usuarioId: 'novo', email: 'novo@example.com' };
+    expect(podeAcessarRotaAutenticada('/acesso-restrito', nova, 'dono')).toBe(true);
+  });
+
+  it('aceita e-mails extras do dono vindos de TINDO_DONO_EMAILS', () => {
+    const emails = emailsDoDono(' Outro@Example.com ,, segundo@example.com');
+    expect(emails).toEqual([
+      'falecomseucamarao@gmail.com',
+      'outro@example.com',
+      'segundo@example.com',
+    ]);
+    expect(
+      podeAcessarRotaAutenticada(
+        '/cards',
+        { usuarioId: 'x', email: 'OUTRO@example.com' },
+        'dono',
+        emails,
+      ),
+    ).toBe(true);
+    expect(
+      podeAcessarRotaAutenticada('/cards', { usuarioId: 'x', email: null }, undefined, emails),
+    ).toBe(false);
   });
 });

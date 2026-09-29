@@ -12,6 +12,7 @@ const FULLSCREEN_ROUTES = [
   '/cadastro',
   '/recuperar-senha',
   '/nova-senha',
+  '/acesso-restrito',
   '/calibracao',
   '/recalibrar',
 ];

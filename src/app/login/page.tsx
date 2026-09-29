@@ -7,6 +7,12 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useState } from 'react';
 
+const MENSAGENS_DE_LINK: Record<string, string> = {
+  'link-invalido': 'Este link expirou ou já foi usado. Peça um novo link.',
+  'link-outro-navegador':
+    'O link foi aberto num navegador diferente do que pediu o e-mail. Peça um novo link e abra no mesmo navegador.',
+};
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,9 +24,7 @@ function LoginForm() {
   const [carregando, setCarregando] = useState<'senha' | 'link' | null>(null);
   const [linkEnviado, setLinkEnviado] = useState(false);
   const [erro, setErro] = useState<string | null>(
-    searchParams.get('erro') === 'link-invalido'
-      ? 'Este link expirou ou já foi usado. Peça um novo link.'
-      : null,
+    MENSAGENS_DE_LINK[searchParams.get('erro') ?? ''] ?? null,
   );
   const receberToken = useCallback((token: string | null) => setCaptchaToken(token), []);
   const bloqueadoPorCaptcha = turnstileConfigurado && !captchaToken;
