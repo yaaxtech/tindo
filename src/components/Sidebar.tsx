@@ -8,6 +8,7 @@ import {
   FolderTree,
   Inbox,
   Layers,
+  ListFilter,
   ListTodo,
   Network,
   PanelLeftClose,
@@ -23,6 +24,7 @@ import { useEffect } from 'react';
 
 const NAV_ITEMS = [
   { href: '/cards', label: 'Cards', icon: Layers },
+  { href: '/triagem', label: 'Triagem', icon: ListFilter },
   { href: '/sugestoes', label: 'Sugestões', icon: Sparkles },
   { href: '/sugestoes-ia', label: 'Inbox IA', icon: Inbox },
   { href: '/tarefas', label: 'Tarefas', icon: ListTodo },
