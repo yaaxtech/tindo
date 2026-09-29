@@ -8,6 +8,7 @@
 import { ErroServicoExterno, ErroValidacao } from '@/lib/api/erros';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
 import { TodoistClient, type TodoistTask } from '@/lib/todoist/client';
+import { descreverFalhaIA } from '@/lib/triagem/falha-ia';
 import {
   type ItemEntrada,
   type PlanoTriagem,
@@ -52,14 +53,14 @@ export async function gerarPreviaTriagem(limite = 10): Promise<PreviaTriagem> {
   const usuarioId = await getUsuarioIdMVP();
   const { data: cfgRow } = await admin
     .from('configuracoes')
-    .select('todoist_token, ai_api_key_criptografada, ai_modelo_classificacao')
+    .select('todoist_token, ai_api_key_criptografada, ai_modelo')
     .eq('usuario_id', usuarioId)
     .maybeSingle();
 
   const cfg = cfgRow as {
     todoist_token: string | null;
     ai_api_key_criptografada: string | null;
-    ai_modelo_classificacao: string | null;
+    ai_modelo: string | null;
   } | null;
   const apiKey = cfg?.ai_api_key_criptografada ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new ErroValidacao('Configure sua chave Claude em /configuracoes.');
@@ -114,8 +115,8 @@ export async function gerarPreviaTriagem(limite = 10): Promise<PreviaTriagem> {
   for (const t of pendentes.slice(0, limite)) {
     try {
       const resposta = await anthropic.messages.create({
-        model: cfg?.ai_modelo_classificacao ?? MODELO_DEFAULT,
-        max_tokens: 400,
+        model: cfg?.ai_modelo ?? MODELO_DEFAULT,
+        max_tokens: 1024,
         // biome-ignore lint/suspicious/noExplicitAny: SDK types for system array with cache_control
         system: system as any,
         // biome-ignore lint/suspicious/noExplicitAny: SDK 0.30 não tipa type: ['string','null']
@@ -143,7 +144,10 @@ export async function gerarPreviaTriagem(limite = 10): Promise<PreviaTriagem> {
       );
     } catch (err) {
       console.error('[triagem] falha no item', t.id, err);
-      erros.push({ tarefaId: t.id, conteudo: t.content, erro: 'A IA não conseguiu classificar.' });
+      const falha = descreverFalhaIA(err);
+      // Chave, crédito ou modelo: vai falhar igual em todos, então avisa uma vez só.
+      if (falha.geral) throw new ErroServicoExterno(falha.mensagem, { cause: err });
+      erros.push({ tarefaId: t.id, conteudo: t.content, erro: falha.mensagem });
     }
   }
 
