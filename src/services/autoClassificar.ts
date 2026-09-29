@@ -163,7 +163,7 @@ export async function autoClassificarSeHabilitado(params: {
 
     const novaNota = calcularNota(
       {
-        tipo: tarefa.tipo as 'tarefa' | 'lembrete',
+        tipo: (tarefa.tipo ?? classificacao.tipo_sugerido ?? 'tarefa') as 'tarefa' | 'lembrete',
         prioridade: (tarefa.prioridade as 1 | 2 | 3 | 4) ?? 4,
         dataVencimento: (tarefa.data_vencimento as string | null) ?? null,
         prazoConclusao: (tarefa.prazo_conclusao as string | null) ?? null,
@@ -184,6 +184,11 @@ export async function autoClassificarSeHabilitado(params: {
         urgencia: classificacao.urgencia,
         facilidade: classificacao.facilidade,
         nota: novaNota,
+        // Só classifica o tipo quando ainda está "sem classificação"; nunca sobrescreve
+        // uma decisão vinda do Todoist ou do usuário.
+        ...(tarefa.tipo == null && classificacao.tipo_sugerido
+          ? { tipo: classificacao.tipo_sugerido }
+          : {}),
       })
       .eq('id', tarefaId)
       .eq('usuario_id', usuarioId);
