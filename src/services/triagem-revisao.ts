@@ -8,7 +8,13 @@
  */
 import { ErroNaoEncontrado, ErroServicoExterno, ErroValidacao } from '@/lib/api/erros';
 import { getAdminClient, getUsuarioIdMVP } from '@/lib/supabase/admin';
-import { TodoistClient } from '@/lib/todoist/client';
+import {
+  TodoistClient,
+  atualizarTodoistTask,
+  concluirTodoistTask,
+  excluirTodoistTask,
+  reabrirTodoistTask,
+} from '@/lib/todoist/client';
 import {
   type ComentarioBruto,
   type RevisaoTinDo,
@@ -17,12 +23,19 @@ import {
   formatarRevisao,
   lerCampos,
 } from '@/lib/triagem/comentario';
+import { descricaoMesclada, nomeDaPessoa } from '@/lib/triagem/detalhes';
 
 export interface ItemRevisao {
   tarefaId: string;
   conteudo: string;
   descricao: string;
   vencimento: string | null;
+  /** Texto da data como está no Todoist ("toda seg às 18:00"). */
+  vencimentoTexto: string | null;
+  recorrente: boolean;
+  projetoAtual: string;
+  criadaEm: string;
+  criadaPor: string | null;
   sugestao: SugestaoVigia;
   revisao: RevisaoTinDo | null;
 }
@@ -39,9 +52,11 @@ export interface PainelRevisao {
   itens: ItemRevisao[];
   projetos: OpcaoProjeto[];
   etiquetas: string[];
+  /** Tarefas abertas com que dá para mesclar (as da Entrada e as do painel). */
+  tarefas: Array<{ id: string; conteudo: string }>;
 }
 
-async function clienteTodoist(): Promise<TodoistClient> {
+async function tokenTodoist(): Promise<string> {
   const admin = getAdminClient();
   const usuarioId = await getUsuarioIdMVP();
   const { data } = await admin
@@ -50,10 +65,13 @@ async function clienteTodoist(): Promise<TodoistClient> {
     .eq('usuario_id', usuarioId)
     .maybeSingle();
   const token = (data as { todoist_token: string | null } | null)?.todoist_token;
-  if (!token && !process.env.TODOIST_API_TOKEN) {
-    throw new ErroValidacao('Conecte o Todoist em /configuracoes.');
-  }
-  return new TodoistClient(token ?? undefined);
+  const final = token || process.env.TODOIST_API_TOKEN;
+  if (!final) throw new ErroValidacao('Conecte o Todoist em /configuracoes.');
+  return final;
+}
+
+async function clienteTodoist(): Promise<TodoistClient> {
+  return new TodoistClient(await tokenTodoist());
 }
 
 function comentariosBrutos(
@@ -67,12 +85,14 @@ function comentariosBrutos(
 
 export async function listarRevisao(): Promise<PainelRevisao> {
   const td = await clienteTodoist();
-  const [projetos, labels, tasks, notas] = await Promise.all([
+  const [projetos, labels, tasks, sync] = await Promise.all([
     td.listProjects(),
     td.listLabels(),
     td.listTasks(),
-    td.listAllTaskComments(),
+    td.syncTriagem(),
   ]);
+  const notas = sync.notes;
+  const nomeProjeto = new Map(projetos.map((p) => [p.id, p.inbox_project ? 'Entrada' : p.name]));
   const entrada = projetos.find((p) => p.inbox_project);
   if (!entrada) throw new ErroServicoExterno('Não encontrei a Entrada no seu Todoist.');
 
@@ -89,6 +109,11 @@ export async function listarRevisao(): Promise<PainelRevisao> {
       conteudo: t.content,
       descricao: t.description ?? '',
       vencimento: t.due?.datetime ?? t.due?.date ?? null,
+      vencimentoTexto: t.due?.string ?? null,
+      recorrente: t.due?.is_recurring ?? false,
+      projetoAtual: nomeProjeto.get(t.project_id) ?? 'projeto',
+      criadaEm: t.added_at,
+      criadaPor: nomeDaPessoa(t.added_by_uid, sync.user, sync.collaborators),
       sugestao: e.sugestao,
       revisao: e.revisao,
     });
@@ -109,6 +134,14 @@ export async function listarRevisao(): Promise<PainelRevisao> {
       .filter((p) => !p.is_archived && !p.is_deleted && !p.inbox_project)
       .map((p) => ({ id: p.id, nome: p.name }))
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
+    tarefas: tasks
+      .filter(
+        (t) =>
+          !t.checked &&
+          !t.is_deleted &&
+          (estado.has(t.id) || (t.project_id === entrada.id && !t.parent_id)),
+      )
+      .map((t) => ({ id: t.id, conteudo: t.content })),
     etiquetas: labels
       .filter((l) => !l.is_deleted)
       .map((l) => l.name)
@@ -142,4 +175,50 @@ export async function registrarRevisao(
   );
   await td.addTaskComment(tarefaId, texto);
   return revisao;
+}
+
+export type AcaoTarefa = 'concluir' | 'reabrir' | 'excluir';
+
+/**
+ * Concluir, reabrir ou excluir a tarefa no Todoist — sempre por clique do dono
+ * na /triagem. Excluir no Todoist não tem volta.
+ */
+export async function executarAcao(acao: AcaoTarefa, tarefaId: string): Promise<void> {
+  if (!tarefaId) throw new ErroValidacao('Tarefa não informada.');
+  const token = await tokenTodoist();
+  try {
+    if (acao === 'concluir') await concluirTodoistTask(token, tarefaId);
+    else if (acao === 'reabrir') await reabrirTodoistTask(token, tarefaId);
+    else await excluirTodoistTask(token, tarefaId);
+  } catch (cause) {
+    throw new ErroServicoExterno('O Todoist não aceitou agora. Tente de novo.', { cause });
+  }
+}
+
+/**
+ * Mescla duas tarefas: a que fica recebe na descrição o texto da outra, e a
+ * outra é excluída do Todoist.
+ */
+export async function mesclarTarefas(ficaId: string, saiId: string): Promise<void> {
+  if (!ficaId || !saiId || ficaId === saiId) {
+    throw new ErroValidacao('Escolha duas tarefas diferentes para mesclar.');
+  }
+  const token = await tokenTodoist();
+  const td = new TodoistClient(token);
+  const [fica, sai] = await Promise.all([td.getTask(ficaId), td.getTask(saiId)]).catch((cause) => {
+    throw new ErroNaoEncontrado('Não encontrei uma das tarefas no Todoist.', { cause });
+  });
+  try {
+    await atualizarTodoistTask(token, fica.id, {
+      description: descricaoMesclada(
+        { conteudo: fica.content, descricao: fica.description ?? '' },
+        { conteudo: sai.content, descricao: sai.description ?? '' },
+      ),
+    });
+    await excluirTodoistTask(token, sai.id);
+  } catch (cause) {
+    throw new ErroServicoExterno('O Todoist não aceitou a mescla agora. Tente de novo.', {
+      cause,
+    });
+  }
 }

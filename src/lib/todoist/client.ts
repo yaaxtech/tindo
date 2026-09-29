@@ -106,6 +106,12 @@ export interface TodoistComment {
   is_deleted?: boolean;
 }
 
+export interface TodoistPessoa {
+  id: string;
+  full_name?: string;
+  email?: string;
+}
+
 interface PagedResponse<T> {
   results: T[];
   next_cursor: string | null;
@@ -181,13 +187,40 @@ export class TodoistClient {
    * requisição por tarefa, que estoura o limite de subrequisições do Worker.
    */
   async listAllTaskComments(): Promise<TodoistComment[]> {
-    const body = new URLSearchParams({ sync_token: '*', resource_types: '["notes"]' });
-    const res = await this.req<{ notes?: TodoistComment[] }>('/sync', {
+    return (await this.syncTriagem()).notes;
+  }
+
+  /**
+   * Comentários, colaboradores e o próprio usuário numa chamada só (Sync API):
+   * a /triagem usa os três e o Worker tem limite de subrequisições.
+   */
+  async syncTriagem(): Promise<{
+    notes: TodoistComment[];
+    collaborators: TodoistPessoa[];
+    user: TodoistPessoa | null;
+  }> {
+    const body = new URLSearchParams({
+      sync_token: '*',
+      resource_types: '["notes","collaborators","user"]',
+    });
+    const res = await this.req<{
+      notes?: TodoistComment[];
+      collaborators?: TodoistPessoa[];
+      user?: TodoistPessoa;
+    }>('/sync', {
       method: 'POST',
       body: body.toString(),
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
-    return (res.notes ?? []).filter((n) => !n.is_deleted);
+    return {
+      notes: (res.notes ?? []).filter((n) => !n.is_deleted),
+      collaborators: res.collaborators ?? [],
+      user: res.user ?? null,
+    };
+  }
+
+  getTask(taskId: string): Promise<TodoistTask> {
+    return this.req<TodoistTask>(`/tasks/${encodeURIComponent(taskId)}`);
   }
 
   addTaskComment(taskId: string, content: string): Promise<TodoistComment> {
