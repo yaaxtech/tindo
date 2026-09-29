@@ -7,8 +7,9 @@ import {
   camposAlterados,
 } from '@/lib/triagem/comentario';
 import type { ItemRevisao, PainelRevisao } from '@/services/triagem-revisao';
-import { Check, RefreshCw } from 'lucide-react';
+import { Check, CheckCircle2, Info, Merge, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { ModalExcluir, ModalMesclar } from './Modais';
 
 const PRIORIDADES: Prioridade[] = ['P1', 'P2', 'P3', 'P4'];
 
@@ -36,6 +37,62 @@ function camposDe(item: ItemRevisao): CamposTriagem {
   };
 }
 
+const dataHora = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+function formatarData(iso: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : dataHora.format(d);
+}
+
+/** Detalhes da tarefa ao passar o mouse (ou tocar no ícone, no celular). */
+function Detalhes({ item }: { item: ItemRevisao }) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <span className="group relative inline-flex align-middle">
+      <button
+        type="button"
+        aria-label="Detalhes da tarefa"
+        onClick={() => setAberto((v) => !v)}
+        onBlur={() => setAberto(false)}
+        className="ml-1 text-text-muted hover:text-jade-accent"
+      >
+        <Info size={14} aria-hidden="true" />
+      </button>
+      <span
+        role="tooltip"
+        className={`${aberto ? 'block' : 'hidden'} absolute left-0 top-6 z-40 w-72 rounded-lg border border-border-strong bg-bg-deep p-3 text-xs text-text-secondary shadow-xl group-hover:block`}
+      >
+        <span className="block font-medium text-text-primary">{item.conteudo}</span>
+        {item.descricao && (
+          <span className="mt-1 block whitespace-pre-line text-text-muted">{item.descricao}</span>
+        )}
+        <span className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <span className="text-text-muted">Projeto</span>
+          <span>{item.projetoAtual}</span>
+          <span className="text-text-muted">Data</span>
+          <span>
+            {item.vencimentoTexto ?? formatarData(item.vencimento)}
+            {item.recorrente ? ' (recorrente)' : ''}
+          </span>
+          <span className="text-text-muted">Criada em</span>
+          <span>{formatarData(item.criadaEm)}</span>
+          <span className="text-text-muted">Criada por</span>
+          <span>{item.criadaPor ?? 'não sei'}</span>
+        </span>
+      </span>
+    </span>
+  );
+}
+
+export type AcaoCartao = 'concluir' | 'reabrir' | 'excluir' | 'mesclar';
+
 function lerEtiquetas(texto: string): string[] {
   return texto
     .split(',')
@@ -47,9 +104,13 @@ function CartaoItem({
   item,
   painel,
   aoSalvar,
+  aoAcao,
+  concluida,
 }: {
   item: ItemRevisao;
   painel: PainelRevisao;
+  aoAcao: (acao: AcaoCartao, item: ItemRevisao) => void;
+  concluida: boolean;
   aoSalvar: (tarefaId: string, campos: CamposTriagem, nota: string) => Promise<void>;
 }) {
   const [campos, setCampos] = useState<CamposTriagem>(() => camposDe(item));
@@ -91,7 +152,20 @@ function CartaoItem({
     <li className="rounded-lg border border-[#1B222C] bg-bg-elevated p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-medium text-text-primary">{item.conteudo}</p>
+          <p
+            className={
+              concluida
+                ? 'font-medium text-text-muted line-through'
+                : 'font-medium text-text-primary'
+            }
+          >
+            {item.conteudo}
+            <Detalhes item={item} />
+          </p>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Criada {formatarData(item.criadaEm)}
+            {item.criadaPor ? ` por ${item.criadaPor}` : ''} · {item.projetoAtual}
+          </p>
           {item.descricao && (
             <p className="mt-1 line-clamp-2 text-xs text-text-muted">{item.descricao}</p>
           )}
@@ -242,6 +316,45 @@ function CartaoItem({
           </div>
         </>
       )}
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#1B222C] pt-3 text-xs">
+        {concluida ? (
+          <button
+            type="button"
+            onClick={() => aoAcao('reabrir', item)}
+            className="flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-jade-accent"
+          >
+            <RotateCcw size={12} aria-hidden="true" /> Concluída. Desfazer
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => aoAcao('concluir', item)}
+              className="flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-jade-accent hover:text-jade-accent"
+            >
+              <CheckCircle2 size={12} aria-hidden="true" /> Concluir
+            </button>
+            <button
+              type="button"
+              onClick={() => aoAcao('mesclar', item)}
+              className={
+                s.duplicadoDe
+                  ? 'flex items-center gap-1 rounded-md border border-[#F2B94B]/60 px-2 py-1 text-[#F2B94B] hover:opacity-80'
+                  : 'flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-jade-accent'
+              }
+            >
+              <Merge size={12} aria-hidden="true" /> Mesclar
+            </button>
+            <button
+              type="button"
+              onClick={() => aoAcao('excluir', item)}
+              className="flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-[#E3546C] hover:text-[#E3546C]"
+            >
+              <Trash2 size={12} aria-hidden="true" /> Excluir
+            </button>
+          </>
+        )}
+      </div>
     </li>
   );
 }
@@ -250,6 +363,12 @@ export default function TriagemPage() {
   const [painel, setPainel] = useState<PainelRevisao | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [concluidas, setConcluidas] = useState<Set<string>>(new Set());
+  const [modal, setModal] = useState<{ tipo: 'excluir' | 'mesclar'; item: ItemRevisao } | null>(
+    null,
+  );
+  const [ocupado, setOcupado] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -290,6 +409,62 @@ export default function TriagemPage() {
     );
   }, []);
 
+  async function chamarAcao(corpo: Record<string, string>): Promise<boolean> {
+    setOcupado(true);
+    setAviso(null);
+    try {
+      const res = await fetch('/api/triagem/acao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(dados.erro ?? 'Não consegui falar com o Todoist agora.');
+      return true;
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'Não consegui falar com o Todoist agora.');
+      return false;
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  function tirarDaLista(...ids: string[]) {
+    setPainel((p) => (p ? { ...p, itens: p.itens.filter((i) => !ids.includes(i.tarefaId)) } : p));
+  }
+
+  async function aoAcao(acao: AcaoCartao, item: ItemRevisao) {
+    if (acao === 'excluir' || acao === 'mesclar') {
+      setModal({ tipo: acao, item });
+      return;
+    }
+    if (await chamarAcao({ acao, tarefaId: item.tarefaId })) {
+      setConcluidas((c) => {
+        const n = new Set(c);
+        if (acao === 'concluir') n.add(item.tarefaId);
+        else n.delete(item.tarefaId);
+        return n;
+      });
+    }
+  }
+
+  async function confirmarExcluir() {
+    if (!modal) return;
+    const id = modal.item.tarefaId;
+    if (await chamarAcao({ acao: 'excluir', tarefaId: id })) {
+      tirarDaLista(id);
+      setModal(null);
+    }
+  }
+
+  async function confirmarMesclar(ficaId: string, saiId: string) {
+    if (await chamarAcao({ acao: 'mesclar', tarefaId: ficaId, saiId })) {
+      tirarDaLista(saiId);
+      setModal(null);
+      setAviso('Tarefas mescladas.');
+    }
+  }
+
   const pendentes = painel?.itens.filter((i) => i.revisao === null) ?? [];
   const revisados = painel?.itens.filter((i) => i.revisao !== null) ?? [];
 
@@ -319,6 +494,25 @@ export default function TriagemPage() {
           {erro}
         </p>
       )}
+      {aviso && <output className="mt-4 block text-sm text-[#F2B94B]">{aviso}</output>}
+      {modal?.tipo === 'excluir' && (
+        <ModalExcluir
+          conteudo={modal.item.conteudo}
+          ocupado={ocupado}
+          onFechar={() => setModal(null)}
+          onConfirmar={() => void confirmarExcluir()}
+        />
+      )}
+      {modal?.tipo === 'mesclar' && painel && (
+        <ModalMesclar
+          atual={{ id: modal.item.tarefaId, conteudo: modal.item.conteudo }}
+          sugerida={modal.item.sugestao.duplicadoDe ?? null}
+          tarefas={painel.tarefas}
+          ocupado={ocupado}
+          onFechar={() => setModal(null)}
+          onConfirmar={(fica, sai) => void confirmarMesclar(fica, sai)}
+        />
+      )}
       {carregando && !painel && (
         <p className="mt-6 text-sm text-text-muted">Lendo as sugestões no seu Todoist…</p>
       )}
@@ -343,7 +537,14 @@ export default function TriagemPage() {
           )}
           <ul className="mt-4 space-y-3">
             {pendentes.map((i) => (
-              <CartaoItem key={i.tarefaId} item={i} painel={painel} aoSalvar={salvar} />
+              <CartaoItem
+                key={i.tarefaId}
+                item={i}
+                painel={painel}
+                aoSalvar={salvar}
+                aoAcao={aoAcao}
+                concluida={concluidas.has(i.tarefaId)}
+              />
             ))}
           </ul>
           {revisados.length > 0 && (
@@ -351,7 +552,14 @@ export default function TriagemPage() {
               <h2 className="mt-8 text-sm font-medium text-text-secondary">Já revisados</h2>
               <ul className="mt-3 space-y-3">
                 {revisados.map((i) => (
-                  <CartaoItem key={i.tarefaId} item={i} painel={painel} aoSalvar={salvar} />
+                  <CartaoItem
+                    key={i.tarefaId}
+                    item={i}
+                    painel={painel}
+                    aoSalvar={salvar}
+                    aoAcao={aoAcao}
+                    concluida={concluidas.has(i.tarefaId)}
+                  />
                 ))}
               </ul>
             </>

@@ -32,6 +32,8 @@ export interface SugestaoVigia extends CamposTriagem {
   confianca: number;
   porque: string;
   alerta?: string;
+  /** Id da tarefa que o vigia acha que é a mesma coisa (sugere mesclar). */
+  duplicadoDe?: string;
 }
 
 export interface RevisaoTinDo extends CamposTriagem {
@@ -94,6 +96,9 @@ export function lerComentario(texto: string): ComentarioTriagem | null {
         confianca: Number.isFinite(confianca) ? Math.min(1, Math.max(0, confianca)) : 0,
         porque: typeof obj.porque === 'string' ? obj.porque : '',
         ...(typeof obj.alerta === 'string' && obj.alerta ? { alerta: obj.alerta } : {}),
+        ...(typeof obj.duplicadoDe === 'string' && obj.duplicadoDe
+          ? { duplicadoDe: obj.duplicadoDe }
+          : {}),
       },
     };
   }
