@@ -6,9 +6,11 @@ import {
   type TipoItem,
   camposAlterados,
 } from '@/lib/triagem/comentario';
-import type { ItemRevisao, PainelRevisao } from '@/services/triagem-revisao';
-import { Check, CheckCircle2, Info, Merge, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
+import type { ItemRevisao, PainelRevisao, TarefaResumo } from '@/services/triagem-revisao';
+import { Check, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { type AcaoCartao, type AlvoAcao, BarraAcoes, Detalhes, formatarData } from './Comum';
+import { SecaoLembretes } from './Lembretes';
 import { ModalExcluir, ModalMesclar } from './Modais';
 
 const PRIORIDADES: Prioridade[] = ['P1', 'P2', 'P3', 'P4'];
@@ -37,61 +39,33 @@ function camposDe(item: ItemRevisao): CamposTriagem {
   };
 }
 
-const dataHora = new Intl.DateTimeFormat('pt-BR', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
-function formatarData(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : dataHora.format(d);
-}
-
-/** Detalhes da tarefa ao passar o mouse (ou tocar no ícone, no celular). */
-function Detalhes({ item }: { item: ItemRevisao }) {
-  const [aberto, setAberto] = useState(false);
+function CartaoSemSugestao({
+  item,
+  concluida,
+  aoAcao,
+}: {
+  item: TarefaResumo;
+  concluida: boolean;
+  aoAcao: (acao: AcaoCartao, alvo: AlvoAcao) => void;
+}) {
   return (
-    <span className="group relative inline-flex align-middle">
-      <button
-        type="button"
-        aria-label="Detalhes da tarefa"
-        onClick={() => setAberto((v) => !v)}
-        onBlur={() => setAberto(false)}
-        className="ml-1 text-text-muted hover:text-jade-accent"
+    <li className="rounded-lg border border-[#1B222C] bg-bg-elevated p-4">
+      <p
+        className={
+          concluida ? 'font-medium text-text-muted line-through' : 'font-medium text-text-primary'
+        }
       >
-        <Info size={14} aria-hidden="true" />
-      </button>
-      <span
-        role="tooltip"
-        className={`${aberto ? 'block' : 'hidden'} absolute left-0 top-6 z-40 w-72 rounded-lg border border-border-strong bg-bg-deep p-3 text-xs text-text-secondary shadow-xl group-hover:block`}
-      >
-        <span className="block font-medium text-text-primary">{item.conteudo}</span>
-        {item.descricao && (
-          <span className="mt-1 block whitespace-pre-line text-text-muted">{item.descricao}</span>
-        )}
-        <span className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-          <span className="text-text-muted">Projeto</span>
-          <span>{item.projetoAtual}</span>
-          <span className="text-text-muted">Data</span>
-          <span>
-            {item.vencimentoTexto ?? formatarData(item.vencimento)}
-            {item.recorrente ? ' (recorrente)' : ''}
-          </span>
-          <span className="text-text-muted">Criada em</span>
-          <span>{formatarData(item.criadaEm)}</span>
-          <span className="text-text-muted">Criada por</span>
-          <span>{item.criadaPor ?? 'não sei'}</span>
-        </span>
-      </span>
-    </span>
+        {item.conteudo}
+        <Detalhes item={item} />
+      </p>
+      <p className="mt-0.5 text-xs text-text-muted">
+        Criada {formatarData(item.criadaEm)}
+        {item.criadaPor ? ` por ${item.criadaPor}` : ''} · ainda sem sugestão do vigia
+      </p>
+      <BarraAcoes alvo={item} concluida={concluida} aoAcao={aoAcao} />
+    </li>
   );
 }
-
-export type AcaoCartao = 'concluir' | 'reabrir' | 'excluir' | 'mesclar';
 
 function lerEtiquetas(texto: string): string[] {
   return texto
@@ -109,7 +83,7 @@ function CartaoItem({
 }: {
   item: ItemRevisao;
   painel: PainelRevisao;
-  aoAcao: (acao: AcaoCartao, item: ItemRevisao) => void;
+  aoAcao: (acao: AcaoCartao, alvo: AlvoAcao) => void;
   concluida: boolean;
   aoSalvar: (tarefaId: string, campos: CamposTriagem, nota: string) => Promise<void>;
 }) {
@@ -316,45 +290,11 @@ function CartaoItem({
           </div>
         </>
       )}
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#1B222C] pt-3 text-xs">
-        {concluida ? (
-          <button
-            type="button"
-            onClick={() => aoAcao('reabrir', item)}
-            className="flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-jade-accent"
-          >
-            <RotateCcw size={12} aria-hidden="true" /> Concluída. Desfazer
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => aoAcao('concluir', item)}
-              className="flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-jade-accent hover:text-jade-accent"
-            >
-              <CheckCircle2 size={12} aria-hidden="true" /> Concluir
-            </button>
-            <button
-              type="button"
-              onClick={() => aoAcao('mesclar', item)}
-              className={
-                s.duplicadoDe
-                  ? 'flex items-center gap-1 rounded-md border border-[#F2B94B]/60 px-2 py-1 text-[#F2B94B] hover:opacity-80'
-                  : 'flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-jade-accent'
-              }
-            >
-              <Merge size={12} aria-hidden="true" /> Mesclar
-            </button>
-            <button
-              type="button"
-              onClick={() => aoAcao('excluir', item)}
-              className="flex items-center gap-1 rounded-md border border-border-strong px-2 py-1 hover:border-[#E3546C] hover:text-[#E3546C]"
-            >
-              <Trash2 size={12} aria-hidden="true" /> Excluir
-            </button>
-          </>
-        )}
-      </div>
+      <BarraAcoes
+        alvo={{ tarefaId: item.tarefaId, conteudo: item.conteudo, duplicadoDe: s.duplicadoDe }}
+        concluida={concluida}
+        aoAcao={aoAcao}
+      />
     </li>
   );
 }
@@ -364,9 +304,7 @@ export default function TriagemPage() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [concluidas, setConcluidas] = useState<Set<string>>(new Set());
-  const [modal, setModal] = useState<{ tipo: 'excluir' | 'mesclar'; item: ItemRevisao } | null>(
-    null,
-  );
+  const [modal, setModal] = useState<{ tipo: 'excluir' | 'mesclar'; item: AlvoAcao } | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -409,7 +347,9 @@ export default function TriagemPage() {
     );
   }, []);
 
-  async function chamarAcao(corpo: Record<string, string>): Promise<boolean> {
+  async function chamarAcao(
+    corpo: Record<string, string>,
+  ): Promise<Record<string, unknown> | null> {
     setOcupado(true);
     setAviso(null);
     try {
@@ -420,20 +360,30 @@ export default function TriagemPage() {
       });
       const dados = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(dados.erro ?? 'Não consegui falar com o Todoist agora.');
-      return true;
+      return dados as Record<string, unknown>;
     } catch (e) {
       setAviso(e instanceof Error ? e.message : 'Não consegui falar com o Todoist agora.');
-      return false;
+      return null;
     } finally {
       setOcupado(false);
     }
   }
 
   function tirarDaLista(...ids: string[]) {
-    setPainel((p) => (p ? { ...p, itens: p.itens.filter((i) => !ids.includes(i.tarefaId)) } : p));
+    const fica = (i: { tarefaId: string }) => !ids.includes(i.tarefaId);
+    setPainel((p) =>
+      p
+        ? {
+            ...p,
+            itens: p.itens.filter(fica),
+            semClassificacao: p.semClassificacao.filter(fica),
+            lembretes: p.lembretes.filter(fica),
+          }
+        : p,
+    );
   }
 
-  async function aoAcao(acao: AcaoCartao, item: ItemRevisao) {
+  async function aoAcao(acao: AcaoCartao, item: AlvoAcao) {
     if (acao === 'excluir' || acao === 'mesclar') {
       setModal({ tipo: acao, item });
       return;
@@ -463,6 +413,13 @@ export default function TriagemPage() {
       setModal(null);
       setAviso('Tarefas mescladas.');
     }
+  }
+
+  async function adiar(tarefaId: string, opcao: string, data?: string): Promise<string | null> {
+    const corpo: Record<string, string> = { acao: 'adiar', tarefaId, opcao };
+    if (data) corpo.data = data;
+    const dados = await chamarAcao(corpo);
+    return typeof dados?.para === 'string' ? dados.para : null;
   }
 
   const pendentes = painel?.itens.filter((i) => i.revisao === null) ?? [];
@@ -506,7 +463,7 @@ export default function TriagemPage() {
       {modal?.tipo === 'mesclar' && painel && (
         <ModalMesclar
           atual={{ id: modal.item.tarefaId, conteudo: modal.item.conteudo }}
-          sugerida={modal.item.sugestao.duplicadoDe ?? null}
+          sugerida={modal.item.duplicadoDe ?? null}
           tarefas={painel.tarefas}
           ocupado={ocupado}
           onFechar={() => setModal(null)}
@@ -547,6 +504,23 @@ export default function TriagemPage() {
               />
             ))}
           </ul>
+          {painel.semClassificacao.length > 0 && (
+            <>
+              <h2 className="mt-8 text-sm font-medium text-text-secondary">
+                Sem classificação ({painel.semClassificacao.length})
+              </h2>
+              <ul className="mt-3 space-y-3">
+                {painel.semClassificacao.map((i) => (
+                  <CartaoSemSugestao
+                    key={i.tarefaId}
+                    item={i}
+                    concluida={concluidas.has(i.tarefaId)}
+                    aoAcao={aoAcao}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
           {revisados.length > 0 && (
             <>
               <h2 className="mt-8 text-sm font-medium text-text-secondary">Já revisados</h2>
@@ -564,6 +538,12 @@ export default function TriagemPage() {
               </ul>
             </>
           )}
+          <SecaoLembretes
+            lembretes={painel.lembretes}
+            concluidas={concluidas}
+            aoAcao={aoAcao}
+            aoAdiar={adiar}
+          />
         </>
       )}
     </div>
