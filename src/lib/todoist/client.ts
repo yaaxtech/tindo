@@ -219,6 +219,19 @@ export class TodoistClient {
     };
   }
 
+  /** Um comando da Sync API (ex.: `item_update`); lança se o Todoist recusar. */
+  async syncComando(type: string, args: Record<string, unknown>): Promise<void> {
+    const uuid = crypto.randomUUID();
+    const body = new URLSearchParams({ commands: JSON.stringify([{ type, uuid, args }]) });
+    const res = await this.req<{ sync_status?: Record<string, unknown> }>('/sync', {
+      method: 'POST',
+      body: body.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    const status = res.sync_status?.[uuid];
+    if (status !== 'ok') throw new Error(`Todoist sync ${type} → ${JSON.stringify(status)}`);
+  }
+
   getTask(taskId: string): Promise<TodoistTask> {
     return this.req<TodoistTask>(`/tasks/${encodeURIComponent(taskId)}`);
   }
