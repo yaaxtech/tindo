@@ -604,6 +604,8 @@ export interface AreaV2 {
   risco: boolean;
   meta_ok1: number;
   titular: DegrauV2;
+  /** Titular ChatGPT desligado (modo só Claude). */
+  desligado?: DegrauV2 | null;
   fallback: DegrauV2 | null;
   teto: DegrauV2 | null;
   escada: DegrauV2[];

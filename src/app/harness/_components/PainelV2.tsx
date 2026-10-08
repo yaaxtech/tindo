@@ -334,6 +334,73 @@ function Atencao({ s, r }: { s: HarnessV2; r?: RespostasDonoProps }) {
   );
 }
 
+function NomeArea({ a }: { a: AreaV2 }) {
+  return (
+    <div>
+      <p className="font-medium text-text-primary">
+        {a.nome}
+        {a.risco && <span className="ml-1 text-xs text-warning">risco</span>}
+      </p>
+      <p className="text-xs text-text-muted">{a.descricao}</p>
+    </div>
+  );
+}
+
+function Ok1({ a }: { a: AreaV2 }) {
+  return (
+    <>
+      <span
+        className={cn(
+          a.ok1 == null ? 'text-text-muted' : a.ok1 >= a.meta_ok1 ? 'text-success' : 'text-danger',
+        )}
+      >
+        {fmtPct(a.ok1)}
+      </span>
+      <span className="block text-xs text-text-muted">meta {fmtPct(a.meta_ok1)}</span>
+    </>
+  );
+}
+
+function Tarefas({ a }: { a: AreaV2 }) {
+  return (
+    <>
+      {fmtInt(a.n)}
+      <span className="block text-xs text-text-muted">{fmtInt(a.julgados)} julgadas</span>
+    </>
+  );
+}
+
+function Custo({ a }: { a: AreaV2 }) {
+  return (
+    <>
+      {fmtTokens(a.tokens_saida_mediana)}
+      <span className="block text-xs text-text-muted">
+        {fmtDuracao(a.duracao_mediana_s)} por tarefa
+      </span>
+    </>
+  );
+}
+
+function Modelos({ a }: { a: AreaV2 }) {
+  return (
+    <div className="space-y-1">
+      <Degrau d={a.titular} />
+      {a.desligado && (
+        <p className="text-xs text-text-muted">
+          {NOME_PROVEDOR[a.desligado.provedor] ?? a.desligado.provedor} desligado:{' '}
+          <span className="line-through">{a.desligado.rotulo}</span>
+        </p>
+      )}
+      <p className="flex flex-wrap items-center gap-1 text-xs text-text-muted">
+        Reserva <Degrau d={a.fallback} />
+      </p>
+      <p className="flex flex-wrap items-center gap-1 text-xs text-text-muted">
+        Teto <Degrau d={a.teto} />
+      </p>
+    </div>
+  );
+}
+
 function Mapa({ areas }: { areas: AreaV2[] }) {
   return (
     <Secao
@@ -349,18 +416,19 @@ function Mapa({ areas }: { areas: AreaV2[] }) {
           <span className="h-2 w-2 rounded-full bg-info" /> ChatGPT
         </span>
       </div>
-      <Rolavel rotulo="Tabela do mapa por área">
-        <table className="w-full min-w-[760px] text-left text-sm">
+      <section
+        aria-label="Tabela do mapa por área"
+        className="hidden overflow-x-auto rounded-xl border border-border bg-bg-elevated sm:block"
+      >
+        <table className="w-full text-left text-sm">
           <thead className="text-xs text-text-muted">
             <tr className="border-b border-border">
               <th className="p-2 font-medium">Área</th>
               <th className="p-2 font-medium">Estado</th>
-              <th className="p-2 font-medium">Quem faz</th>
-              <th className="p-2 font-medium">Reserva (outra assinatura)</th>
-              <th className="p-2 font-medium">Teto</th>
               <th className="p-2 text-right font-medium">Certo de primeira</th>
+              <th className="p-2 font-medium">Modelos</th>
               <th className="p-2 text-right font-medium">Tarefas</th>
-              <th className="p-2 text-right font-medium">Custo (tokens de saída)</th>
+              <th className="p-2 text-right font-medium">Custo</th>
             </tr>
           </thead>
           <tbody>
@@ -368,58 +436,64 @@ function Mapa({ areas }: { areas: AreaV2[] }) {
               <tr
                 key={a.id}
                 data-testid={`area-${a.id}`}
-                className="border-b border-border last:border-0"
+                className="border-b border-border align-top last:border-0"
               >
                 <td className="p-2">
-                  <p className="font-medium text-text-primary">
-                    {a.nome}
-                    {a.risco && <span className="ml-1 text-xs text-warning">risco</span>}
-                  </p>
-                  <p className="text-xs text-text-muted">{a.descricao}</p>
+                  <NomeArea a={a} />
                 </td>
                 <td className="p-2">
                   <ChipEstado estado={a.estado} />
                 </td>
-                <td className="p-2">
-                  <Degrau d={a.titular} />
-                </td>
-                <td className="p-2">
-                  <Degrau d={a.fallback} />
-                </td>
-                <td className="p-2">
-                  <Degrau d={a.teto} />
-                </td>
                 <td className="p-2 text-right tabular-nums">
-                  <span
-                    className={cn(
-                      a.ok1 == null
-                        ? 'text-text-muted'
-                        : a.ok1 >= a.meta_ok1
-                          ? 'text-success'
-                          : 'text-danger',
-                    )}
-                  >
-                    {fmtPct(a.ok1)}
-                  </span>
-                  <span className="block text-xs text-text-muted">meta {fmtPct(a.meta_ok1)}</span>
+                  <Ok1 a={a} />
+                </td>
+                <td className="p-2">
+                  <Modelos a={a} />
                 </td>
                 <td className="p-2 text-right tabular-nums text-text-secondary">
-                  {fmtInt(a.n)}
-                  <span className="block text-xs text-text-muted">
-                    {fmtInt(a.julgados)} julgadas
-                  </span>
+                  <Tarefas a={a} />
                 </td>
                 <td className="p-2 text-right tabular-nums text-text-secondary">
-                  {fmtTokens(a.tokens_saida_mediana)}
-                  <span className="block text-xs text-text-muted">
-                    {fmtDuracao(a.duracao_mediana_s)} por tarefa
-                  </span>
+                  <Custo a={a} />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </Rolavel>
+      </section>
+      <ul className="space-y-3 sm:hidden" aria-label="Mapa por área em cartões">
+        {areas.map((a) => (
+          <li key={a.id} data-testid={`cartao-area-${a.id}`}>
+            <Cartao className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <NomeArea a={a} />
+                <ChipEstado estado={a.estado} />
+              </div>
+              <Modelos a={a} />
+              <dl className="grid grid-cols-3 gap-2 border-t border-border pt-3 tabular-nums">
+                <div>
+                  <dt className="text-xs text-text-muted">Certo de primeira</dt>
+                  <dd>
+                    <Ok1 a={a} />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Tarefas</dt>
+                  <dd className="text-text-secondary">
+                    <Tarefas a={a} />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Custo</dt>
+                  <dd className="text-text-secondary">
+                    <Custo a={a} />
+                  </dd>
+                </div>
+              </dl>
+            </Cartao>
+          </li>
+        ))}
+      </ul>
     </Secao>
   );
 }
