@@ -25,7 +25,8 @@ describe('/harness v2', () => {
       'Para IAs',
     ]);
     expect(screen.getAllByTestId(/^area-/)).toHaveLength(8);
-    expect(screen.getByText('Quer subir')).toBeTruthy();
+    // tabela (sm+) e cartões (mobile) coexistem no DOM; o CSS escolhe qual aparece
+    expect(screen.getAllByText('Quer subir').length).toBeGreaterThan(0);
   });
 
   it('atenção vazia mostra estado positivo', () => {
@@ -38,6 +39,28 @@ describe('/harness v2', () => {
     const cerebro = screen.getByTestId('area-cerebro');
     expect(within(cerebro).getAllByText('—').length).toBeGreaterThan(0);
     expect(within(cerebro).queryByText('0,0%')).toBeNull();
+  });
+
+  it('mapa mostra modelo desligado e traço para reserva/teto nulos', () => {
+    const areas = base.areas.map((a, i) =>
+      i === 0
+        ? {
+            ...a,
+            fallback: null,
+            teto: null,
+            desligado: {
+              provedor: 'codex',
+              modelo: 'gpt-6-luna',
+              effort: 'high',
+              rotulo: 'gpt-6-luna high',
+            },
+          }
+        : a,
+    );
+    renderV2({ ...base, areas });
+    const linha = screen.getByTestId(`area-${areas[0]?.id}`);
+    expect(within(linha).getByText('gpt-6-luna high')).toBeTruthy();
+    expect(within(linha).getAllByText('—').length).toBeGreaterThanOrEqual(2);
   });
 
   it('snapshot antigo mostra aviso em vez de quebrar', () => {
