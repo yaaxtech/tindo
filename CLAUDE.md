@@ -20,8 +20,9 @@ Se houver conflito entre documentos, PARE e avise.
 > poucas linhas, o detalhe numa skill/doc citada. Antes de escrever um gotcha,
 > pergunte: existe um CHECK de máquina (lint, teste, reviewer) que pega a
 > classe inteira do erro? Se existe, instale o check E escreva o gotcha. Nada
-> nasce gotcha por precaução — só por repetição ou incidente caro real (ver
-> `.claude/memoria-ciclo-de-vida.md`).
+> nasce gotcha por precaução — só por repetição ou incidente caro real.
+> Este repo NÃO tem `.claude/skills`, `agents`, hooks nem loops: o detalhe de
+> um gotcha vai para `docs/` ou para o CLAUDE.md do subdiretório.
 
 *(sem gotchas registrados ainda)*
 
@@ -77,9 +78,11 @@ final e precisa poder chamar a qualquer momento.
   Agent), que reacorda a sessão ao concluir. (b) Ao encerrar turno com worker
   externo rodando, deixar wake-up de segurança agendado (~20min). (c) Turno
   nunca termina em "vou despachar X": despacha ANTES de encerrar.
-- **Orquestração de workers** (Codex/Kimi/Claude, escadinha de quota, ledger
-  de despachos) segue o regime do `~/.claude/CLAUDE.md` global — nada
-  duplicado aqui, pra não desatualizar se o global mudar.
+- **Orquestração de workers** (Codex/Claude, roteamento por tipo de tarefa,
+  ledger de despachos) vive FORA deste repo (`~/.claude/orquestracao/` no Mac
+  do dono); a cópia revisável do runtime está em `scripts/harness/runtime/` e
+  o painel em `/harness`. Sem esse ambiente, nada disto se aplica: trabalhe
+  como sessão única.
 
 ---
 
@@ -194,9 +197,13 @@ aceita opções sem ler.
   ponta-a-ponta), `PERGUNTAS_ABERTAS.md` (decisões pendentes) e
   `docs/09_ROADMAP.md` (fase atual + checklist) — mantenha-os atualizados ao
   fechar uma frente para que compactar/abrir janela nova NUNCA perca contexto.
-- **Avisar o momento de fechar:** frente terminada, assunto pivotou, ou o
-  histórico virou peso morto → 1 linha: "pode compactar" / "pode abrir janela
-  nova". O gerenciamento em si segue silencioso.
+- **Nunca peça ao dono para compactar ou abrir janela nova** (mesma regra do
+  SeuCamarão, dono 2026-09-23): atualize as âncoras e siga; o auto-compact
+  cuida do resto. Frente fechada = âncoras atualizadas + os 3 blocos de fim de
+  tarefa, e a próxima continua na mesma janela.
+- **`ESTADO_ATUAL.md` está datado de 2026-04-18** e descreve swipe e login que
+  já mudaram: até ser regenerado, trate-o como histórico e confie no código e
+  em `docs/09_ROADMAP.md`.
 
 ---
 
@@ -225,7 +232,7 @@ aceita opções sem ler.
 | Framework | Next.js 15 (App Router, RSC) |
 | Runtime / Package | Bun |
 | Linguagem | TypeScript 5.3+ (`strict: true` sempre) |
-| UI | Tailwind CSS + shadcn/ui |
+| UI | Tailwind CSS, componentes custom leves (sem shadcn/Radix instalado — `package.json` não tem `@radix-ui/*`) |
 | Estado client | Zustand |
 | Animação | Framer Motion |
 | Áudio | Tone.js |
@@ -294,8 +301,7 @@ Login → Fila priorizada (cards) → Ação (concluir/pular/voltar/adiar) → P
 - **Ctrl+Z / Cmd+Z** → desfazer último adiamento
 
 A animação visual do card é SEMPRE igual entre swipe e teclado equivalentes: avançar faz carta voar pra esquerda; voltar faz carta voar pra direita.
-
-Histórico: original 2026-04-17 era ←avançar/→voltar. Invertida (B) na manhã 2026-04-20. Revertida Tinder-like na tarde 2026-04-20. Final: mobile Tinder + teclado browser (convenção híbrida).
+(A convenção mudou duas vezes em 2026-04 antes de fechar; o histórico está no git, não aqui.)
 
 ### Botões do card
 - Concluir ✓ (com animação viciante)
@@ -357,38 +363,52 @@ WITH CHECK (usuario_id = auth.uid())
 
 ## ARQUITETURA FRONTEND
 
-### Rotas (App Router)
+> Regenerado do código em 2026-10-25 (`find src/app -name page.tsx`,
+> `ls src/services src/stores src/components/*`). Se esta lista divergir do
+> disco, o disco vence — e esta seção precisa ser regenerada, não remendada.
+
+### Rotas (App Router) — `src/app/**/page.tsx`
 ```
-/                          → redirect /cards (se logado) ou /login
-/login                     → Supabase Auth
-/cadastro                  → criar conta
-/cards                     → tela principal (card swipeable)
-/tarefas                   → lista, filtros, busca
-/tarefas/[id]              → detalhe (edit)
-/projetos                  → gerenciar projetos (ordem + multiplicador)
-/tags                      → gerenciar tags (tipo de peso + valor)
-/gamificacao               → streak, XP, nível, heatmap
-/conquistas                → badges
-/calibracao                → wizard inicial e recalibrações
-/configuracoes             → abas: Perfil, Scoring, Todoist, IA, Notificações, Privacidade
+/                                   → redirect /cards (logado) ou /login
+/login  /cadastro  /recuperar-senha  /nova-senha  /acesso-restrito
+/cards                              → tela principal (card swipeable)
+/tarefas                            → lista, filtros, busca
+/triagem                            → triagem da Inbox do Todoist com IA
+/sugestoes  /sugestoes-ia           → sugestões (adiamento / IA)
+/projetos  /tags  /espacos-trabalho
+/gamificacao                        → streak, XP, nível, heatmap, adiamento
+/calibracao  /recalibrar            → wizard inicial e recalibrações
+/configuracoes                      → abas; /configuracoes/todoist/{status,importar,exportar}
+/docs  /docs/compartilhado/[token]  /docs/compartilhados/[id]   → RoadmapMind (editor de docs/mapa)
+/harness                            → painel de telemetria da orquestração (não é produto)
 ```
+Rotas de API em `src/app/api/**/route.ts` (kernel `rotaApi`, ver
+`src/app/api/CLAUDE.md`): `ai/*`, `triagem/*`, `sugestoes-ai/*`, `adiamento/*`,
+`recalibrar/*`, `gamificacao/*`, `push/*`, `docs/*`, `cron/diario`, `fila`,
+`tarefas`, `projetos`, `tags`, `perfil`, `configuracoes`, `calibracao`,
+`espacos-trabalho`, `recalcular-notas`.
 
 ### Camada de serviços (`src/services/`)
-- `tarefas.ts`, `lembretes.ts`, `projetos.ts`, `tags.ts`
-- `gamificacao.ts`, `calibracao.ts`, `historico.ts`
-- `todoist.ts`, `ai.ts`
+`tarefas`, `ai` (classificar/quebrar/sugerir), `autoClassificar`, `triagem`,
+`triagem-revisao`, `adiamento-etiquetas`, `kpis-adiamento`, `calibracao`,
+`gamificacao`, `perfil`, `auth`, `email`, `push`, `publico`, `compartilhar`,
+`doc`, `doc-markdown`, `todoistWriteback`, `harness`, `harness-servidor`.
+Regras da camada: `src/services/CLAUDE.md`.
 
 ### Componentes críticos
-- `TaskCard` — swipe + keyboard + botões
-- `SwipeHandler` — gesto Framer Motion
-- `CompletionCelebration` — som + confetti + scale
-- `AdiamentoNivel2` — segundo swipe pra adiar manual
-- `KpiTile`, `StreakBadge`, `HeatmapGrafico`
+- `card/`: `TaskCard` (swipe + teclado + botões), `SwipeHandler` (gesto Framer
+  Motion), `CardStack`, `AdiamentoNivel2` (2º nível do adiar), `TarefaModal`,
+  `EditarDataPopover`, `ContadorLembretes`
+- `celebration/CompletionCelebration` — som + confetti + scale
+- `gamificacao/AdiamentoTab`
+- casca: `AppShell`, `Sidebar`, `BottomNav`, `MobileHeader`, `BotaoSync`,
+  `RecalibracaoBanner`, `Toaster`
 
-### Estado (Zustand)
+### Estado (Zustand, `src/stores/`)
 - `useCardStackStore` — fila atual, índice, histórico
 - `useGamificacaoStore` — streak, XP, nível, conquistas
-- `useConfigStore` — pesos de scoring, limiares
+- `useTinDoMenuStore` — menu; `useToasts` — toasts
+(pesos de scoring e limiares vêm de `configuracoes` via serviço, não de store.)
 
 ---
 

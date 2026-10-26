@@ -110,7 +110,7 @@ tindo/
 │   │   │   ├── mapper.ts        # todoist ↔ tindo schema
 │   │   │   └── sync.ts          # orquestra pull/push
 │   │   └── ai/
-│   │       ├── claude.ts        # SDK Anthropic
+│   │       ├── cliente-claude.ts        # SDK Anthropic
 │   │       └── prompts.ts
 │   ├── services/
 │   │   ├── tarefas.ts

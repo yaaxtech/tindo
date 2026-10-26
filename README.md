@@ -11,7 +11,7 @@ Inspirado na UX do Tinder: foco absoluto no item mais importante agora.
 | Framework | Next.js 15 (App Router, RSC) |
 | Runtime / Package | Bun |
 | Linguagem | TypeScript 5.3+ (strict) |
-| UI | Tailwind CSS + shadcn/ui |
+| UI | Tailwind CSS (componentes custom; sem shadcn/Radix) |
 | Estado client | Zustand |
 | Animação | Framer Motion |
 | Áudio | Tone.js |

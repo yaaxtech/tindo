@@ -1,3 +1,10 @@
+> ⚠️ **Portado do SeuCamarão (2026-07-30) e ainda não adaptado (2026-10-25).**
+> Cita `.claude/skills/`, `.claude/reflections/`, `stop-reflect.sh`, loops
+> L3/L10 e `migration-reviewer` — nada disso existe no TinDo. Vale aqui só o
+> PRINCÍPIO (o que vira gotcha, o que vira doc, o que decai); os mecanismos
+> citados são do outro repo. Adaptar ou apagar quando o TinDo ganhar harness
+> próprio.
+
 # Ciclo de vida da memória do harness — retenção, decaimento, promoção
 
 > Origem: auditoria ultracode de 2026-07-12 (23 agentes + verificação

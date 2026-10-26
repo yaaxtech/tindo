@@ -257,8 +257,10 @@ CREATE TABLE public.configuracoes (
   todoist_sync_habilitado boolean NOT NULL DEFAULT false,
   -- IA
   ai_habilitado boolean NOT NULL DEFAULT false,
-  ai_modelo_classificacao varchar(50) NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
-  ai_modelo_analise varchar(50) NOT NULL DEFAULT 'claude-sonnet-4-6',
+  -- ai_modelo_classificacao / ai_modelo_analise: colunas da migration
+  -- 20260417000007, SUPERADAS por `ai_modelo` (20260419000001). Ainda
+  -- existem no banco e em `src/types/database.ts`, mas nenhum código lê.
+  ai_modelo varchar(40) NOT NULL DEFAULT 'claude-sonnet-4-6',
   -- Critérios de sucesso (respostas da calibração inicial)
   criterios_sucesso jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
