@@ -350,3 +350,58 @@ export function montarPromptClassificacao(ctx: ContextoClassificacao): {
     tool: TOOL_CLASSIFICAR_TAREFA,
   };
 }
+
+export const TOOL_CLASSIFICAR_LOTE = {
+  name: 'classificar_lote',
+  description: 'Classifica várias tarefas de uma vez, uma classificação por id.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      classificacoes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'id da tarefa, exatamente como recebido.' },
+            ...TOOL_CLASSIFICAR_TAREFA.input_schema.properties,
+          },
+          required: ['id', ...TOOL_CLASSIFICAR_TAREFA.input_schema.required],
+        },
+      },
+    },
+    required: ['classificacoes'],
+  },
+} as const;
+
+export interface ContextoClassificacaoLote {
+  criteriosSucesso?: Record<string, unknown> | null;
+  projetos: Projeto[];
+  tags: Tag[];
+  tarefas: Array<{ id: string; titulo: string; descricao?: string | null }>;
+}
+
+export function montarPromptClassificacaoLote(ctx: ContextoClassificacaoLote): {
+  system: Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }>;
+  userMessage: string;
+  tool: typeof TOOL_CLASSIFICAR_LOTE;
+} {
+  const lines: string[] = [
+    'Classifique estas tarefas. Devolva exatamente uma entrada em classificacoes para cada id, com o id exato:',
+  ];
+
+  for (const t of ctx.tarefas) {
+    lines.push(
+      `- id=${t.id} | Título: ${t.titulo}${t.descricao ? ` | Descrição: ${t.descricao}` : ''}`,
+    );
+  }
+
+  return {
+    system: montarSystem({
+      criteriosSucesso: ctx.criteriosSucesso,
+      projetos: ctx.projetos,
+      tags: ctx.tags,
+    }),
+    userMessage: lines.join('\n'),
+    tool: TOOL_CLASSIFICAR_LOTE,
+  };
+}
