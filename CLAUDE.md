@@ -222,7 +222,7 @@ aceita opções sem ler.
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Framework | Next.js 15 (App Router, RSC) |
+| Framework | Next.js 16 (App Router, RSC) — 15 saiu do suporte e o OpenNext recusa (dono, 2026-11-03) |
 | Runtime / Package | Bun |
 | Linguagem | TypeScript 5.3+ (`strict: true` sempre) |
 | UI | Tailwind CSS + shadcn/ui |
