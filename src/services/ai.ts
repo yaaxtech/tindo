@@ -157,7 +157,9 @@ export async function classificarBatch(
 
   // Elemento nulo ou sem objeto vindo da IA é ignorado: o item dele cai em "ausente".
   const porId = new Map(
-    chamada.itens.filter((item) => item && typeof item === 'object').map((item) => [String(item.id), item]),
+    chamada.itens
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => [String(item.id), item]),
   );
   const usage = {
     input_tokens: Math.round(chamada.usage.input_tokens / fatia.length),
