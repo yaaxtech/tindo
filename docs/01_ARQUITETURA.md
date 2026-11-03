@@ -4,7 +4,7 @@
 
 | Camada | Tecnologia | Por quê |
 |--------|-----------|---------|
-| Framework | Next.js 15 (App Router) | RSC, streaming, roteamento mature, deploy Cloudflare nativo |
+| Framework | Next.js 16 (App Router) | RSC, streaming, roteamento mature, deploy Cloudflare nativo |
 | Runtime / Package | Bun | Rápido, install rápido, é o que o usuário usa |
 | Linguagem | TypeScript 5.3+ strict | Sem gambiarra runtime; tipos servem de documentação |
 | UI kit | shadcn/ui + Tailwind | Componentes baixo-nível, customizáveis, sem lock-in |
