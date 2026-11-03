@@ -1,11 +1,13 @@
 import { criarClienteClaude } from '@/lib/ai/cliente-claude';
 import {
+  type Classificacao,
   type ClassificacaoMeta,
   type ContextoClassificacao,
   type ContextoQuebra,
   type ContextoSugestoes,
   type Sugestao,
   montarPromptClassificacao,
+  montarPromptClassificacaoLote,
   montarPromptQuebra,
   montarPromptSugestoes,
 } from '@/lib/ai/prompts';
@@ -135,37 +137,99 @@ export async function quebrarTarefa(input: QuebrarTarefaInput): Promise<QuebraTa
 }
 
 // ---------------------------------------------------------------------------
-// classificarBatch — processa até 20 tarefas em série (rate-limit safe)
+// classificarBatch — até 20 tarefas em UMA chamada à API
 // ---------------------------------------------------------------------------
 
 export async function classificarBatch(
   tarefas: BatchItemInput[],
   opts?: { apiKey?: string; modelo?: string; projetos?: Projeto[]; tags?: Tag[] },
 ): Promise<ClassificarBatchResult> {
-  const limite = Math.min(tarefas.length, 20);
-  const fatia = tarefas.slice(0, limite);
-  const resultados: BatchItemResultado[] = [];
+  const fatia = tarefas.slice(0, Math.min(tarefas.length, 20));
+  if (fatia.length === 0) return { resultados: [] };
 
-  for (const t of fatia) {
-    try {
-      const classificacao = await classificarTarefa({
-        titulo: t.titulo,
-        descricao: t.descricao,
-        apiKey: opts?.apiKey,
-        modelo: opts?.modelo,
-        projetos: opts?.projetos ?? [],
-        tags: opts?.tags ?? [],
-      });
-      resultados.push({ id: t.id, classificacao });
-    } catch (err) {
-      resultados.push({
-        id: t.id,
-        erro: err instanceof Error ? err.message : 'Erro desconhecido',
-      });
-    }
+  let chamada: { itens: Record<string, unknown>[]; usage: ClassificacaoMeta['usage'] };
+  try {
+    chamada = await chamarClassificacaoLote(fatia, opts);
+  } catch (err) {
+    const erro = err instanceof Error ? err.message : 'Erro desconhecido';
+    return { resultados: fatia.map((t) => ({ id: t.id, erro })) };
   }
 
+  // Elemento nulo ou sem objeto vindo da IA é ignorado: o item dele cai em "ausente".
+  const porId = new Map(
+    chamada.itens
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => [String(item.id), item]),
+  );
+  const usage = {
+    input_tokens: Math.round(chamada.usage.input_tokens / fatia.length),
+    output_tokens: Math.round(chamada.usage.output_tokens / fatia.length),
+    cache_creation_input_tokens: Math.round(
+      chamada.usage.cache_creation_input_tokens / fatia.length,
+    ),
+    cache_read_input_tokens: Math.round(chamada.usage.cache_read_input_tokens / fatia.length),
+  };
+
+  const resultados = fatia.map((t): BatchItemResultado => {
+    const item = porId.get(t.id);
+    if (!item) return { id: t.id, erro: 'Item ausente na resposta da IA' };
+    try {
+      return { id: t.id, classificacao: { ...normalizarClassificacao(item), usage } };
+    } catch (err) {
+      return { id: t.id, erro: err instanceof Error ? err.message : 'Erro desconhecido' };
+    }
+  });
+
   return { resultados };
+}
+
+async function chamarClassificacaoLote(
+  fatia: BatchItemInput[],
+  opts?: { apiKey?: string; modelo?: string; projetos?: Projeto[]; tags?: Tag[] },
+): Promise<{ itens: Record<string, unknown>[]; usage: ClassificacaoMeta['usage'] }> {
+  const resolvedKey = opts?.apiKey ?? process.env.ANTHROPIC_API_KEY;
+  if (!resolvedKey) {
+    throw new ErroValidacao(
+      'Configure sua chave Claude em /configuracoes para usar a classificação por IA.',
+    );
+  }
+
+  const anthropic = criarClienteClaude(resolvedKey);
+  const { system, userMessage, tool } = montarPromptClassificacaoLote({
+    tarefas: fatia,
+    projetos: opts?.projetos ?? [],
+    tags: opts?.tags ?? [],
+  });
+
+  const response = await anthropic.messages.create({
+    model: opts?.modelo ?? MODELO_DEFAULT,
+    max_tokens: MAX_TOKENS * fatia.length,
+    // SDK aceita array de ContentBlockParam com cache_control — types ainda em catch-up
+    // biome-ignore lint/suspicious/noExplicitAny: SDK types for system array with cache_control
+    system: system as any,
+    tools: [tool],
+    tool_choice: { type: 'tool', name: tool.name },
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const toolBlock = response.content.find((b) => b.type === 'tool_use');
+  if (!toolBlock || toolBlock.type !== 'tool_use') {
+    throw new ErroServicoExterno('IA não retornou classificação. Tente novamente.');
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: tool input is dynamic JSON
+  const raw = toolBlock.input as any;
+  return {
+    itens: Array.isArray(raw.classificacoes) ? raw.classificacoes : [],
+    usage: {
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+      // biome-ignore lint/suspicious/noExplicitAny: extended usage fields from caching
+      cache_creation_input_tokens: (response.usage as any).cache_creation_input_tokens ?? 0,
+      // biome-ignore lint/suspicious/noExplicitAny: extended usage fields from caching
+      cache_read_input_tokens: (response.usage as any).cache_read_input_tokens ?? 0,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -266,6 +330,31 @@ export interface ClassificarTarefaInput {
   modelo?: string;
 }
 
+function normalizarClassificacao(raw: Record<string, unknown>): Classificacao {
+  const importancia = Number(raw.importancia);
+  const urgencia = Number(raw.urgencia);
+  const facilidade = Number(raw.facilidade);
+
+  if (Number.isNaN(importancia) || Number.isNaN(urgencia) || Number.isNaN(facilidade)) {
+    throw new ErroServicoExterno('Resposta da IA com valores inválidos. Tente novamente.');
+  }
+
+  return {
+    importancia: Math.round(Math.min(100, Math.max(0, importancia))),
+    urgencia: Math.round(Math.min(100, Math.max(0, urgencia))),
+    facilidade: Math.round(Math.min(100, Math.max(0, facilidade))),
+    tags_sugeridas: Array.isArray(raw.tags_sugeridas) ? (raw.tags_sugeridas as string[]) : [],
+    tipo_sugerido:
+      raw.tipo_sugerido === 'lembrete' || raw.tipo_sugerido === 'tarefa'
+        ? raw.tipo_sugerido
+        : undefined,
+    labels_todoist_sugeridas: Array.isArray(raw.labels_todoist_sugeridas)
+      ? (raw.labels_todoist_sugeridas as unknown[]).map(String).slice(0, 3)
+      : [],
+    explicacao: String(raw.explicacao ?? '').slice(0, 140),
+  };
+}
+
 export async function classificarTarefa(input: ClassificarTarefaInput): Promise<ClassificacaoMeta> {
   const resolvedKey = input.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!resolvedKey) {
@@ -307,27 +396,9 @@ export async function classificarTarefa(input: ClassificarTarefaInput): Promise<
 
   // biome-ignore lint/suspicious/noExplicitAny: tool input is dynamic JSON
   const raw = toolBlock.input as any;
-  const importancia = Number(raw.importancia);
-  const urgencia = Number(raw.urgencia);
-  const facilidade = Number(raw.facilidade);
-
-  if (Number.isNaN(importancia) || Number.isNaN(urgencia) || Number.isNaN(facilidade)) {
-    throw new ErroServicoExterno('Resposta da IA com valores inválidos. Tente novamente.');
-  }
 
   return {
-    importancia: Math.round(Math.min(100, Math.max(0, importancia))),
-    urgencia: Math.round(Math.min(100, Math.max(0, urgencia))),
-    facilidade: Math.round(Math.min(100, Math.max(0, facilidade))),
-    tags_sugeridas: Array.isArray(raw.tags_sugeridas) ? (raw.tags_sugeridas as string[]) : [],
-    tipo_sugerido:
-      raw.tipo_sugerido === 'lembrete' || raw.tipo_sugerido === 'tarefa'
-        ? raw.tipo_sugerido
-        : undefined,
-    labels_todoist_sugeridas: Array.isArray(raw.labels_todoist_sugeridas)
-      ? (raw.labels_todoist_sugeridas as unknown[]).map(String).slice(0, 3)
-      : [],
-    explicacao: String(raw.explicacao ?? '').slice(0, 140),
+    ...normalizarClassificacao(raw),
     usage: {
       input_tokens: response.usage.input_tokens,
       output_tokens: response.usage.output_tokens,
