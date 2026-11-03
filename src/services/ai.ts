@@ -145,6 +145,7 @@ export async function classificarBatch(
   opts?: { apiKey?: string; modelo?: string; projetos?: Projeto[]; tags?: Tag[] },
 ): Promise<ClassificarBatchResult> {
   const fatia = tarefas.slice(0, Math.min(tarefas.length, 20));
+  if (fatia.length === 0) return { resultados: [] };
 
   let chamada: { itens: Record<string, unknown>[]; usage: ClassificacaoMeta['usage'] };
   try {
@@ -154,7 +155,10 @@ export async function classificarBatch(
     return { resultados: fatia.map((t) => ({ id: t.id, erro })) };
   }
 
-  const porId = new Map(chamada.itens.map((item) => [String(item.id), item]));
+  // Elemento nulo ou sem objeto vindo da IA é ignorado: o item dele cai em "ausente".
+  const porId = new Map(
+    chamada.itens.filter((item) => item && typeof item === 'object').map((item) => [String(item.id), item]),
+  );
   const usage = {
     input_tokens: Math.round(chamada.usage.input_tokens / fatia.length),
     output_tokens: Math.round(chamada.usage.output_tokens / fatia.length),
